@@ -37,6 +37,17 @@ func (s *RoleService) AssignRole(userID, roleID uuid.UUID) error {
 	return s.roleRepo.AssignRole(userID, roleID)
 }
 
+func (s *RoleService) AssignRoleByName(userID uuid.UUID, roleName string) error {
+	r, err := s.roleRepo.FindByName(roleName)
+	if err != nil {
+		return err
+	}
+	if r == nil {
+		return ErrRoleNotFound
+	}
+	return s.roleRepo.AssignRole(userID, r.ID)
+}
+
 func (s *RoleService) RevokeRole(userID, roleID uuid.UUID) error {
 	return s.roleRepo.RevokeRole(userID, roleID)
 }

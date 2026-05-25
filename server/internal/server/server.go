@@ -33,7 +33,7 @@ func New(cfg *config.Config, db *gorm.DB, vc vault.Client) *Server {
 	engine := gin.Default()
 
 	engine.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:8080"},
+		AllowOrigins:     cfg.Server.AllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Authorization", "Content-Type"},
 		ExposeHeaders:    []string{"Content-Length"},
@@ -70,7 +70,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	envService := environment.NewService(envRepo)
 	wsService := workspace.NewService(wsRepo, roleService, envService)
 	capService := capability.NewService(capRepo, vc)
-	arService := accessrequest.NewService(arRepo, wsService)
+	arService := accessrequest.NewService(arRepo, wsService, roleService)
 	nomadService := nomad.NewService(capRepo, vc)
 	k8sService := kubernetes.NewService(capRepo, vc)
 	secretService := secret.NewService(secret.NewRepository(db), capRepo, vc)

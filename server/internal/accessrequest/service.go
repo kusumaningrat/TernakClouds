@@ -19,13 +19,19 @@ type WorkspaceAccess interface {
 	AddMemberDirect(workspaceID, userID uuid.UUID) error
 }
 
-type Service struct {
-	repo  *Repository
-	wsSvc WorkspaceAccess
+// RoleAssigner is satisfied by role.RoleService.
+type RoleAssigner interface {
+	AssignRoleByName(userID uuid.UUID, roleName string) error
 }
 
-func NewService(repo *Repository, wsSvc WorkspaceAccess) *Service {
-	return &Service{repo: repo, wsSvc: wsSvc}
+type Service struct {
+	repo     *Repository
+	wsSvc    WorkspaceAccess
+	roleSvc  RoleAssigner
+}
+
+func NewService(repo *Repository, wsSvc WorkspaceAccess, roleSvc RoleAssigner) *Service {
+	return &Service{repo: repo, wsSvc: wsSvc, roleSvc: roleSvc}
 }
 
 func (s *Service) Create(userID uuid.UUID, input CreateInput) (*AccessRequest, error) {
@@ -81,6 +87,10 @@ func (s *Service) Approve(reviewerID, requestID uuid.UUID, roleOverride string) 
 
 	if roleOverride != "" {
 		ar.RequestedRole = roleOverride
+	}
+
+	if err := s.roleSvc.AssignRoleByName(ar.UserID, ar.RequestedRole); err != nil {
+		return err
 	}
 
 	now := time.Now()

@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/subosito/gotenv"
@@ -31,8 +32,9 @@ func Load() (*Config, error) {
 
 	return &Config{
 		Server: ServerConfig{
-			Port:    getEnv("SERVER_PORT", "8022"),
-			GinMode: getEnv("GIN_MODE", "release"),
+			Port:           getEnv("APP_PORT", "8022"),
+			GinMode:        getEnv("GIN_MODE", "release"),
+			AllowedOrigins: parseList(getEnv("ALLOWED_CORS", "http://localhost:3000,http://localhost:8080")),
 		},
 		Vault: VaultConfig{
 			Enabled:  getEnv("VAULT_ENABLED", "false") == "true",
@@ -61,11 +63,20 @@ func Load() (*Config, error) {
 	}, nil
 }
 
-// Get Environment Function - Load all provided environment variables
 func getEnv(key, defaultVal string) string {
 	if v := os.Getenv(key); v != "" {
 		return v
 	}
 
 	return defaultVal
+}
+
+func parseList(s string) []string {
+	var out []string
+	for item := range strings.SplitSeq(s, ",") {
+		if t := strings.TrimSpace(item); t != "" {
+			out = append(out, t)
+		}
+	}
+	return out
 }

@@ -24,8 +24,9 @@ type AdminConfig struct {
 }
 
 type ServerConfig struct {
-	Port    string
-	GinMode string
+	Port           string
+	GinMode        string
+	AllowedOrigins []string
 }
 
 type DatabaseConfig struct {
