@@ -9,18 +9,18 @@ on:
 
 jobs:
   backend:
-    name: Server
+    name: server
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: server
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
+          go-version-file: server/go.mod
+          cache-dependency-path: server/go.sum
 
       - name: Download dependencies
         run: go mod download
@@ -34,8 +34,8 @@ jobs:
       - name: Build
         run: go build -o bin/api ./cmd/api
 
-  frontend-public:
-    name: Public Site
+  public:
+    name: public site
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,12 +54,12 @@ jobs:
       - name: Build
         run: npm run build
 
-  frontend-admin:
-    name: Admin Dashboard
+  admin:
+    name: admin
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: frontend
+        working-directory: admin
     steps:
       - uses: actions/checkout@v4
 
@@ -67,7 +67,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          cache-dependency-path: admin/package-lock.json
 
       - name: Install
         run: npm ci
