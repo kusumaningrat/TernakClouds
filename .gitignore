@@ -1,0 +1,27 @@
+# ── Public website (root) ─────────────────────────────────────────────────────
+node_modules/
+dist/
+.env
+.env.local
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+backend/bin/
+backend/*.exe
+backend/tmp/
+backend/.env
+
+# ── Admin frontend ────────────────────────────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.wrangler/
+frontend/.tanstack/
+frontend/.env
+frontend/.env.local
+
+# ── OS / editor ───────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

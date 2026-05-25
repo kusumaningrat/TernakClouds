@@ -1,0 +1,50 @@
+version: "3.9"
+
+# ─── IDP Platform — Docker Compose ──────────────────────────────────────────
+# Starts: PostgreSQL, Vault (optional), and the backend API.
+# The frontend apps run separately via `make dev-frontend` / `make dev-public`.
+#
+# Usage:
+#   docker compose up -d              # start all services
+#   docker compose up -d postgres     # start only the database
+#   docker compose -f docker-compose.yml -f docker-compose-vault.yml up -d
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: idp_platform
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - ./backend/.env
+    environment:
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: idp_platform
+      SERVER_PORT: "8080"
+      GIN_MODE: release
+    ports:
+      - "8080:8080"
+
+volumes:
+  pg_data:
