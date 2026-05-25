@@ -247,20 +247,6 @@ docker compose up -d
 
 ---
 
-## Project documentation
-
-Additional design and architecture documents live in `server/`:
-
-- [`server/Docs.md`](server/Docs.md) — API reference
-- [`server/Authentication.md`](server/Authentication.md) — Auth flow
-- [`server/Flow.md`](server/Flow.md) — Request lifecycle
-- [`server/design.md`](server/design.md) — System design
-- [`server/workspace.md`](server/workspace.md) — Workspace model
-- [`server/env-workspace-isolation.md`](server/env-workspace-isolation.md) — Environment isolation
-- [`server/vault-config-example.hcl`](server/vault-config-example.hcl) — Vault setup
-
----
-
 ## Contributing
 
 1. Create a feature branch from `main`
