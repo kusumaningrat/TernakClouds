@@ -9,7 +9,7 @@ on:
 
 jobs:
   backend:
-    name: Backend (Go)
+    name: Server
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,7 +35,7 @@ jobs:
         run: go build -o bin/api ./cmd/api
 
   frontend-public:
-    name: Public Site (Vite)
+    name: Public Site
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
         run: npm run build
 
   frontend-admin:
-    name: Admin Dashboard (TanStack)
+    name: Admin Dashboard
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -73,7 +73,10 @@ jobs:
         run: npm ci
 
       - name: Lint
-        run: npm run lint
+        run: npm run lint -- --max-warnings 0
+
+      - name: Format check
+        run: npx prettier --check .
 
       - name: Build
         run: npm run build
