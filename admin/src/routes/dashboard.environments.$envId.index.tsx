@@ -280,7 +280,7 @@ function EnvOverviewPage() {
                 <Loader2 className="size-4 animate-spin" /> Loading…
               </div>
             ) : nomadUnavailable ? (
-              <NoProviderBanner capability="Nomad" envId={envId} />
+              <NoProviderBanner capability="runtime" envId={envId} />
             ) : recentJobs.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">No jobs in this namespace.</p>
             ) : (
