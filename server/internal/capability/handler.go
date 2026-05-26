@@ -146,6 +146,30 @@ func (h *Handler) UnbindProvider(c *gin.Context) {
 	pkg.RespondMessage(c, http.StatusOK, "provider unbound")
 }
 
+// POST /api/v1/workspaces/:slug/environments/:envSlug/capabilities/:cap/provider/:providerID/verify
+func (h *Handler) VerifyProvider(c *gin.Context) {
+	envID := contextEnvironmentID(c)
+	capName := c.Param("cap")
+
+	providerID, err := uuid.Parse(c.Param("providerID"))
+	if err != nil {
+		pkg.RespondErr(c, http.StatusBadRequest, "invalid provider id")
+		return
+	}
+
+	result, err := h.svc.VerifyProvider(c.Request.Context(), envID, capName, providerID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			pkg.RespondErr(c, http.StatusNotFound, "provider not found")
+			return
+		}
+		pkg.RespondErr(c, http.StatusInternalServerError, "verification failed")
+		return
+	}
+
+	pkg.RespondOK(c, http.StatusOK, result)
+}
+
 func contextEnvironmentID(c *gin.Context) uuid.UUID {
 	val, _ := c.Get("environment_id")
 	id, _ := val.(uuid.UUID)

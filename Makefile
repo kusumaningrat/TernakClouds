@@ -1,4 +1,3 @@
-# ─── IDP Monorepo Makefile ───────────────────────────────────────────────────
 # Structure:
 #   /           Public website (docs + platform intro) — Vite + React
 #   server/    Go/Gin REST API

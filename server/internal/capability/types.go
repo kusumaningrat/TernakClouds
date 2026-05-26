@@ -6,7 +6,7 @@ type BindProviderInput struct {
 	Endpoint     string `json:"endpoint"      binding:"required"`
 	Region       string `json:"region"`
 	Namespace    string `json:"namespace"`
-	Token        string `json:"token"         binding:"required"`
+	Token        string `json:"token"`
 }
 
 // UpdateProviderInput is the request body for PUT .../capabilities/:cap/provider/:id.
@@ -36,4 +36,11 @@ type ProviderConfigResponse struct {
 	Namespace      string `json:"namespace,omitempty"`
 	CredentialType string `json:"credential_type"`
 	CreatedAt      string `json:"created_at"`
+}
+
+// VerifyProviderResult is returned by POST .../capabilities/:cap/provider/:id/verify.
+type VerifyProviderResult struct {
+	Reachable  bool   `json:"reachable"`
+	StatusCode int    `json:"status_code,omitempty"`
+	Message    string `json:"message"`
 }

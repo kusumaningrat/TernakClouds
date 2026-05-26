@@ -1,4 +1,4 @@
-# ForgeIDP — Backend
+# TernakClouds — Backend
 
 REST API for the Internal Developer Platform. Built with Go, Gin, GORM, and PostgreSQL. Provides workspace-scoped environments, capability-based infrastructure bindings, role-based access control, and a self-service workspace access request workflow.
 

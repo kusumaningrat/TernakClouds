@@ -319,8 +319,9 @@ func seedCapabilityCatalogue(db *gorm.DB) error {
 		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000001"), Name: capability.CapRuntime, DisplayName: "Runtime", Description: "Workload scheduling and execution (Nomad, Kubernetes)"},
 		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000002"), Name: capability.CapSecrets, DisplayName: "Secrets", Description: "Secret management and dynamic credentials (Vault)"},
 		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000003"), Name: capability.CapNetworking, DisplayName: "Networking", Description: "Service mesh and networking (Consul, Istio)"},
-		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000004"), Name: capability.CapObservability, DisplayName: "Observability", Description: "Metrics, logs, and traces (Prometheus, Grafana, Loki)"},
+		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000004"), Name: capability.CapObservability, DisplayName: "Observability", Description: "Metrics and traces (Prometheus, Grafana)"},
 		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000005"), Name: capability.CapStorage, DisplayName: "Storage", Description: "Persistent storage (MinIO, Ceph)"},
+		{ID: uuid.MustParse("00000000-0000-0000-0000-000000000006"), Name: capability.CapLogs, DisplayName: "Logs", Description: "Centralized logs ingestion, storage, and search (Loki, OpenSearch, Elasticsearch)"},
 	}
 	for _, c := range caps {
 		if err := db.Where("name = ?", c.Name).FirstOrCreate(&c).Error; err != nil {
@@ -340,6 +341,10 @@ func seedCapabilityCatalogue(db *gorm.DB) error {
 		{ID: uuid.MustParse("00000004-0000-0000-0000-000000000001"), Name: "prometheus", DisplayName: "Prometheus + Grafana", CapabilityName: capability.CapObservability, Description: "Metrics and dashboards"},
 		// Storage
 		{ID: uuid.MustParse("00000005-0000-0000-0000-000000000001"), Name: "minio", DisplayName: "MinIO", CapabilityName: capability.CapStorage, Description: "S3-compatible object storage"},
+		// Logs
+		{ID: uuid.MustParse("00000006-0000-0000-0000-000000000001"), Name: "loki", DisplayName: "Grafana Loki", CapabilityName: capability.CapLogs, Description: "Scalable label-based log aggregation"},
+		{ID: uuid.MustParse("00000006-0000-0000-0000-000000000002"), Name: "opensearch", DisplayName: "OpenSearch", CapabilityName: capability.CapLogs, Description: "Distributed search and analytics for logs"},
+		{ID: uuid.MustParse("00000006-0000-0000-0000-000000000003"), Name: "elasticsearch", DisplayName: "Elasticsearch", CapabilityName: capability.CapLogs, Description: "Search engine for full-text log indexing"},
 	}
 	for _, p := range providers {
 		if err := db.Where("name = ?", p.Name).FirstOrCreate(&p).Error; err != nil {
