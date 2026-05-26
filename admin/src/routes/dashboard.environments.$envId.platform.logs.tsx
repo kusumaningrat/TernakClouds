@@ -9,7 +9,15 @@ export const Route = createFileRoute("/dashboard/environments/$envId/platform/lo
   component: LogsCapabilityPage,
 });
 
-function LogProvidersInfo({ slug, envId, capName }: { slug: string; envId: string; capName: string }) {
+function LogProvidersInfo({
+  slug,
+  envId,
+  capName,
+}: {
+  slug: string;
+  envId: string;
+  capName: string;
+}) {
   const { data: status } = useCapability(slug, envId, capName);
   const providers = status?.providers ?? [];
   if (providers.length === 0) return null;
@@ -30,7 +38,10 @@ function LogProvidersInfo({ slug, envId, capName }: { slug: string; envId: strin
         </div>
         <div className="space-y-3">
           {providers.map((p) => (
-            <div key={p.id} className="rounded-lg border border-border bg-background/50 p-4 space-y-2 text-sm">
+            <div
+              key={p.id}
+              className="rounded-lg border border-border bg-background/50 p-4 space-y-2 text-sm"
+            >
               <div className="flex items-center gap-2">
                 <span className="text-muted-foreground text-xs w-20 shrink-0">Provider</span>
                 <span className="text-xs font-medium">{p.display_name || p.provider_name}</span>

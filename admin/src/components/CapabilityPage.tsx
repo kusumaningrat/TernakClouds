@@ -170,11 +170,18 @@ function AddProviderForm({
 
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Token {isTokenOptional ? <span className="normal-case text-muted-foreground/60">(optional)</span> : "*"}
+          Token{" "}
+          {isTokenOptional ? (
+            <span className="normal-case text-muted-foreground/60">(optional)</span>
+          ) : (
+            "*"
+          )}
         </label>
         <input
           type="password"
-          placeholder={isTokenOptional ? "Leave blank for unauthenticated access" : "••••••••••••••••"}
+          placeholder={
+            isTokenOptional ? "Leave blank for unauthenticated access" : "••••••••••••••••"
+          }
           value={form.token}
           onChange={(e) => setForm((f) => ({ ...f, token: e.target.value }))}
           className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50"

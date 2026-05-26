@@ -329,7 +329,10 @@ function EnvLogsPage() {
   const [workloads, setWorkloads] = useState<RuntimeWorkload[]>([]);
 
   const selectedWorkload = workloads.find((w) => w.id === selectedWorkloadId) ?? null;
-  const containers = (selectedWorkload?.metadata?.containers as string[] | undefined) ?? [];
+  const containers = useMemo(
+    () => (selectedWorkload?.metadata?.containers as string[] | undefined) ?? [],
+    [selectedWorkload],
+  );
 
   // Providers — only runtimes the user has registered for this environment
   const {
@@ -392,7 +395,7 @@ function EnvLogsPage() {
   useEffect(() => {
     if (containers.length > 0) setContainer(containers[0]);
     else setContainer("");
-  }, [selectedWorkloadId]);
+  }, [selectedWorkloadId, containers]);
 
   // Auto-select first task when Nomad tasks are discovered
   useEffect(() => {
@@ -441,7 +444,10 @@ function EnvLogsPage() {
     (runtime !== "nomad" || !!task);
 
   const providerOptions =
-    providers?.map((p) => ({ value: p.name, label: p.name.charAt(0).toUpperCase() + p.name.slice(1) })) ?? [];
+    providers?.map((p) => ({
+      value: p.name,
+      label: p.name.charAt(0).toUpperCase() + p.name.slice(1),
+    })) ?? [];
 
   const workloadOptions = workloads.map((w) => ({
     value: w.id,
@@ -550,7 +556,9 @@ function EnvLogsPage() {
             <Select
               value={selectedWorkloadId}
               onChange={setSelectedWorkloadId}
-              placeholder={loadingWorkloads ? "Loading…" : runtime ? "Select workload" : "Select runtime first"}
+              placeholder={
+                loadingWorkloads ? "Loading…" : runtime ? "Select workload" : "Select runtime first"
+              }
               options={workloadOptions}
               disabled={!runtime || streaming || loadingWorkloads}
             />
@@ -734,7 +742,10 @@ function EnvLogsPage() {
                     />
                     {searchInput && (
                       <button
-                        onClick={() => { setSearchInput(""); setActiveSearch(""); }}
+                        onClick={() => {
+                          setSearchInput("");
+                          setActiveSearch("");
+                        }}
                         className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                       >
                         <X className="size-2.5" />
@@ -765,11 +776,10 @@ function EnvLogsPage() {
                   Clear
                 </button>
                 <span className="text-[10px] text-muted-foreground tabular-nums">
-                  {lines.length > 0 && (
-                    activeSearch
+                  {lines.length > 0 &&
+                    (activeSearch
                       ? `${filteredLines.length} / ${lines.length.toLocaleString()} lines`
-                      : `${lines.length.toLocaleString()} lines`
-                  )}
+                      : `${lines.length.toLocaleString()} lines`)}
                 </span>
               </div>
             </div>
@@ -794,7 +804,10 @@ function EnvLogsPage() {
                 <span className="text-zinc-600 italic">No lines match "{activeSearch}".</span>
               ) : (
                 filteredLines.map((line, i) => (
-                  <div key={i} className="whitespace-pre-wrap break-all hover:bg-white/5 px-1 -mx-1 rounded">
+                  <div
+                    key={i}
+                    className="whitespace-pre-wrap break-all hover:bg-white/5 px-1 -mx-1 rounded"
+                  >
                     <HighlightedLine text={line} search={activeSearch} />
                   </div>
                 ))
