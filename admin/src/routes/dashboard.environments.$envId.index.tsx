@@ -25,6 +25,7 @@ import {
   KeyRound,
   HardDrive,
   AlertTriangle,
+  ScrollText,
 } from "lucide-react";
 import type { CapabilityStatusResponse } from "@/lib/types";
 
@@ -57,6 +58,7 @@ const CAP_ICONS: Record<string, React.ElementType> = {
   networking: Network,
   storage: HardDrive,
   observability: Activity,
+  logs: ScrollText,
 };
 
 // ─── Stat card ────────────────────────────────────────────────────────────────

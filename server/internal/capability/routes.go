@@ -11,6 +11,7 @@ func RegisterRoutes(rg *gin.RouterGroup, h *Handler, ownerGuard ...gin.HandlerFu
 		caps.GET("/:cap", h.Get)
 		caps.GET("/:cap/providers", h.ListProviders)
 		caps.POST("/:cap/provider", append(ownerGuard, h.BindProvider)...)
+		caps.POST("/:cap/provider/:providerID/verify", h.VerifyProvider)
 		caps.PUT("/:cap/provider/:providerID", append(ownerGuard, h.UpdateProvider)...)
 		caps.DELETE("/:cap/provider/:providerID", append(ownerGuard, h.UnbindProvider)...)
 	}

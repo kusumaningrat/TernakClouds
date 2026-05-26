@@ -2,10 +2,13 @@ package capability
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kusumaningrat/idp-backend/internal/vault"
@@ -90,7 +93,7 @@ func (s *Service) GetStatus(envID uuid.UUID, capName string) (*CapabilityStatusR
 // BindProvider adds a new provider to the capability binding.
 // Returns ErrProviderAlreadyBound if the same provider_name is already bound.
 func (s *Service) BindProvider(ctx context.Context, envID uuid.UUID, capName string, input BindProviderInput, callerID uuid.UUID) (*CapabilityStatusResponse, error) {
-	if s.vault == nil {
+	if input.Token != "" && s.vault == nil {
 		return nil, ErrVaultDisabled
 	}
 
@@ -134,9 +137,14 @@ func (s *Service) BindProvider(ctx context.Context, envID uuid.UUID, capName str
 		}
 	}
 
-	vaultPath := fmt.Sprintf("idp/capabilities/%s/%s/%s/token", envID, capName, input.ProviderName)
-	if err := s.vault.StoreToken(ctx, vaultPath, input.Token); err != nil {
-		return nil, fmt.Errorf("capability: store token in vault: %w", err)
+	var vaultPath string
+	credentialType := "none"
+	if input.Token != "" {
+		vaultPath = fmt.Sprintf("idp/capabilities/%s/%s/%s/token", envID, capName, input.ProviderName)
+		if err := s.vault.StoreToken(ctx, vaultPath, input.Token); err != nil {
+			return nil, fmt.Errorf("capability: store token in vault: %w", err)
+		}
+		credentialType = "token"
 	}
 
 	cfg := &ProviderConfig{
@@ -147,13 +155,15 @@ func (s *Service) BindProvider(ctx context.Context, envID uuid.UUID, capName str
 		Region:              input.Region,
 		Namespace:           input.Namespace,
 		VaultPath:           vaultPath,
-		CredentialType:      "token",
+		CredentialType:      credentialType,
 		CreatedBy:           callerID,
 	}
 	if err := s.repo.CreateProviderConfig(cfg); err != nil {
-		if delErr := s.vault.DeleteToken(ctx, vaultPath); delErr != nil {
-			slog.Error("failed to clean vault secret after provider config creation failure",
-				"path", vaultPath, "err", delErr)
+		if vaultPath != "" {
+			if delErr := s.vault.DeleteToken(ctx, vaultPath); delErr != nil {
+				slog.Error("failed to clean vault secret after provider config creation failure",
+					"path", vaultPath, "err", delErr)
+			}
 		}
 		if strings.Contains(err.Error(), "idx_binding_provider") {
 			return nil, ErrProviderAlreadyBound
@@ -250,6 +260,60 @@ func (s *Service) UnbindProvider(ctx context.Context, envID uuid.UUID, capName s
 // ListProviders returns the provider catalogue for a capability.
 func (s *Service) ListProviders(capName string) ([]Provider, error) {
 	return s.repo.ListProvidersByCapability(capName)
+}
+
+// VerifyProvider checks whether the provider's endpoint is reachable.
+// It uses a provider-specific probe path (e.g. /ready for Loki) and
+// optionally attaches the stored bearer token if one exists in Vault.
+func (s *Service) VerifyProvider(ctx context.Context, envID uuid.UUID, capName string, providerID uuid.UUID) (*VerifyProviderResult, error) {
+	cfg, err := s.repo.FindProviderConfig(providerID)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, ErrNotFound
+	}
+
+	binding, err := s.repo.FindBinding(envID, capName)
+	if err != nil {
+		return nil, err
+	}
+	if binding == nil || cfg.CapabilityBindingID != binding.ID {
+		return nil, ErrNotFound
+	}
+
+	probeURL := strings.TrimRight(cfg.Endpoint, "/") + "/ready"
+
+	httpClient := &http.Client{
+		Timeout: 5 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, probeURL, nil)
+	if err != nil {
+		return &VerifyProviderResult{Reachable: false, Message: "invalid endpoint: " + err.Error()}, nil
+	}
+
+	if s.vault != nil && cfg.VaultPath != "" {
+		if token, vErr := s.vault.RetrieveToken(ctx, cfg.VaultPath); vErr == nil && token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return &VerifyProviderResult{Reachable: false, Message: err.Error()}, nil
+	}
+	defer resp.Body.Close()
+
+	reachable := resp.StatusCode < 500
+	return &VerifyProviderResult{
+		Reachable:  reachable,
+		StatusCode: resp.StatusCode,
+		Message:    http.StatusText(resp.StatusCode),
+	}, nil
 }
 
 func toProviderConfigResponse(cfg *ProviderConfig) ProviderConfigResponse {

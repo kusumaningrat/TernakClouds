@@ -237,7 +237,7 @@ export interface BindProviderInput {
   endpoint: string;
   region?: string;
   namespace?: string;
-  token: string;
+  token?: string;
 }
 
 export interface UpdateProviderInput {
@@ -826,4 +826,27 @@ export interface K8sServiceDetail {
   ports: K8sPortStub[];
   endpoints: string[];
   createdAt: string;
+}
+
+// ─── Runtime Logs ─────────────────────────────────────────────────────────────
+
+export type WorkloadType = "service" | "job" | "cron" | "task";
+
+export interface RuntimeWorkload {
+  id: string;
+  runtime: string;
+  type: WorkloadType;
+  name: string;
+  namespace?: string;
+  status?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LogsProviderInfo {
+  name: string;
+  capabilities: {
+    can_search: boolean;
+    can_stream: boolean;
+    can_list_labels: boolean;
+  };
 }

@@ -5,6 +5,7 @@ import {
   useBindProvider,
   useUpdateProvider,
   useUnbindProvider,
+  useVerifyProvider,
 } from "@/lib/queries";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 import { useState } from "react";
@@ -20,6 +21,8 @@ import {
   X,
   Save,
   ServerCrash,
+  ShieldCheck,
+  ShieldX,
 } from "lucide-react";
 import type { CapabilityProvider, ProviderConfigResponse } from "@/lib/types";
 
@@ -55,6 +58,8 @@ function AddProviderForm({
   const [error, setError] = useState<string | null>(null);
   const bind = useBindProvider();
 
+  const isTokenOptional = selectedProvider?.name === "loki";
+
   const handleSubmit = async () => {
     if (!selectedProvider) {
       setError("Select a provider.");
@@ -64,7 +69,7 @@ function AddProviderForm({
       setError("Endpoint is required.");
       return;
     }
-    if (!form.token.trim()) {
+    if (!isTokenOptional && !form.token.trim()) {
       setError("Token is required.");
       return;
     }
@@ -79,7 +84,7 @@ function AddProviderForm({
           endpoint: form.endpoint.trim(),
           region: form.region.trim() || undefined,
           namespace: form.namespace.trim() || undefined,
-          token: form.token,
+          token: form.token.trim() || undefined,
         },
       });
       onDone();
@@ -165,11 +170,11 @@ function AddProviderForm({
 
       <div className="space-y-1.5">
         <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-          Token *
+          Token {isTokenOptional ? <span className="normal-case text-muted-foreground/60">(optional)</span> : "*"}
         </label>
         <input
           type="password"
-          placeholder="••••••••••••••••"
+          placeholder={isTokenOptional ? "Leave blank for unauthenticated access" : "••••••••••••••••"}
           value={form.token}
           onChange={(e) => setForm((f) => ({ ...f, token: e.target.value }))}
           className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50"
@@ -316,11 +321,31 @@ function ProviderCard({
   provider: ProviderConfigResponse;
 }) {
   const [editing, setEditing] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<{
+    reachable: boolean;
+    message: string;
+  } | null>(null);
   const unbind = useUnbindProvider();
+  const verify = useVerifyProvider();
 
   const handleRemove = async () => {
     if (!confirm(`Remove ${provider.display_name || provider.provider_name}?`)) return;
     await unbind.mutateAsync({ slug, envSlug: envId, cap: capName, providerID: provider.id });
+  };
+
+  const handleVerify = async () => {
+    setVerifyResult(null);
+    try {
+      const result = await verify.mutateAsync({
+        slug,
+        envSlug: envId,
+        cap: capName,
+        providerID: provider.id,
+      });
+      setVerifyResult({ reachable: result.reachable, message: result.message });
+    } catch {
+      setVerifyResult({ reachable: false, message: "Request failed" });
+    }
   };
 
   return (
@@ -337,6 +362,22 @@ function ProviderCard({
             <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-secondary border border-border text-muted-foreground">
               {provider.provider_name}
             </span>
+            {verifyResult !== null && (
+              <span
+                className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded border ${
+                  verifyResult.reachable
+                    ? "bg-success/10 text-success border-success/20"
+                    : "bg-destructive/10 text-destructive border-destructive/20"
+                }`}
+              >
+                {verifyResult.reachable ? (
+                  <ShieldCheck className="size-3" />
+                ) : (
+                  <ShieldX className="size-3" />
+                )}
+                {verifyResult.reachable ? "reachable" : "unreachable"}
+              </span>
+            )}
           </div>
           <div className="font-mono text-xs text-muted-foreground mt-0.5 truncate">
             {provider.endpoint}
@@ -348,6 +389,19 @@ function ProviderCard({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <button
+            onClick={() => void handleVerify()}
+            disabled={verify.isPending}
+            className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md border border-border hover:bg-accent transition disabled:opacity-50"
+            title="Check if provider endpoint is reachable"
+          >
+            {verify.isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <ShieldCheck className="size-3.5" />
+            )}
+            Verify
+          </button>
           <button
             onClick={() => setEditing((v) => !v)}
             className="flex items-center gap-1 text-xs px-2 py-1.5 rounded-md border border-border hover:bg-accent transition"
