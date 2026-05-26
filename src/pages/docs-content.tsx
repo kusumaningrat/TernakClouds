@@ -28,7 +28,6 @@ function H2({ children }: { children: React.ReactNode }) {
   );
 }
 
-
 function P({ children }: { children: React.ReactNode }) {
   return (
     <p
@@ -118,8 +117,8 @@ export const articles: Article[] = [
 
         <H2>Core concepts</H2>
         <P>
-          <strong>Workspace</strong> — an isolated organizational tenant with its
-          own environments, members, and capability bindings.
+          <strong>Workspace</strong> — an isolated organizational tenant with
+          its own environments, members, and capability bindings.
         </P>
         <P>
           <strong>Environment</strong> — a named deployment target within a
@@ -243,9 +242,7 @@ make docker-up
 make install   # npm install for site + admin dashboard
 make dev       # starts API (:8022) + admin dashboard (:3000)
         `}</CodeBlock>
-        <P>
-          Or start services individually:
-        </P>
+        <P>Or start services individually:</P>
         <CodeBlock>{`
 make dev-backend   # Go API on :8022
 make dev-admin     # Admin dashboard on :3000
@@ -319,7 +316,7 @@ VITE_API_URL        Backend URL (empty in dev)
 // Access token payload (JWT claims)
 {
   "sub":   "usr_01HZ...",
-  "email": "alex@ternak.io",
+  "email": "alex@peternakclouds.com",
   "dept":  "payments",
   "roles": ["developer"],
   "iat":   1716000000,
@@ -338,7 +335,7 @@ POST /api/v1/auth/login
 Content-Type: application/json
 
 {
-  "email":    "alex@ternak.io",
+  "email":    "alex@peternakclouds.com",
   "password": "••••••••"
 }
 
@@ -543,7 +540,7 @@ Authorization: Bearer eyJ...
 Content-Type: application/json
 
 {
-  "email":      "new.dev@ternak.io",
+  "email":      "new.dev@peternakclouds.com",
   "department": "payments",
   "role_id":    "rol_01HZ..."   // optional — defaults to "developer"
 }
@@ -551,7 +548,7 @@ Content-Type: application/json
 // 201 Created
 {
   "invite_id":  "inv_01HZ...",
-  "invite_url": "https://idp.ternak.io/accept/inv_01HZ...",
+  "invite_url": "https://idp.peternakclouds.com/accept/inv_01HZ...",
   "expires_at": "2026-06-01T00:00:00Z"
 }
         `}</CodeBlock>
@@ -594,7 +591,7 @@ Authorization: Bearer eyJ...
   "invites": [
     {
       "id":         "inv_01HZ...",
-      "email":      "new.dev@ternak.io",
+      "email":      "new.dev@peternakclouds.com",
       "department": "payments",
       "role":       "developer",
       "expires_at": "2026-06-01T00:00:00Z"
@@ -644,7 +641,7 @@ Authorization: Bearer eyJ...
     {
       "id":    "usr_01HZ...",
       "name":  "Alex Dev",
-      "email": "alex@ternak.io",
+      "email": "alex@peternakclouds.com",
       "roles": ["developer"]
     }
   ]
@@ -715,7 +712,7 @@ Authorization: Bearer eyJ...
   "events": [
     {
       "id":         "evt_01HZ...",
-      "actor":      "alex@ternak.io",
+      "actor":      "alex@peternakclouds.com",
       "action":     "deploy_services",
       "resource":   "payments-api",
       "department": "payments",
@@ -730,7 +727,7 @@ Authorization: Bearer eyJ...
         <H2>Filtering options</H2>
         <CodeBlock>{`
 // Filter by actor
-GET /api/v1/audit?actor=alex@ternak.io
+GET /api/v1/audit?actor=alex@peternakclouds.com
 
 // Filter by action
 GET /api/v1/audit?action=deploy_services
@@ -797,10 +794,8 @@ internal/<domain>/
         `}</CodeBlock>
         <P>
           Routes are registered in{" "}
-          <code className="font-mono text-xs">
-            internal/server/server.go
-          </code>
-          . Each package exposes a{" "}
+          <code className="font-mono text-xs">internal/server/server.go</code>.
+          Each package exposes a{" "}
           <code className="font-mono text-xs">RegisterRoutes</code> function —
           never register routes inline in{" "}
           <code className="font-mono text-xs">server.go</code>.
@@ -847,9 +842,7 @@ GET /api/v1/workspaces/:slug/environments/:envSlug
         />
 
         <H2>Authorization model</H2>
-        <P>
-          All privileged mutations require both layers simultaneously:
-        </P>
+        <P>All privileged mutations require both layers simultaneously:</P>
         <CodeBlock>{`
 Layer 1: Platform role permission
   e.g. environments:write → admin and manager only
@@ -880,8 +873,8 @@ to modify a workspace you do not own.
           Two providers are supported: <strong>Kubernetes</strong> and{" "}
           <strong>Nomad</strong>. Each environment binds exactly one runtime
           provider. Operations — listing workloads, streaming logs, inspecting
-          pods — are proxied through the TernakClouds API; developers never
-          call the runtime APIs directly.
+          pods — are proxied through the TernakClouds API; developers never call
+          the runtime APIs directly.
         </P>
 
         <H2>Binding a Kubernetes provider</H2>
@@ -960,9 +953,9 @@ GET /runtime/nomad/allocations/:allocID/logs
 
         <H2>Workload model</H2>
         <P>
-          Both runtimes expose their workloads through the same normalized
-          shape in the dashboard. Kubernetes pods and Nomad allocations both
-          appear in the same workload selector without runtime-specific UI.
+          Both runtimes expose their workloads through the same normalized shape
+          in the dashboard. Kubernetes pods and Nomad allocations both appear in
+          the same workload selector without runtime-specific UI.
         </P>
         <CodeBlock>{`
 // Kubernetes pod → normalized
@@ -990,11 +983,10 @@ GET /runtime/nomad/allocations/:allocID/logs
 
         <H2>Verifying a provider</H2>
         <P>
-          Use the <strong>Verify</strong> button on any bound provider card.
-          It probes <code className="font-mono text-xs">{"{endpoint}/ready"}</code>{" "}
-          with a 5-second timeout and reports{" "}
-          <strong>reachable</strong> (green) or <strong>unreachable</strong>{" "}
-          (red).
+          Use the <strong>Verify</strong> button on any bound provider card. It
+          probes <code className="font-mono text-xs">{"{endpoint}/ready"}</code>{" "}
+          with a 5-second timeout and reports <strong>reachable</strong> (green)
+          or <strong>unreachable</strong> (red).
         </P>
       </div>
     ),
@@ -1007,8 +999,8 @@ GET /runtime/nomad/allocations/:allocID/logs
       <div>
         <H2>Overview</H2>
         <P>
-          The logs platform gives developers a single place to tail, search,
-          and filter logs from any workload — without{" "}
+          The logs platform gives developers a single place to tail, search, and
+          filter logs from any workload — without{" "}
           <code className="font-mono text-xs">kubectl logs</code>, direct
           allocation access, or infrastructure knowledge.
         </P>
@@ -1059,9 +1051,8 @@ live tail · search · filter · highlight
           Only matching lines are shown; matches are highlighted in yellow. The
           counter shows <code className="font-mono text-xs">N / Total</code>{" "}
           when a filter is active. Press{" "}
-          <code className="font-mono text-xs">Escape</code> or click ✕ to
-          clear. Search is client-side and does not affect the streaming
-          connection.
+          <code className="font-mono text-xs">Escape</code> or click ✕ to clear.
+          Search is client-side and does not affect the streaming connection.
         </P>
 
         <H2>SSE protocol</H2>
@@ -1079,9 +1070,8 @@ event: error
 data: connection refused
         `}</CodeBlock>
         <P>
-          Events are split by double newline. The client reads the response
-          body as a byte stream, parses SSE blocks, and dispatches to React
-          state.
+          Events are split by double newline. The client reads the response body
+          as a byte stream, parses SSE blocks, and dispatches to React state.
         </P>
 
         <H2>Logs backend (Loki)</H2>
@@ -1219,9 +1209,9 @@ make reset-db-dev     # Drop + re-migrate + re-seed (dev only)
           ]}
         />
         <Callout title="Database migrations">
-          The project uses GORM AutoMigrate. Add or modify fields in
-          models.go — the schema updates on next server start. For destructive
-          changes (drop column, rename), write a manual migration or use{" "}
+          The project uses GORM AutoMigrate. Add or modify fields in models.go —
+          the schema updates on next server start. For destructive changes (drop
+          column, rename), write a manual migration or use{" "}
           <code className="font-mono text-xs">make reset-db-dev</code> during
           development. Do not write raw SQL migration files.
         </Callout>

@@ -23,7 +23,10 @@ export function Landing() {
       {/* Hero */}
       <section id="about" className="relative overflow-hidden">
         <div className="absolute inset-0 grid-bg opacity-40 pointer-events-none" />
-        <div className="absolute inset-0" style={{ background: "var(--gradient-hero)" }} />
+        <div
+          className="absolute inset-0"
+          style={{ background: "var(--gradient-hero)" }}
+        />
         <div className="relative mx-auto max-w-7xl px-6 pt-24 pb-28 text-center">
           <div
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass text-xs mb-8"
@@ -43,15 +46,19 @@ export function Landing() {
             className="mt-6 text-lg max-w-2xl mx-auto"
             style={{ color: "var(--muted-foreground)" }}
           >
-            TernakClouds IDP is the internal platform built by the platform engineering team
-            to centralize authentication, access control, department isolation, and deployment
-            operations — all in one auditable console.
+            TernakClouds IDP is the internal platform built by the platform
+            engineering team to centralize authentication, access control,
+            department isolation, and deployment operations — all in one
+            auditable console.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
               to="/docs"
               className="px-5 py-3 rounded-md font-medium inline-flex items-center gap-2 shadow-[var(--shadow-glow)]"
-              style={{ background: "var(--color-primary)", color: "var(--primary-foreground)" }}
+              style={{
+                background: "var(--color-primary)",
+                color: "var(--primary-foreground)",
+              }}
             >
               Read the docs <BookOpen className="size-4" />
             </Link>
@@ -66,7 +73,13 @@ export function Landing() {
       </section>
 
       {/* Goals */}
-      <section id="goals" className="border-y border-border" style={{ background: "color-mix(in oklab, var(--card) 30%, transparent)" }}>
+      <section
+        id="goals"
+        className="border-y border-border"
+        style={{
+          background: "color-mix(in oklab, var(--card) 30%, transparent)",
+        }}
+      >
         <div className="mx-auto max-w-7xl px-6 py-20">
           <div className="text-center mb-14">
             <div
@@ -75,10 +88,15 @@ export function Landing() {
             >
               Why we built this
             </div>
-            <h2 className="text-4xl font-bold tracking-tight">Platform goals</h2>
-            <p className="mt-4 max-w-2xl mx-auto" style={{ color: "var(--muted-foreground)" }}>
-              The platform was designed around three core principles that guide every design
-              decision and feature we ship.
+            <h2 className="text-4xl font-bold tracking-tight">
+              Platform goals
+            </h2>
+            <p
+              className="mt-4 max-w-2xl mx-auto"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              The platform was designed around three core principles that guide
+              every design decision and feature we ship.
             </p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
@@ -88,10 +106,16 @@ export function Landing() {
                   className="size-12 rounded-xl grid place-items-center mb-5 mx-auto"
                   style={{ background: "var(--color-secondary)" }}
                 >
-                  <g.icon className="size-6" style={{ color: "var(--color-primary)" }} />
+                  <g.icon
+                    className="size-6"
+                    style={{ color: "var(--color-primary)" }}
+                  />
                 </div>
                 <h3 className="text-lg font-semibold">{g.title}</h3>
-                <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+                <p
+                  className="mt-2 text-sm leading-relaxed"
+                  style={{ color: "var(--muted-foreground)" }}
+                >
                   {g.desc}
                 </p>
               </div>
@@ -109,19 +133,30 @@ export function Landing() {
           >
             Platform capabilities
           </div>
-          <h2 className="text-4xl font-bold tracking-tight">What the platform does</h2>
+          <h2 className="text-4xl font-bold tracking-tight">
+            What the platform does
+          </h2>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((f) => (
-            <div key={f.title} className="glass rounded-xl p-6 hover:border-primary/40 transition group">
+            <div
+              key={f.title}
+              className="glass rounded-xl p-6 hover:border-primary/40 transition group"
+            >
               <div
                 className="size-10 rounded-lg grid place-items-center mb-4 group-hover:opacity-80 transition"
                 style={{ background: "var(--color-secondary)" }}
               >
-                <f.icon className="size-5" style={{ color: "var(--color-primary)" }} />
+                <f.icon
+                  className="size-5"
+                  style={{ color: "var(--color-primary)" }}
+                />
               </div>
               <h3 className="font-semibold">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
+              <p
+                className="mt-2 text-sm leading-relaxed"
+                style={{ color: "var(--muted-foreground)" }}
+              >
                 {f.desc}
               </p>
             </div>
@@ -132,7 +167,9 @@ export function Landing() {
       {/* Security band */}
       <section
         className="border-y border-border"
-        style={{ background: "color-mix(in oklab, var(--card) 30%, transparent)" }}
+        style={{
+          background: "color-mix(in oklab, var(--card) 30%, transparent)",
+        }}
       >
         <div className="mx-auto max-w-7xl px-6 py-20 grid lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -145,10 +182,13 @@ export function Landing() {
             <h2 className="text-4xl font-bold tracking-tight">
               JWT auth. RBAC. Department isolation.
             </h2>
-            <p className="mt-4 leading-relaxed" style={{ color: "var(--muted-foreground)" }}>
-              Short-lived access tokens with rotating refresh, fine-grained permissions, and strict
-              department scoping ensure that every action is authorized, audited, and scoped to the
-              right team.
+            <p
+              className="mt-4 leading-relaxed"
+              style={{ color: "var(--muted-foreground)" }}
+            >
+              Short-lived access tokens with rotating refresh, fine-grained
+              permissions, and strict department scoping ensure that every
+              action is authorized, audited, and scoped to the right team.
             </p>
             <ul className="mt-6 space-y-3 text-sm">
               {securityPoints.map((t) => (
@@ -168,7 +208,7 @@ export function Landing() {
             </div>
             <pre style={{ color: "var(--color-foreground)" }}>
               {`{
-  "actor":      "alex.dev@ternak.io",
+  "actor":      "alex.dev@peternakclouds.com",
   "permission": "deploy_services",
   "department": "payments",
   "service":    "payments-api",
@@ -177,15 +217,17 @@ export function Landing() {
 }`}
             </pre>
             <div className="flex items-center gap-4 mt-4 pt-4 border-t border-border">
-              {["RBAC verified", "Dept scope: payments", "Audit logged"].map((label) => (
-                <div
-                  key={label}
-                  className="flex items-center gap-1.5 text-xs"
-                  style={{ color: "var(--color-success)" }}
-                >
-                  <CheckCircle2 className="size-3.5" /> {label}
-                </div>
-              ))}
+              {["RBAC verified", "Dept scope: payments", "Audit logged"].map(
+                (label) => (
+                  <div
+                    key={label}
+                    className="flex items-center gap-1.5 text-xs"
+                    style={{ color: "var(--color-success)" }}
+                  >
+                    <CheckCircle2 className="size-3.5" /> {label}
+                  </div>
+                ),
+              )}
             </div>
           </div>
         </div>
@@ -200,7 +242,9 @@ export function Landing() {
           >
             Personas
           </div>
-          <h2 className="text-4xl font-bold tracking-tight">Built for admins, devs, and SREs.</h2>
+          <h2 className="text-4xl font-bold tracking-tight">
+            Built for admins, devs, and SREs.
+          </h2>
         </div>
         <div className="grid md:grid-cols-3 gap-5">
           {personas.map((w) => (
@@ -212,7 +256,10 @@ export function Landing() {
                 <w.icon className="size-4" /> {w.tag}
               </div>
               <h3 className="text-xl font-semibold">{w.title}</h3>
-              <p className="mt-2 text-sm" style={{ color: "var(--muted-foreground)" }}>
+              <p
+                className="mt-2 text-sm"
+                style={{ color: "var(--muted-foreground)" }}
+              >
                 {w.desc}
               </p>
               <ul className="mt-5 space-y-2 text-sm">
@@ -240,12 +287,16 @@ export function Landing() {
               Documentation coming soon.
             </h2>
             <p className="mt-3" style={{ color: "var(--muted-foreground)" }}>
-              We're writing full guides for setup, RBAC configuration, API reference, and more.
+              We're writing full guides for setup, RBAC configuration, API
+              reference, and more.
             </p>
             <Link
               to="/docs"
               className="mt-7 inline-flex items-center gap-2 px-6 py-3 rounded-md font-medium shadow-[var(--shadow-glow)]"
-              style={{ background: "var(--color-primary)", color: "var(--primary-foreground)" }}
+              style={{
+                background: "var(--color-primary)",
+                color: "var(--primary-foreground)",
+              }}
             >
               Preview the docs <BookOpen className="size-4" />
             </Link>
@@ -258,9 +309,14 @@ export function Landing() {
           className="mx-auto max-w-7xl px-6 py-10 flex flex-col md:flex-row justify-between gap-4 text-sm"
           style={{ color: "var(--muted-foreground)" }}
         >
-          <div>© {new Date().getFullYear()} TernakClouds · Platform Engineering</div>
+          <div>
+            © {new Date().getFullYear()} TernakClouds · Platform Engineering
+          </div>
           <div className="flex gap-6">
-            <Link to="/docs" className="hover:opacity-100 opacity-70 transition">
+            <Link
+              to="/docs"
+              className="hover:opacity-100 opacity-70 transition"
+            >
               Docs
             </Link>
           </div>
