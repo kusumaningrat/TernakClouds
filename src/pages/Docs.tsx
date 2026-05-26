@@ -10,12 +10,24 @@ const sidebar = [
     items: ["introduction", "installation", "auth-basics"],
   },
   {
+    title: "Platform",
+    items: ["architecture", "runtimes"],
+  },
+  {
+    title: "Observability",
+    items: ["logs-platform"],
+  },
+  {
     title: "Access control",
     items: ["rbac-concepts"],
   },
   {
     title: "User management",
     items: ["inviting-users", "managing-teams", "audit-logs"],
+  },
+  {
+    title: "Contributing",
+    items: ["contributing"],
   },
 ];
 

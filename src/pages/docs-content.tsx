@@ -93,73 +93,90 @@ export const articles: Article[] = [
     title: "Introduction & overview",
     content: (
       <div>
-        <H2>What is TernakClouds IDP?</H2>
+        <H2>What is TernakClouds?</H2>
         <P>
-          TernakClouds IDP (Internal Developer Platform) is a centralized
-          developer control plane designed to standardize application delivery,
-          infrastructure access, and operational workflows across environments
-          and runtime providers.
+          TernakClouds is a self-hosted Internal Developer Platform (IDP) that
+          gives engineering teams a single control plane to deploy services,
+          manage secrets, govern access, and observe infrastructure — across
+          Kubernetes, Nomad, and any runtime.
         </P>
-        <P>The platform provides a unified, auditable interface for:</P>
+        <P>
+          Instead of giving developers direct access to{" "}
+          <code className="font-mono text-xs">kubectl</code>, Nomad CLIs, or
+          Vault, TernakClouds centralizes all platform operations behind a
+          clean, permission-controlled interface.
+        </P>
         <UL
           items={[
-            "Authentication and access control",
-            "Workspace and environment isolation",
-            "Runtime orchestration (Nomad, Kubernetes, and future providers)",
-            "Service lifecycle management",
-            "Deployment automation",
-            "Secrets and registry integrations",
-            "Centralized observability and operational visibility",
+            "Deploy and inspect workloads without runtime-specific knowledge",
+            "Stream logs from any workload in real time",
+            "Request secret access without touching Vault directly",
+            "Submit self-service workspace access requests",
+            "Manage multiple environments (dev, staging, production) per workspace",
           ]}
         />
+
+        <H2>Core concepts</H2>
         <P>
-          Instead of relying on scattered scripts, manually managed
-          infrastructure access, runtime-specific tooling, and inconsistent
-          deployment workflows, TernakClouds enables teams to operate through a
-          governed self-service platform with reusable templates, policy
-          enforcement, and provider-agnostic abstractions.
+          <strong>Workspace</strong> — an isolated organizational tenant with its
+          own environments, members, and capability bindings.
+        </P>
+        <P>
+          <strong>Environment</strong> — a named deployment target within a
+          workspace (e.g. dev, staging, production). Each environment
+          independently configures its own providers.
+        </P>
+        <P>
+          <strong>Capability</strong> — a platform service type:{" "}
+          <code className="font-mono text-xs">runtime</code>,{" "}
+          <code className="font-mono text-xs">secrets</code>,{" "}
+          <code className="font-mono text-xs">logs</code>,{" "}
+          <code className="font-mono text-xs">networking</code>,{" "}
+          <code className="font-mono text-xs">storage</code>.
+        </P>
+        <P>
+          <strong>Provider</strong> — a concrete implementation of a capability
+          (e.g. Nomad for runtime, Loki for logs, Vault for secrets). Providers
+          are bound per-environment and configured with an endpoint and optional
+          credentials stored in Vault.
         </P>
 
-        <H2>Platform principles</H2>
-        <P>The platform is built around:</P>
-        <UL
-          items={[
-            "Environment-scoped infrastructure",
-            "Service-centric operations",
-            "Runtime abstraction",
-            "Deployment standardization",
-            "Centralized observability",
-            "Extensible provider integrations",
-          ]}
-        />
-        <P>
-          This allows organizations to scale developer operations without
-          tightly coupling workflows to specific infrastructure technologies.
-        </P>
-
-        <H2>Architecture overview</H2>
+        <H2>System architecture</H2>
         <CodeBlock>{`
-┌─────────────────────────────────────┐
-│          IDP Frontend (this app)    │
-│   React 19 · TanStack Router        │
-└──────────────┬──────────────────────┘
-               │ REST / JWT
-┌──────────────▼──────────────────────┐
-│           IDP Backend               │
-│   Go · Chi router · PostgreSQL      │
-│   JWT auth · RBAC middleware        │
-└─────────────────────────────────────┘
+┌──────────────────────┐     ┌──────────────────────┐
+│  Admin dashboard     │     │  Public website      │
+│  React + TanStack    │     │  Vite + React        │
+│  :3000               │     │  :4000               │
+└──────────┬───────────┘     └──────────────────────┘
+           │ /api/*  Bearer JWT
+           ▼
+┌──────────────────────┐
+│  Go / Gin REST API   │
+│  :8022               │
+└──────────┬───────────┘
+           │
+  ┌────────┼──────────────────┐
+  ▼        ▼                  ▼
+┌─────┐ ┌───────┐  ┌─────────────────────┐
+│ PG  │ │ Vault │  │  Runtime clusters   │
+│5432 │ │ 8200  │  │  Kubernetes / Nomad │
+└─────┘ └───────┘  └─────────────────────┘
         `}</CodeBlock>
+        <P>
+          The API is stateless. All platform state lives in PostgreSQL. Provider
+          credentials are stored exclusively in Vault KV v2 and never in the
+          database.
+        </P>
 
-        <H2>What's covered in these docs</H2>
+        <H2>What these docs cover</H2>
         <UL
           items={[
-            "Getting started: installation, environment setup, and your first login",
-            "Authentication: token lifecycle, refresh rotation, and session revocation",
-            "RBAC: designing roles, assigning permissions, and department scoping",
-            "User management: inviting teammates and managing teams",
-            "Deployments: triggering, approving, and rolling back deploys",
-            "API reference: full endpoint catalogue with examples",
+            "Installation — prerequisites, configuration, first run",
+            "Architecture — system components, request flows, data model",
+            "Runtimes — Kubernetes and Nomad provider setup and operations",
+            "Logs platform — centralized streaming, Loki integration, search",
+            "Authentication & RBAC — roles, permissions, access requests",
+            "Contributing — development setup, conventions, PR workflow",
           ]}
         />
       </div>
@@ -174,69 +191,113 @@ export const articles: Article[] = [
         <H2>Prerequisites</H2>
         <UL
           items={[
-            "Go 1.22+ for the backend service",
-            "Node 20+ and pnpm for the frontend",
-            "PostgreSQL 15+ for the database",
-            "Docker (optional, for local infra)",
+            "Go 1.22+ — backend API",
+            "Node.js 20+ and npm 10+ — frontend apps",
+            "Docker 24+ and Docker Compose v2 — PostgreSQL",
+            "HashiCorp Vault 1.15+ — optional, only needed for real provider credentials",
           ]}
         />
 
-        <H2>Clone the repositories</H2>
+        <H2>1. Clone and configure</H2>
         <CodeBlock>{`
-# Backend
-git clone https://github.com/ternak-clouds/idp-backend
-cd idp-backend
-
-# Frontend (this repo)
-git clone https://github.com/ternak-clouds/idp
+git clone <repo-url> idp
 cd idp
-        `}</CodeBlock>
 
-        <H2>Backend setup</H2>
-        <P>Copy the example environment file and fill in your values:</P>
+# Backend config
+cp server/.env.example server/.env
+
+# Admin dashboard config
+cp admin/.env.example admin/.env
+        `}</CodeBlock>
+        <P>
+          Edit <code className="font-mono text-xs">server/.env</code> and set
+          the required values:
+        </P>
         <CodeBlock>{`
-cp .env.example .env
-
-# .env
-DATABASE_URL=postgres://user:pass@localhost:5432/idp
-JWT_ACCESS_SECRET=<random-256-bit-secret>
-JWT_REFRESH_SECRET=<different-random-256-bit-secret>
-PORT=8080
+APP_PORT=8022
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_NAME=idp_platform
+JWT_SECRET=change-me-to-a-long-random-string
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=changeme123
+VAULT_ENABLED=false
         `}</CodeBlock>
-        <P>Run migrations and start the server:</P>
-        <CodeBlock>{`
-go run ./cmd/migrate up
-go run ./cmd/server
-# → listening on :8080
-        `}</CodeBlock>
-
-        <H2>Frontend setup</H2>
-        <CodeBlock>{`
-pnpm install
-pnpm dev
-# → http://localhost:4000
-        `}</CodeBlock>
-
-        <Callout title="Note">
-          The frontend expects the backend to be reachable at{" "}
-          <code className="font-mono text-xs">http://localhost:8080</code>. You
-          can override this with a{" "}
-          <code className="font-mono text-xs">VITE_API_URL</code> env variable
-          in <code className="font-mono text-xs">.env.local</code>.
+        <Callout title="VITE_API_URL">
+          Leave <code className="font-mono text-xs">VITE_API_URL</code> empty in{" "}
+          <code className="font-mono text-xs">admin/.env</code> during
+          development — the Vite dev server automatically proxies{" "}
+          <code className="font-mono text-xs">/api/*</code> to the backend.
         </Callout>
 
-        <H2>Seed a superadmin</H2>
-        <P>
-          On a fresh database there are no users. Use the seed command to create
-          the first superadmin account:
-        </P>
+        <H2>2. Start infrastructure</H2>
         <CodeBlock>{`
-go run ./cmd/seed --email admin@ternak.io --password changeme
+make docker-up
+# starts PostgreSQL on :5432
+        `}</CodeBlock>
+
+        <H2>3. Install dependencies and run</H2>
+        <CodeBlock>{`
+make install   # npm install for site + admin dashboard
+make dev       # starts API (:8022) + admin dashboard (:3000)
         `}</CodeBlock>
         <P>
-          Log in with those credentials to access the admin console and invite
-          your team.
+          Or start services individually:
         </P>
+        <CodeBlock>{`
+make dev-backend   # Go API on :8022
+make dev-admin     # Admin dashboard on :3000
+make dev-site      # Public website on :4000
+        `}</CodeBlock>
+
+        <H2>4. First login</H2>
+        <P>
+          Open{" "}
+          <a
+            href="http://localhost:3000"
+            className="underline underline-offset-2"
+            style={{ color: "var(--color-primary)" }}
+          >
+            http://localhost:3000
+          </a>{" "}
+          and log in with the{" "}
+          <code className="font-mono text-xs">ADMIN_EMAIL</code> and{" "}
+          <code className="font-mono text-xs">ADMIN_PASSWORD</code> you set. On
+          first start the server auto-migrates the database and seeds default
+          roles, a bootstrap admin user, and a Platform workspace with dev /
+          staging / production environments.
+        </P>
+
+        <H2>Reset the database</H2>
+        <P>During development you can wipe and re-seed at any time:</P>
+        <CodeBlock>{`
+make reset-db-dev
+        `}</CodeBlock>
+
+        <H2>Environment variable reference</H2>
+        <CodeBlock>{`
+# server/.env
+APP_PORT            API listen port (default: 8022)
+GIN_MODE            debug | release
+DB_HOST / DB_PORT   PostgreSQL connection
+DB_USER / DB_PASSWORD / DB_NAME
+DB_SSLMODE          disable (dev) | require (prod)
+JWT_SECRET          HMAC-SHA256 key — min 32 chars
+JWT_ACCESS_EXPIRY   Access token TTL (default: 15m)
+JWT_REFRESH_EXPIRY  Refresh token TTL (default: 168h)
+ADMIN_EMAIL         Bootstrap admin email
+ADMIN_PASSWORD      Bootstrap admin password
+VAULT_ENABLED       true | false (default: false)
+VAULT_ADDR          Vault server URL
+VAULT_ROLE_ID       AppRole role ID
+VAULT_SECRET_ID     AppRole secret ID
+VAULT_KV_MOUNT      KV v2 mount path (default: secret)
+
+# admin/.env
+VITE_API_URL        Backend URL (empty in dev)
+        `}</CodeBlock>
       </div>
     ),
   },
@@ -684,6 +745,485 @@ GET /api/v1/audit?department=payments&action=deploy_services&limit=20
           Audit events are retained indefinitely by default. Contact your
           platform admin to configure a retention window if storage becomes a
           concern.
+        </Callout>
+      </div>
+    ),
+  },
+
+  {
+    id: "architecture",
+    title: "Architecture",
+    content: (
+      <div>
+        <H2>System components</H2>
+        <P>
+          TernakClouds is a Go/Gin REST API backed by PostgreSQL and HashiCorp
+          Vault. The admin dashboard is a React + TanStack Router SPA. All
+          communication between dashboard and API uses JWT bearer tokens.
+        </P>
+        <CodeBlock>{`
+┌──────────────────────────────────────────────────────┐
+│  Admin dashboard  React + TanStack  :3000            │
+└───────────────────────────┬──────────────────────────┘
+                            │ /api/*  Bearer JWT
+                            ▼
+┌──────────────────────────────────────────────────────┐
+│  Go / Gin REST API  :8022                            │
+│  internal/                                           │
+│    auth/       workspace/    capability/             │
+│    user/       environment/  runtime/  secrets/      │
+└──────┬──────────────┬────────────────────────────────┘
+       │              │
+  ┌────▼────┐   ┌─────▼──────────────────────────────┐
+  │Postgres │   │ Vault KV v2                        │
+  │ :5432   │   │ idp/capabilities/{envID}/{cap}/... │
+  └─────────┘   └────────────────────────────────────┘
+        `}</CodeBlock>
+
+        <H2>Backend package structure</H2>
+        <P>
+          Each domain lives under{" "}
+          <code className="font-mono text-xs">server/internal/</code> as an
+          independent package. Every package follows the same layout:
+        </P>
+        <CodeBlock>{`
+internal/<domain>/
+  models.go      GORM model definitions
+  types.go       Request/response DTOs
+  repository.go  Database queries and writes
+  service.go     Business logic
+  handler.go     HTTP handlers
+  routes.go      Route registration
+        `}</CodeBlock>
+        <P>
+          Routes are registered in{" "}
+          <code className="font-mono text-xs">
+            internal/server/server.go
+          </code>
+          . Each package exposes a{" "}
+          <code className="font-mono text-xs">RegisterRoutes</code> function —
+          never register routes inline in{" "}
+          <code className="font-mono text-xs">server.go</code>.
+        </P>
+
+        <H2>Request flow — capability binding</H2>
+        <CodeBlock>{`
+POST /api/v1/workspaces/:slug/environments/:envSlug
+     /capabilities/:cap/provider
+
+1. JWT middleware validates token, extracts user + roles
+2. ownerGuard checks workspace membership (owner required)
+3. Permission middleware checks environments:write platform role
+4. Handler calls capability.Service.BindProvider
+5. Service writes ProviderConfig to Postgres
+6. If token present: Service stores it in Vault at
+   idp/capabilities/{envID}/{cap}/{providerName}/token
+7. Vault path saved to ProviderConfig (not the token itself)
+        `}</CodeBlock>
+
+        <H2>Request flow — log streaming</H2>
+        <CodeBlock>{`
+GET /api/v1/workspaces/:slug/environments/:envSlug
+    /runtime/kubernetes/pods/:ns/:name/logs?container=app&follow=true
+
+1. Auth + workspace membership verified
+2. Handler fetches K8s provider config for environment
+3. Retrieves K8s service account token from Vault
+4. Opens streaming connection to K8s API server
+5. Reads lines with bufio.Scanner
+6. Emits each line as SSE event: log
+7. On disconnect: cleans up upstream connection
+        `}</CodeBlock>
+
+        <H2>Data model</H2>
+        <UL
+          items={[
+            "Workspace — top-level tenant; has members (users) and environments",
+            "Environment — deployment target (dev/staging/prod) within a workspace",
+            "CapabilityType — platform-defined capability slot: runtime, secrets, logs, networking, storage",
+            "ProviderCatalogue — available implementations seeded at startup (kubernetes, nomad, loki, vault, …)",
+            "ProviderConfig — a bound provider: capability + provider + endpoint + Vault path (per environment)",
+          ]}
+        />
+
+        <H2>Authorization model</H2>
+        <P>
+          All privileged mutations require both layers simultaneously:
+        </P>
+        <CodeBlock>{`
+Layer 1: Platform role permission
+  e.g. environments:write → admin and manager only
+
+Layer 2: Workspace ownership
+  user must be workspace owner (not just member)
+
+Both must pass. Being admin globally is not enough
+to modify a workspace you do not own.
+        `}</CodeBlock>
+        <Callout title="Vault credential isolation">
+          Provider tokens are stored in Vault and retrieved at request time.
+          They are never returned in API responses and never persisted in
+          PostgreSQL. The database stores only the Vault path.
+        </Callout>
+      </div>
+    ),
+  },
+
+  {
+    id: "runtimes",
+    title: "Runtimes",
+    content: (
+      <div>
+        <H2>Overview</H2>
+        <P>
+          A runtime provider connects an environment to a workload orchestrator.
+          Two providers are supported: <strong>Kubernetes</strong> and{" "}
+          <strong>Nomad</strong>. Each environment binds exactly one runtime
+          provider. Operations — listing workloads, streaming logs, inspecting
+          pods — are proxied through the TernakClouds API; developers never
+          call the runtime APIs directly.
+        </P>
+
+        <H2>Binding a Kubernetes provider</H2>
+        <P>
+          Navigate to <strong>Platform → Runtime</strong> in any environment,
+          then click <strong>Add provider → Kubernetes</strong>.
+        </P>
+        <UL
+          items={[
+            "Endpoint — Kubernetes API server URL (e.g. https://k8s.internal:6443)",
+            "Token — service account bearer token with namespace read + pod log access",
+            "Namespace — optional default namespace (can be overridden per request)",
+          ]}
+        />
+        <P>Required RBAC for the service account:</P>
+        <CodeBlock>{`
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ternak-clouds-reader
+rules:
+  - apiGroups: [""]
+    resources: [namespaces, pods]
+    verbs: [get, list, watch]
+  - apiGroups: [""]
+    resources: [pods/log]
+    verbs: [get]
+  - apiGroups: [apps]
+    resources: [deployments, replicasets]
+    verbs: [get, list, watch]
+        `}</CodeBlock>
+
+        <H2>Binding a Nomad provider</H2>
+        <P>
+          Navigate to <strong>Platform → Runtime</strong>, then click{" "}
+          <strong>Add provider → Nomad</strong>.
+        </P>
+        <UL
+          items={[
+            "Endpoint — Nomad HTTP API base URL (e.g. https://nomad.internal:4646)",
+            "Token — Nomad ACL token with read:job + alloc access",
+            "Namespace — optional Nomad namespace (default: default)",
+          ]}
+        />
+        <P>Minimum Nomad ACL policy:</P>
+        <CodeBlock>{`
+namespace "default" {
+  policy       = "read"
+  capabilities = ["read-job", "alloc-exec", "read-logs"]
+}
+        `}</CodeBlock>
+
+        <H2>Runtime operations</H2>
+        <CodeBlock>{`
+# Kubernetes
+GET /runtime/kubernetes/namespaces
+GET /runtime/kubernetes/pods/:namespace
+GET /runtime/kubernetes/pods/:namespace/:name
+GET /runtime/kubernetes/pods/:namespace/:name/logs
+    ?container=app&follow=true
+
+# Nomad
+GET /runtime/nomad/namespaces
+GET /runtime/nomad/jobs
+GET /runtime/nomad/jobs/:jobID
+GET /runtime/nomad/allocations/:allocID/logs
+    ?task=server&type=stdout&follow=true
+        `}</CodeBlock>
+        <P>
+          All paths above are prefixed with{" "}
+          <code className="font-mono text-xs">
+            /api/v1/workspaces/:slug/environments/:envSlug
+          </code>
+          .
+        </P>
+
+        <H2>Workload model</H2>
+        <P>
+          Both runtimes expose their workloads through the same normalized
+          shape in the dashboard. Kubernetes pods and Nomad allocations both
+          appear in the same workload selector without runtime-specific UI.
+        </P>
+        <CodeBlock>{`
+// Kubernetes pod → normalized
+{
+  id:        "default/payments-api-8f4d9b",
+  runtime:   "kubernetes",
+  type:      "pod",
+  name:      "payments-api-8f4d9b",
+  namespace: "default",
+  status:    "Running",
+  containers: ["app", "sidecar"]
+}
+
+// Nomad allocation → normalized
+{
+  id:       "a3f2c1d0-...",
+  runtime:  "nomad",
+  type:     "allocation",
+  name:     "payments-api",
+  job:      "payments-api",
+  status:   "running",
+  tasks:    ["server", "migrations"]
+}
+        `}</CodeBlock>
+
+        <H2>Verifying a provider</H2>
+        <P>
+          Use the <strong>Verify</strong> button on any bound provider card.
+          It probes <code className="font-mono text-xs">{"{endpoint}/ready"}</code>{" "}
+          with a 5-second timeout and reports{" "}
+          <strong>reachable</strong> (green) or <strong>unreachable</strong>{" "}
+          (red).
+        </P>
+      </div>
+    ),
+  },
+
+  {
+    id: "logs-platform",
+    title: "Logs platform",
+    content: (
+      <div>
+        <H2>Overview</H2>
+        <P>
+          The logs platform gives developers a single place to tail, search,
+          and filter logs from any workload — without{" "}
+          <code className="font-mono text-xs">kubectl logs</code>, direct
+          allocation access, or infrastructure knowledge.
+        </P>
+        <CodeBlock>{`
+Runtime workloads (pods / allocations)
+            │  native log API
+            ▼
+TernakClouds backend (proxy + SSE emitter)
+            │  Server-Sent Events
+            ▼
+Admin dashboard — Logs page
+live tail · search · filter · highlight
+        `}</CodeBlock>
+
+        <H2>Live streaming</H2>
+        <P>
+          The primary mode. Works as long as a runtime provider is bound — no
+          logs backend needed.
+        </P>
+        <UL
+          items={[
+            "Kubernetes: proxies pod log streaming via the K8s API server",
+            "Nomad: proxies allocation log streaming via the Nomad client HTTP API; decodes base64 LogFrame objects",
+            "Stream is forwarded as SSE — browser receives events in real time",
+            "Logs capped at 3,000 lines; older lines drop automatically",
+          ]}
+        />
+
+        <H2>Using the Logs page</H2>
+        <P>
+          Navigate to any environment → <strong>Logs</strong> in the sidebar.
+        </P>
+        <UL
+          items={[
+            "Runtime — select the runtime provider (Kubernetes or Nomad)",
+            "Namespace — dropdown populated from the cluster; changing it resets the workload selection",
+            "Workload — select a pod (K8s) or job (Nomad)",
+            "Container / Task — auto-populated from the selected workload",
+            "Source — stdout or stderr",
+            "Stream / Stop — start and stop live tailing",
+          ]}
+        />
+
+        <H2>Search and filter</H2>
+        <P>
+          Type a term in the Search bar and press{" "}
+          <code className="font-mono text-xs">Enter</code> (or click Search).
+          Only matching lines are shown; matches are highlighted in yellow. The
+          counter shows <code className="font-mono text-xs">N / Total</code>{" "}
+          when a filter is active. Press{" "}
+          <code className="font-mono text-xs">Escape</code> or click ✕ to
+          clear. Search is client-side and does not affect the streaming
+          connection.
+        </P>
+
+        <H2>SSE protocol</H2>
+        <CodeBlock>{`
+event: connected
+data: {}
+
+event: log
+data: 2026-05-26T10:00:00Z INFO starting server port=8080
+
+event: log
+data: 2026-05-26T10:00:01Z INFO request path=/health status=200
+
+event: error
+data: connection refused
+        `}</CodeBlock>
+        <P>
+          Events are split by double newline. The client reads the response
+          body as a byte stream, parses SSE blocks, and dispatches to React
+          state.
+        </P>
+
+        <H2>Logs backend (Loki)</H2>
+        <P>
+          A logs backend enables historical log queries independent of live
+          streaming. Navigate to <strong>Platform → Logs Backend</strong> and
+          bind a Loki provider.
+        </P>
+        <UL
+          items={[
+            "Endpoint — Loki base URL (e.g. https://loki.internal:3100)",
+            "Token — optional bearer token (leave blank for unauthenticated Loki)",
+            "Use Verify to confirm the /ready endpoint responds",
+          ]}
+        />
+        <Callout title="Architecture boundary">
+          The frontend never communicates with Loki directly. All queries go
+          through the TernakClouds API, which translates them into LogQL. Loki
+          is never exposed to the public network.
+        </Callout>
+
+        <H2>Structured log recommendations</H2>
+        <P>
+          Applications should emit structured JSON logs for the best search
+          experience:
+        </P>
+        <CodeBlock>{`
+{
+  "timestamp": "2026-05-26T10:00:00Z",
+  "level":     "error",
+  "service":   "payments",
+  "message":   "database timeout after 30s",
+  "traceId":   "abc123",
+  "requestId": "req-456"
+}
+        `}</CodeBlock>
+        <P>
+          Use low-cardinality values as Loki labels (
+          <code className="font-mono text-xs">namespace</code>,{" "}
+          <code className="font-mono text-xs">environment</code>,{" "}
+          <code className="font-mono text-xs">app</code>). High-cardinality
+          values like <code className="font-mono text-xs">traceId</code> belong
+          in the log payload, not labels.
+        </P>
+      </div>
+    ),
+  },
+
+  {
+    id: "contributing",
+    title: "Contributing",
+    content: (
+      <div>
+        <H2>Development setup</H2>
+        <CodeBlock>{`
+git clone <repo-url> idp && cd idp
+cp server/.env.example server/.env   # edit DB_* and JWT_SECRET
+cp admin/.env.example admin/.env
+make docker-up   # start PostgreSQL
+make install     # npm install for site + admin
+make dev         # API :8022 + dashboard :3000
+        `}</CodeBlock>
+        <P>
+          Vault is not required for local development — set{" "}
+          <code className="font-mono text-xs">VAULT_ENABLED=false</code>.
+        </P>
+
+        <H2>Backend conventions</H2>
+        <P>
+          Follow the package layout described in the Architecture article. Key
+          rules:
+        </P>
+        <UL
+          items={[
+            "Route registration belongs in the package routes.go — never inline in server.go",
+            "Use pkg.RespondOK / pkg.RespondErr / pkg.RespondMessage for all HTTP responses",
+            "Return typed sentinel errors from services (ErrNotFound, ErrAlreadyExists) and map them to HTTP codes in handlers",
+            "All models embed models.Base (UUID primary key, CreatedAt, UpdatedAt, DeletedAt soft delete)",
+            "Never use integer auto-increment IDs",
+          ]}
+        />
+        <P>Vault token paths follow this convention:</P>
+        <CodeBlock>{`
+idp/capabilities/{environmentID}/{capabilityName}/{providerName}/token
+
+# Example
+idp/capabilities/550e8400.../runtime/nomad/token
+        `}</CodeBlock>
+
+        <H2>Frontend conventions</H2>
+        <UL
+          items={[
+            "All API calls go through TanStack Query hooks in src/lib/queries.ts — never call fetch directly in components",
+            "All types live in src/lib/types.ts — use exact field names from the Go JSON tags",
+            "Routes follow TanStack Router file-based naming: dashboard.environments.$envId.logs.tsx → /dashboard/environments/:envId/logs",
+            "Use Tailwind CSS utility classes; follow the dark-mode-first approach with CSS variable tokens",
+          ]}
+        />
+        <CodeBlock>{`
+// Query hook pattern
+export function useMyResource(slug: string, id: string) {
+  return useQuery<MyResource, ApiError>({
+    queryKey: ["workspaces", slug, "my-resource", id],
+    queryFn:  () => api.get(\`/api/v1/workspaces/\${slug}/my-resource/\${id}\`),
+    enabled:  !!slug && !!id,
+  });
+}
+        `}</CodeBlock>
+
+        <H2>Makefile reference</H2>
+        <CodeBlock>{`
+make dev              # API + admin dashboard
+make dev-backend      # Go API only (:8022)
+make dev-admin        # Admin dashboard only (:3000)
+make dev-site         # Public website only (:4000)
+
+make build            # Build all artifacts
+make test             # go test ./...
+make fmt              # go fmt + prettier
+make lint             # eslint (admin)
+
+make docker-up        # Start Postgres
+make docker-down      # Stop all Docker services
+make reset-db-dev     # Drop + re-migrate + re-seed (dev only)
+        `}</CodeBlock>
+
+        <H2>Pull request guidelines</H2>
+        <UL
+          items={[
+            "Branch from main — use descriptive names: feature/logs-search, fix/nomad-allocation-resolver",
+            "Keep backend and frontend changes together when they are coupled",
+            "Run make test, make fmt, and cd admin && npm run lint before opening a PR",
+            "PR description must include what changed and why, any API contract changes, and how to test manually",
+            "Do not amend published commits — push new commits for review feedback",
+          ]}
+        />
+        <Callout title="Database migrations">
+          The project uses GORM AutoMigrate. Add or modify fields in
+          models.go — the schema updates on next server start. For destructive
+          changes (drop column, rename), write a manual migration or use{" "}
+          <code className="font-mono text-xs">make reset-db-dev</code> during
+          development. Do not write raw SQL migration files.
         </Callout>
       </div>
     ),
