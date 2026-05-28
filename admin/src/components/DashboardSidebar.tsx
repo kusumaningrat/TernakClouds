@@ -219,6 +219,7 @@ const ADMIN_NAV = [
 const PROVIDER_DISPLAY: Record<string, string> = {
   nomad: "Nomad",
   kubernetes: "K8s",
+  docker: "Docker",
   vault: "Vault",
   consul: "Consul",
   prometheus: "Prometheus",
@@ -279,7 +280,12 @@ export function DashboardSidebar() {
   const { data: capabilities } = useCapabilities(workspaceSlug ?? "", activeEnvId ?? "");
 
   const capMap = Object.fromEntries((capabilities ?? []).map((c) => [c.capability_name, c]));
-  const hasK8s = (capMap["runtime"]?.providers ?? []).some((p) => p.provider_name === "kubernetes");
+  const runtimeProviders = capMap["runtime"]?.providers ?? [];
+  const hasK8s = runtimeProviders.some((p) => p.provider_name === "kubernetes");
+  const hasDocker = runtimeProviders.some((p) => p.provider_name === "docker");
+  const hasNomadOrK8s = runtimeProviders.some(
+    (p) => p.provider_name === "nomad" || p.provider_name === "kubernetes",
+  );
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -377,25 +383,38 @@ export function DashboardSidebar() {
             <div>
               <SectionHeader label="Applications" />
               <nav className="flex flex-col gap-0.5">
-                <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/services`}
-                  label="Services"
-                  icon={Layers}
-                  active={envActive("services")}
-                />
-                <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/deployments`}
-                  label="Deployments"
-                  icon={Rocket}
-                  active={envActive("deployments")}
-                />
-                {hasK8s && (
+                {hasNomadOrK8s && (
+                  <>
+                    <NavLink
+                      to={`/dashboard/environments/${activeEnvId}/services`}
+                      label="Services"
+                      icon={Layers}
+                      active={envActive("services")}
+                    />
+                    <NavLink
+                      to={`/dashboard/environments/${activeEnvId}/deployments`}
+                      label="Deployments"
+                      icon={Rocket}
+                      active={envActive("deployments")}
+                    />
+                    {hasK8s && (
+                      <NavLink
+                        to={`/dashboard/environments/${activeEnvId}/pods`}
+                        label="Pods"
+                        icon={Server}
+                        active={envActive("pods")}
+                        badge="K8s"
+                      />
+                    )}
+                  </>
+                )}
+                {hasDocker && (
                   <NavLink
-                    to={`/dashboard/environments/${activeEnvId}/pods`}
-                    label="Pods"
-                    icon={Server}
-                    active={envActive("pods")}
-                    badge="K8s"
+                    to={`/dashboard/environments/${activeEnvId}/containers`}
+                    label="Containers"
+                    icon={Container}
+                    active={envActive("containers")}
+                    badge="Docker"
                   />
                 )}
                 <NavLink
@@ -404,12 +423,6 @@ export function DashboardSidebar() {
                   icon={Package}
                   active={envActive("service-catalog")}
                 />
-                {/* <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/runtime-events`}
-                  label="Events"
-                  icon={Zap}
-                  active={envActive("runtime-events")}
-                /> */}
               </nav>
             </div>
 

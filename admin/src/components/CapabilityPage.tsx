@@ -58,7 +58,7 @@ function AddProviderForm({
   const [error, setError] = useState<string | null>(null);
   const bind = useBindProvider();
 
-  const isTokenOptional = selectedProvider?.name === "loki";
+  const isTokenOptional = selectedProvider?.name === "loki" || selectedProvider?.name === "docker";
 
   const handleSubmit = async () => {
     if (!selectedProvider) {
