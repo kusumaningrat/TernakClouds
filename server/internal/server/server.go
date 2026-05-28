@@ -11,6 +11,7 @@ import (
 	"github.com/kusumaningrat/idp-backend/internal/config"
 	"github.com/kusumaningrat/idp-backend/internal/department"
 	"github.com/kusumaningrat/idp-backend/internal/environment"
+	"github.com/kusumaningrat/idp-backend/internal/docker"
 	"github.com/kusumaningrat/idp-backend/internal/kubernetes"
 	"github.com/kusumaningrat/idp-backend/internal/middleware"
 	"github.com/kusumaningrat/idp-backend/internal/nomad"
@@ -77,6 +78,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	arService := accessrequest.NewService(arRepo, wsService, roleService)
 	nomadService := nomad.NewService(capRepo, vc)
 	k8sService := kubernetes.NewService(capRepo, vc)
+	dockerService := docker.NewService(capRepo, vc)
 	secretService := secret.NewService(secret.NewRepository(db), capRepo, vc)
 	registryService := registry.NewService(registryRepo, vc)
 	catalogService := servicecatalog.NewService(catalogRepo, nomadService, registryRepo, capRepo, vc)
@@ -93,6 +95,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	capHandler := capability.NewHandler(capService)
 	nomadHandler := nomad.NewHandler(nomadService)
 	k8sHandler := kubernetes.NewHandler(k8sService)
+	dockerHandler := docker.NewHandler(dockerService)
 	secretHandler := secret.NewHandler(secretService)
 	arHandler := accessrequest.NewHandler(arService)
 	registryHandler := registry.NewHandler(registryService)
@@ -158,6 +161,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 		)
 		nomad.RegisterRoutes(envGroup, nomadHandler)
 		kubernetes.RegisterRoutes(envGroup, k8sHandler)
+		docker.RegisterRoutes(envGroup, dockerHandler)
 		secret.RegisterRoutes(envGroup, secretHandler)
 
 		registry.RegisterWorkspaceRoutes(protected, registryHandler,

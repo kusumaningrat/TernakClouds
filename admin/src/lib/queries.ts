@@ -62,6 +62,11 @@ import type {
   K8sDeploymentDetail,
   K8sPodDetail,
   K8sServiceDetail,
+  DockerContainerStub,
+  DockerContainerDetail,
+  DockerImageStub,
+  DockerNetworkStub,
+  DockerVolumeStub,
   CatalogItem,
   ServiceDeployment,
   DeployServiceInput,
@@ -1346,6 +1351,110 @@ export function useVerifyProvider() {
         `/api/v1/workspaces/${slug}/environments/${encodeURIComponent(envSlug)}/capabilities/${cap}/provider/${providerID}/verify`,
         {},
       ),
+  });
+}
+
+// ─── Docker ───────────────────────────────────────────────────────────────────
+
+export const dockerKeys = {
+  containers: (slug: string, envSlug: string) =>
+    ["workspaces", slug, "environments", envSlug, "docker", "containers"] as const,
+  container: (slug: string, envSlug: string, id: string) =>
+    ["workspaces", slug, "environments", envSlug, "docker", "containers", id] as const,
+  images: (slug: string, envSlug: string) =>
+    ["workspaces", slug, "environments", envSlug, "docker", "images"] as const,
+  networks: (slug: string, envSlug: string) =>
+    ["workspaces", slug, "environments", envSlug, "docker", "networks"] as const,
+  volumes: (slug: string, envSlug: string) =>
+    ["workspaces", slug, "environments", envSlug, "docker", "volumes"] as const,
+};
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/docker/containers
+export function useDockerContainers(slug: string, envSlug: string, enabled = true) {
+  return useQuery<DockerContainerStub[], ApiError>({
+    queryKey: dockerKeys.containers(slug, envSlug),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers`),
+    enabled: !!slug && !!envSlug && enabled,
+    staleTime: 15_000,
+  });
+}
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/docker/containers/:id
+export function useDockerContainer(slug: string, envSlug: string, id: string, enabled = true) {
+  return useQuery<DockerContainerDetail, ApiError>({
+    queryKey: dockerKeys.container(slug, envSlug, id),
+    queryFn: () =>
+      api.get(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers/${encodeURIComponent(id)}`,
+      ),
+    enabled: !!slug && !!envSlug && !!id && enabled,
+    staleTime: 10_000,
+  });
+}
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/docker/images
+export function useDockerImages(slug: string, envSlug: string, enabled = true) {
+  return useQuery<DockerImageStub[], ApiError>({
+    queryKey: dockerKeys.images(slug, envSlug),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/images`),
+    enabled: !!slug && !!envSlug && enabled,
+    staleTime: 30_000,
+  });
+}
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/docker/networks
+export function useDockerNetworks(slug: string, envSlug: string, enabled = true) {
+  return useQuery<DockerNetworkStub[], ApiError>({
+    queryKey: dockerKeys.networks(slug, envSlug),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/networks`),
+    enabled: !!slug && !!envSlug && enabled,
+    staleTime: 30_000,
+  });
+}
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/docker/volumes
+export function useDockerVolumes(slug: string, envSlug: string, enabled = true) {
+  return useQuery<DockerVolumeStub[], ApiError>({
+    queryKey: dockerKeys.volumes(slug, envSlug),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/volumes`),
+    enabled: !!slug && !!envSlug && enabled,
+    staleTime: 30_000,
+  });
+}
+
+// POST /api/v1/workspaces/:slug/environments/:envSlug/docker/containers/:id/start
+// POST /api/v1/workspaces/:slug/environments/:envSlug/docker/containers/:id/stop
+// POST /api/v1/workspaces/:slug/environments/:envSlug/docker/containers/:id/restart
+export function useDockerContainerAction() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { message: string },
+    ApiError,
+    { slug: string; envSlug: string; id: string; action: "start" | "stop" | "restart" }
+  >({
+    mutationFn: ({ slug, envSlug, id, action }) =>
+      api.post(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers/${encodeURIComponent(id)}/${action}`,
+        {},
+      ),
+    onSuccess: (_, { slug, envSlug, id }) => {
+      void queryClient.invalidateQueries({ queryKey: dockerKeys.containers(slug, envSlug) });
+      void queryClient.invalidateQueries({ queryKey: dockerKeys.container(slug, envSlug, id) });
+    },
+  });
+}
+
+// DELETE /api/v1/workspaces/:slug/environments/:envSlug/docker/containers/:id
+export function useRemoveDockerContainer() {
+  const queryClient = useQueryClient();
+  return useMutation<{ message: string }, ApiError, { slug: string; envSlug: string; id: string }>({
+    mutationFn: ({ slug, envSlug, id }) =>
+      api.delete(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers/${encodeURIComponent(id)}`,
+      ),
+    onSuccess: (_, { slug, envSlug }) => {
+      void queryClient.invalidateQueries({ queryKey: dockerKeys.containers(slug, envSlug) });
+    },
   });
 }
 

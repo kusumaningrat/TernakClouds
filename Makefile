@@ -82,3 +82,8 @@ clean:
 	rm -rf server/bin
 	rm -rf admin/dist admin/.tanstack admin/.wrangler
 	rm -rf dist
+
+# ── Admin Linting ────────────────────────────────────────────────────────────────────
+
+lint-admin:
+	cd admin && npm run lint

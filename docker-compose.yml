@@ -55,7 +55,7 @@ services:
       postgres:
         condition: service_healthy
     env_file:
-      - ./backend/.env
+      - ./server/.env
     environment:
       DB_HOST: postgres
       DB_USER: postgres

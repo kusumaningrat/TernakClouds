@@ -47,6 +47,7 @@ import { Route as DashboardEnvironmentsEnvIdIntegrationsRouteImport } from './ro
 import { Route as DashboardEnvironmentsEnvIdDeploymentsRouteImport } from './routes/dashboard.environments.$envId.deployments'
 import { Route as DashboardEnvironmentsEnvIdBlueprintsRouteImport } from './routes/dashboard.environments.$envId.blueprints'
 import { Route as DashboardEnvironmentsEnvIdApplicationsRouteImport } from './routes/dashboard.environments.$envId.applications'
+import { Route as DashboardEnvironmentsEnvIdContainersRouteImport } from './routes/dashboard.environments.$envId.containers'
 import { Route as DashboardEnvironmentsEnvIdServicesIndexRouteImport } from './routes/dashboard.environments.$envId.services.index'
 import { Route as DashboardEnvironmentsEnvIdPodsIndexRouteImport } from './routes/dashboard.environments.$envId.pods.index'
 import { Route as DashboardEnvironmentsEnvIdDeploymentsIndexRouteImport } from './routes/dashboard.environments.$envId.deployments.index'
@@ -270,6 +271,12 @@ const DashboardEnvironmentsEnvIdApplicationsRoute =
     path: '/applications',
     getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
   } as any)
+const DashboardEnvironmentsEnvIdContainersRoute =
+  DashboardEnvironmentsEnvIdContainersRouteImport.update({
+    id: '/containers',
+    path: '/containers',
+    getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
+  } as any)
 const DashboardEnvironmentsEnvIdServicesIndexRoute =
   DashboardEnvironmentsEnvIdServicesIndexRouteImport.update({
     id: '/',
@@ -368,6 +375,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/environments/': typeof DashboardEnvironmentsIndexRoute
   '/dashboard/environments/$envId/applications': typeof DashboardEnvironmentsEnvIdApplicationsRoute
   '/dashboard/environments/$envId/blueprints': typeof DashboardEnvironmentsEnvIdBlueprintsRoute
+  '/dashboard/environments/$envId/containers': typeof DashboardEnvironmentsEnvIdContainersRoute
   '/dashboard/environments/$envId/deployments': typeof DashboardEnvironmentsEnvIdDeploymentsRouteWithChildren
   '/dashboard/environments/$envId/integrations': typeof DashboardEnvironmentsEnvIdIntegrationsRoute
   '/dashboard/environments/$envId/logs': typeof DashboardEnvironmentsEnvIdLogsRoute
@@ -417,6 +425,7 @@ export interface FileRoutesByTo {
   '/dashboard/environments': typeof DashboardEnvironmentsIndexRoute
   '/dashboard/environments/$envId/applications': typeof DashboardEnvironmentsEnvIdApplicationsRoute
   '/dashboard/environments/$envId/blueprints': typeof DashboardEnvironmentsEnvIdBlueprintsRoute
+  '/dashboard/environments/$envId/containers': typeof DashboardEnvironmentsEnvIdContainersRoute
   '/dashboard/environments/$envId/integrations': typeof DashboardEnvironmentsEnvIdIntegrationsRoute
   '/dashboard/environments/$envId/logs': typeof DashboardEnvironmentsEnvIdLogsRoute
   '/dashboard/environments/$envId/metrics': typeof DashboardEnvironmentsEnvIdMetricsRoute
@@ -467,6 +476,7 @@ export interface FileRoutesById {
   '/dashboard/environments/': typeof DashboardEnvironmentsIndexRoute
   '/dashboard/environments/$envId/applications': typeof DashboardEnvironmentsEnvIdApplicationsRoute
   '/dashboard/environments/$envId/blueprints': typeof DashboardEnvironmentsEnvIdBlueprintsRoute
+  '/dashboard/environments/$envId/containers': typeof DashboardEnvironmentsEnvIdContainersRoute
   '/dashboard/environments/$envId/deployments': typeof DashboardEnvironmentsEnvIdDeploymentsRouteWithChildren
   '/dashboard/environments/$envId/integrations': typeof DashboardEnvironmentsEnvIdIntegrationsRoute
   '/dashboard/environments/$envId/logs': typeof DashboardEnvironmentsEnvIdLogsRoute
@@ -521,6 +531,7 @@ export interface FileRouteTypes {
     | '/dashboard/environments/'
     | '/dashboard/environments/$envId/applications'
     | '/dashboard/environments/$envId/blueprints'
+    | '/dashboard/environments/$envId/containers'
     | '/dashboard/environments/$envId/deployments'
     | '/dashboard/environments/$envId/integrations'
     | '/dashboard/environments/$envId/logs'
@@ -570,6 +581,7 @@ export interface FileRouteTypes {
     | '/dashboard/environments'
     | '/dashboard/environments/$envId/applications'
     | '/dashboard/environments/$envId/blueprints'
+    | '/dashboard/environments/$envId/containers'
     | '/dashboard/environments/$envId/integrations'
     | '/dashboard/environments/$envId/logs'
     | '/dashboard/environments/$envId/metrics'
@@ -619,6 +631,7 @@ export interface FileRouteTypes {
     | '/dashboard/environments/'
     | '/dashboard/environments/$envId/applications'
     | '/dashboard/environments/$envId/blueprints'
+    | '/dashboard/environments/$envId/containers'
     | '/dashboard/environments/$envId/deployments'
     | '/dashboard/environments/$envId/integrations'
     | '/dashboard/environments/$envId/logs'
@@ -923,6 +936,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardEnvironmentsEnvIdApplicationsRouteImport
       parentRoute: typeof DashboardEnvironmentsEnvIdRoute
     }
+    '/dashboard/environments/$envId/containers': {
+      id: '/dashboard/environments/$envId/containers'
+      path: '/containers'
+      fullPath: '/dashboard/environments/$envId/containers'
+      preLoaderRoute: typeof DashboardEnvironmentsEnvIdContainersRouteImport
+      parentRoute: typeof DashboardEnvironmentsEnvIdRoute
+    }
     '/dashboard/environments/$envId/services/': {
       id: '/dashboard/environments/$envId/services/'
       path: '/'
@@ -1097,6 +1117,7 @@ const DashboardEnvironmentsEnvIdServicesRouteWithChildren =
 interface DashboardEnvironmentsEnvIdRouteChildren {
   DashboardEnvironmentsEnvIdApplicationsRoute: typeof DashboardEnvironmentsEnvIdApplicationsRoute
   DashboardEnvironmentsEnvIdBlueprintsRoute: typeof DashboardEnvironmentsEnvIdBlueprintsRoute
+  DashboardEnvironmentsEnvIdContainersRoute: typeof DashboardEnvironmentsEnvIdContainersRoute
   DashboardEnvironmentsEnvIdDeploymentsRoute: typeof DashboardEnvironmentsEnvIdDeploymentsRouteWithChildren
   DashboardEnvironmentsEnvIdIntegrationsRoute: typeof DashboardEnvironmentsEnvIdIntegrationsRoute
   DashboardEnvironmentsEnvIdLogsRoute: typeof DashboardEnvironmentsEnvIdLogsRoute
@@ -1119,6 +1140,8 @@ const DashboardEnvironmentsEnvIdRouteChildren: DashboardEnvironmentsEnvIdRouteCh
       DashboardEnvironmentsEnvIdApplicationsRoute,
     DashboardEnvironmentsEnvIdBlueprintsRoute:
       DashboardEnvironmentsEnvIdBlueprintsRoute,
+    DashboardEnvironmentsEnvIdContainersRoute:
+      DashboardEnvironmentsEnvIdContainersRoute,
     DashboardEnvironmentsEnvIdDeploymentsRoute:
       DashboardEnvironmentsEnvIdDeploymentsRouteWithChildren,
     DashboardEnvironmentsEnvIdIntegrationsRoute:
