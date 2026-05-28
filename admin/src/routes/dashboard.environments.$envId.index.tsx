@@ -153,11 +153,10 @@ function EnvOverviewPage() {
 
   const { data: capabilities, isLoading: capLoading } = useCapabilities(slug, envId);
 
-  const runtimeProviders = (capabilities ?? []).find((c) => c.capability_name === "runtime")
-    ?.providers ?? [];
+  const runtimeProviders =
+    (capabilities ?? []).find((c) => c.capability_name === "runtime")?.providers ?? [];
 
-  const hasNomadProvider =
-    !capLoading && runtimeProviders.some((p) => p.provider_name === "nomad");
+  const hasNomadProvider = !capLoading && runtimeProviders.some((p) => p.provider_name === "nomad");
   const hasK8sProvider =
     !capLoading && runtimeProviders.some((p) => p.provider_name === "kubernetes");
   const noRuntimeProvider = !capLoading && !hasNomadProvider && !hasK8sProvider;
@@ -210,7 +209,8 @@ function EnvOverviewPage() {
 
   // Tab state for the workloads panel when both runtimes are active
   const [workloadTab, setWorkloadTab] = useState<"nomad" | "kubernetes">("nomad");
-  const activeTab = hasNomadProvider && hasK8sProvider ? workloadTab : hasK8sProvider ? "kubernetes" : "nomad";
+  const activeTab =
+    hasNomadProvider && hasK8sProvider ? workloadTab : hasK8sProvider ? "kubernetes" : "nomad";
 
   return (
     <>
@@ -274,12 +274,7 @@ function EnvOverviewPage() {
           {/* No runtime fallback */}
           {noRuntimeProvider && (
             <>
-              <StatCard
-                label="Nodes"
-                value="—"
-                icon={Server}
-                colorClass="text-muted-foreground"
-              />
+              <StatCard label="Nodes" value="—" icon={Server} colorClass="text-muted-foreground" />
               <StatCard
                 label="Workloads"
                 value="—"
