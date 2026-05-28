@@ -1,0 +1,71 @@
+name: Deploy {{.ServiceName}}
+
+on:
+  push:
+    branches:
+      - {{.Branch}}
+
+env:
+  SERVICE_NAME: {{.ServiceName}}
+  REGISTRY: {{if .RegistryEndpoint}}{{.RegistryEndpoint}}{{else}}ghcr.io{{end}}
+  IMAGE_PATH: {{if .ImagePath}}{{.ImagePath}}{{else}}${{ "{{" }} github.repository {{ "}}" }}/{{.ServiceName}}{{end}}
+
+jobs:
+  build-and-push:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ "{{" }} steps.meta.outputs.version {{ "}}" }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ "{{" }} env.REGISTRY {{ "}}" }}
+          username: ${{ "{{" }} secrets.REGISTRY_USERNAME {{ "}}" }}
+          password: ${{ "{{" }} secrets.REGISTRY_PASSWORD {{ "}}" }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ "{{" }} env.REGISTRY {{ "}}" }}/${{ "{{" }} env.IMAGE_PATH {{ "}}" }}
+          tags: |
+            type=sha,prefix=
+            type=raw,value=latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ "{{" }} steps.meta.outputs.tags {{ "}}" }}
+          labels: ${{ "{{" }} steps.meta.outputs.labels {{ "}}" }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to {{.EnvironmentLabel}}
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: {{.EnvironmentLabel}}
+
+    steps:
+      - name: Deploy via TernakClouds IDP
+        uses: kusumaningrat/ternak-deploy-action@v1
+        with:
+          idp_url: ${{ "{{" }} secrets.TERNAK_IDP_URL {{ "}}" }}
+          idp_token: ${{ "{{" }} secrets.TERNAK_IDP_TOKEN {{ "}}" }}
+          workspace: ${{ "{{" }} secrets.TERNAK_WORKSPACE {{ "}}" }}
+          environment: {{.EnvironmentLabel}}
+          service: {{.ServiceName}}
+          image_tag: ${{ "{{" }} needs.build-and-push.outputs.image_tag {{ "}}" }}

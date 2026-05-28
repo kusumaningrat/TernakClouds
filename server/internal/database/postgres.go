@@ -5,10 +5,12 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kusumaningrat/idp-backend/internal/accessrequest"
+	"github.com/kusumaningrat/idp-backend/internal/blueprint"
 	"github.com/kusumaningrat/idp-backend/internal/capability"
 	"github.com/kusumaningrat/idp-backend/internal/config"
 	"github.com/kusumaningrat/idp-backend/internal/department"
 	"github.com/kusumaningrat/idp-backend/internal/environment"
+	"github.com/kusumaningrat/idp-backend/internal/platformapp"
 	"github.com/kusumaningrat/idp-backend/internal/registry"
 	"github.com/kusumaningrat/idp-backend/internal/role"
 	"github.com/kusumaningrat/idp-backend/internal/secret"
@@ -68,6 +70,8 @@ func Migrate(db *gorm.DB) error {
 		&registry.RegistryBinding{},
 		&servicecatalog.CatalogItem{},
 		&servicecatalog.ServiceDeployment{},
+		&blueprint.Blueprint{},
+		&platformapp.PlatformApp{},
 	)
 }
 
@@ -84,6 +88,9 @@ func Seed(db *gorm.DB, cfg *config.Config) error {
 		return err
 	}
 	if err := seedServiceCatalog(db); err != nil {
+		return err
+	}
+	if err := seedBlueprints(db); err != nil {
 		return err
 	}
 	if err := seedDefaultWorkspace(db, cfg.Admin.Email); err != nil {
@@ -419,6 +426,83 @@ func seedServiceCatalog(db *gorm.DB) error {
 			HealthCheckType:      "http",
 			HealthCheckPath:      "/health",
 			IsPublicImage:        false,
+		},
+	}
+	for _, item := range items {
+		if err := db.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func seedBlueprints(db *gorm.DB) error {
+	items := []blueprint.Blueprint{
+		{
+			Name:              "web-api",
+			DisplayName:       "Web API",
+			Description:       "HTTP REST or GraphQL API service. Includes health checks, rolling deployments, and optional Vault secret injection.",
+			Category:          "application",
+			Version:           "v1",
+			SupportedRuntimes: "nomad,kubernetes",
+			IsPublic:          true,
+			IsSystem:          true,
+			Icon:              "globe",
+		},
+		{
+			Name:              "worker",
+			DisplayName:       "Background Worker",
+			Description:       "Long-running background processor. No HTTP port exposed; suitable for queue consumers and async jobs.",
+			Category:          "application",
+			Version:           "v1",
+			SupportedRuntimes: "nomad,kubernetes",
+			IsPublic:          true,
+			IsSystem:          true,
+			Icon:              "cpu",
+		},
+		{
+			Name:              "cron-job",
+			DisplayName:       "Cron Job",
+			Description:       "Scheduled batch task that runs on a cron schedule. Mapped to Nomad batch jobs or Kubernetes CronJobs.",
+			Category:          "application",
+			Version:           "v1",
+			SupportedRuntimes: "nomad,kubernetes",
+			IsPublic:          true,
+			IsSystem:          true,
+			Icon:              "clock",
+		},
+		{
+			Name:              "internal-service",
+			DisplayName:       "Internal Service",
+			Description:       "Service exposed only within the cluster network. Suitable for gRPC microservices and internal APIs.",
+			Category:          "application",
+			Version:           "v1",
+			SupportedRuntimes: "nomad,kubernetes",
+			IsPublic:          true,
+			IsSystem:          true,
+			Icon:              "network",
+		},
+		{
+			Name:              "static-website",
+			DisplayName:       "Static Website",
+			Description:       "Static file server or SPA served via Nginx. Includes zero-downtime rolling updates.",
+			Category:          "application",
+			Version:           "v1",
+			SupportedRuntimes: "nomad,kubernetes",
+			IsPublic:          true,
+			IsSystem:          true,
+			Icon:              "layout-dashboard",
+		},
+		{
+			Name:              "background-processor",
+			DisplayName:       "Background Processor",
+			Description:       "Event-driven processor for streaming pipelines. Suitable for Kafka consumers and stream processors.",
+			Category:          "application",
+			Version:           "v1",
+			SupportedRuntimes: "nomad,kubernetes",
+			IsPublic:          true,
+			IsSystem:          true,
+			Icon:              "zap",
 		},
 	}
 	for _, item := range items {

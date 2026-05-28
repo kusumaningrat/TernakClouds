@@ -67,6 +67,11 @@ import type {
   DeployServiceInput,
   LogsProviderInfo,
   RuntimeWorkload,
+  Blueprint,
+  PlatformApp,
+  GeneratedResources,
+  ProvisionAppInput,
+  PreviewAppInput,
 } from "./types";
 
 // ─── Auth ────────────────────────────────────────────────────────────────────
@@ -1419,5 +1424,114 @@ export function useLogsWorkloads(
     staleTime: 15_000,
     retry: false,
     refetchOnWindowFocus: false,
+  });
+}
+
+// ─── Blueprints ───────────────────────────────────────────────────────────────
+
+export const blueprintKeys = {
+  all: () => ["blueprints"] as const,
+  detail: (name: string) => ["blueprints", name] as const,
+};
+
+// GET /api/v1/blueprints
+export function useBlueprints() {
+  return useQuery<Blueprint[], ApiError>({
+    queryKey: blueprintKeys.all(),
+    queryFn: () => api.get("/api/v1/blueprints"),
+    staleTime: 60_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// GET /api/v1/blueprints/:name
+export function useBlueprint(name: string) {
+  return useQuery<Blueprint, ApiError>({
+    queryKey: blueprintKeys.detail(name),
+    queryFn: () => api.get(`/api/v1/blueprints/${name}`),
+    enabled: !!name,
+    staleTime: 60_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ─── Platform Apps ────────────────────────────────────────────────────────────
+
+export const platformAppKeys = {
+  list: (slug: string, envSlug: string) =>
+    ["workspaces", slug, "environments", envSlug, "platform-apps"] as const,
+  detail: (slug: string, envSlug: string, id: string) =>
+    ["workspaces", slug, "environments", envSlug, "platform-apps", id] as const,
+};
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/platform-apps
+export function usePlatformApps(slug: string, envSlug: string) {
+  return useQuery<PlatformApp[], ApiError>({
+    queryKey: platformAppKeys.list(slug, envSlug),
+    queryFn: () =>
+      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps`),
+    enabled: !!slug && !!envSlug,
+    staleTime: 15_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/platform-apps/:id
+export function usePlatformApp(slug: string, envSlug: string, id: string) {
+  return useQuery<PlatformApp, ApiError>({
+    queryKey: platformAppKeys.detail(slug, envSlug, id),
+    queryFn: () =>
+      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/${id}`),
+    enabled: !!slug && !!envSlug && !!id,
+    staleTime: 15_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// POST /api/v1/workspaces/:slug/environments/:envSlug/platform-apps/preview
+export function usePreviewApp(slug: string, envSlug: string) {
+  return useMutation<GeneratedResources, ApiError, PreviewAppInput>({
+    mutationFn: (input) =>
+      api.post(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/preview`,
+        input,
+      ),
+  });
+}
+
+// POST /api/v1/workspaces/:slug/environments/:envSlug/platform-apps
+export function useProvisionApp(slug: string, envSlug: string) {
+  const queryClient = useQueryClient();
+  return useMutation<PlatformApp, ApiError, ProvisionAppInput>({
+    mutationFn: (input) =>
+      api.post(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps`,
+        input,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: platformAppKeys.list(slug, envSlug),
+      });
+    },
+  });
+}
+
+// DELETE /api/v1/workspaces/:slug/environments/:envSlug/platform-apps/:id
+export function useDeletePlatformApp(slug: string, envSlug: string) {
+  const queryClient = useQueryClient();
+  return useMutation<void, ApiError, string>({
+    mutationFn: (id) =>
+      api.delete(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/${id}`,
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: platformAppKeys.list(slug, envSlug),
+      });
+    },
   });
 }

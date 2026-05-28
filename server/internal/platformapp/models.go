@@ -1,0 +1,35 @@
+package platformapp
+
+import (
+	"github.com/google/uuid"
+	"github.com/kusumaningrat/idp-backend/internal/models"
+)
+
+const (
+	StatusPending     = "pending"
+	StatusProvisioned = "provisioned"
+	StatusFailed      = "failed"
+	StatusStopped     = "stopped"
+)
+
+// PlatformApp is a deployed application created from a blueprint.
+// It owns the canonical platform spec and all generated manifests.
+type PlatformApp struct {
+	models.Base
+	WorkspaceID   uuid.UUID `gorm:"type:uuid;not null;index" json:"workspace_id"`
+	EnvironmentID uuid.UUID `gorm:"type:uuid;not null;index" json:"environment_id"`
+	BlueprintID   uuid.UUID `gorm:"type:uuid;not null"       json:"blueprint_id"`
+	BlueprintName string    `gorm:"not null"                 json:"blueprint_name"`
+	Name          string    `gorm:"not null"                 json:"name"`
+	// RuntimeProvider is the selected provider: "nomad", "kubernetes", or "docker".
+	RuntimeProvider string `gorm:"not null" json:"runtime_provider"`
+	// SpecJSON is the serialized PlatformSpec used to generate this application.
+	SpecJSON string `gorm:"type:text;not null" json:"-"`
+	// Status tracks provisioning state.
+	Status string `gorm:"not null;default:'pending'" json:"status"`
+	// GeneratedManifest stores the rendered runtime manifest (HCL, YAML, etc.).
+	GeneratedManifest string    `gorm:"type:text"          json:"generated_manifest,omitempty"`
+	ProvisionedBy     uuid.UUID `gorm:"type:uuid;not null" json:"provisioned_by"`
+	// RuntimeJobID is the job/deployment ID in the runtime (e.g. Nomad job name, K8s deployment name).
+	RuntimeJobID string `json:"runtime_job_id,omitempty"`
+}

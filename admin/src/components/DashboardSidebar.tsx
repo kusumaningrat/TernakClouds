@@ -27,6 +27,7 @@ import {
   Clock,
   Container,
   Package,
+  Blocks,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { tokenTTLSeconds } from "@/lib/auth";
@@ -378,9 +379,21 @@ export function DashboardSidebar() {
               <SectionHeader label="Applications" />
               <nav className="flex flex-col gap-0.5">
                 <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/services`}
-                  label="Services"
+                  to={`/dashboard/environments/${activeEnvId}/applications`}
+                  label="Applications"
                   icon={Layers}
+                  active={envActive("applications")}
+                />
+                <NavLink
+                  to={`/dashboard/environments/${activeEnvId}/blueprints`}
+                  label="Blueprints"
+                  icon={Blocks}
+                  active={envActive("blueprints")}
+                />
+                <NavLink
+                  to={`/dashboard/environments/${activeEnvId}/services`}
+                  label="Runtime Services"
+                  icon={Rocket}
                   active={envActive("services")}
                 />
                 <NavLink
@@ -404,12 +417,6 @@ export function DashboardSidebar() {
                   icon={Package}
                   active={envActive("service-catalog")}
                 />
-                {/* <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/runtime-events`}
-                  label="Events"
-                  icon={Zap}
-                  active={envActive("runtime-events")}
-                /> */}
               </nav>
             </div>
 

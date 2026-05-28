@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kusumaningrat/idp-backend/internal/accessrequest"
 	"github.com/kusumaningrat/idp-backend/internal/auth"
+	"github.com/kusumaningrat/idp-backend/internal/blueprint"
 	"github.com/kusumaningrat/idp-backend/internal/capability"
 	"github.com/kusumaningrat/idp-backend/internal/config"
 	"github.com/kusumaningrat/idp-backend/internal/department"
@@ -13,6 +14,7 @@ import (
 	"github.com/kusumaningrat/idp-backend/internal/kubernetes"
 	"github.com/kusumaningrat/idp-backend/internal/middleware"
 	"github.com/kusumaningrat/idp-backend/internal/nomad"
+	"github.com/kusumaningrat/idp-backend/internal/platformapp"
 	"github.com/kusumaningrat/idp-backend/internal/registry"
 	"github.com/kusumaningrat/idp-backend/internal/role"
 	"github.com/kusumaningrat/idp-backend/internal/secret"
@@ -61,6 +63,8 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	arRepo := accessrequest.NewRepository(db)
 	registryRepo := registry.NewRepository(db)
 	catalogRepo := servicecatalog.NewRepository(db)
+	blueprintRepo := blueprint.NewRepository(db)
+	platformAppRepo := platformapp.NewRepository(db)
 
 	// ── Services ─────────────────────────────────────────────────────────────
 	userService := user.NewUserService(userRepo, tokenRepo)
@@ -76,6 +80,8 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	secretService := secret.NewService(secret.NewRepository(db), capRepo, vc)
 	registryService := registry.NewService(registryRepo, vc)
 	catalogService := servicecatalog.NewService(catalogRepo, nomadService, registryRepo, capRepo, vc)
+	blueprintService := blueprint.NewService(blueprintRepo)
+	platformAppService := platformapp.NewService(platformAppRepo, blueprintService, nomadService)
 
 	// ── Handlers ─────────────────────────────────────────────────────────────
 	authHandler := auth.NewAuthHandler(authService, roleService)
@@ -91,6 +97,8 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	arHandler := accessrequest.NewHandler(arService)
 	registryHandler := registry.NewHandler(registryService)
 	catalogHandler := servicecatalog.NewHandler(catalogService)
+	blueprintHandler := blueprint.NewHandler(blueprintService)
+	platformAppHandler := platformapp.NewHandler(platformAppService)
 
 	v1 := r.Group("/api/v1")
 
@@ -171,6 +179,14 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 		// Deployments live under the env group; deploy + delete require deployments:exec.
 		servicecatalog.RegisterCatalogRoutes(protected, catalogHandler)
 		servicecatalog.RegisterDeploymentRoutes(envGroup, catalogHandler,
+			middleware.RequirePermission(roleService, "deployments:exec"),
+		)
+
+		// Blueprints: global read-only listing for any authenticated user.
+		blueprint.RegisterRoutes(protected, blueprintHandler)
+
+		// Platform applications: provision + delete require deployments:exec.
+		platformapp.RegisterRoutes(envGroup, platformAppHandler,
 			middleware.RequirePermission(roleService, "deployments:exec"),
 		)
 	}

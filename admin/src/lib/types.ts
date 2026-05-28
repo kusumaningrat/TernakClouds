@@ -850,3 +850,131 @@ export interface LogsProviderInfo {
     can_list_labels: boolean;
   };
 }
+
+// ─── Blueprints ───────────────────────────────────────────────────────────────
+
+export interface Blueprint {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string;
+  category: "application" | "infrastructure";
+  version: string;
+  supported_runtimes: string[];
+  is_public: boolean;
+  is_system: boolean;
+  icon?: string;
+  created_at: string;
+}
+
+// ─── Platform Spec ────────────────────────────────────────────────────────────
+
+export interface PlatformServiceSpec {
+  name: string;
+  type: string; // "web-api", "worker", "cron-job", "static-website", "background-processor"
+}
+
+export interface PlatformRuntimeSpec {
+  provider: "nomad" | "kubernetes" | "docker";
+  /** Selects manifest template variant. Nomad: ""|"v1"|"no-vault"|"with-volume". K8s: ""|"v1"|"with-hpa"|"with-ingress"|"with-pvc". */
+  variant?: string;
+  // Nomad
+  datacenter?: string;
+  namespace?: string;
+  worker_name?: string;
+  // Kubernetes
+  k8s_namespace?: string;
+  replicas?: number;
+  // Docker
+  network?: string;
+}
+
+export interface PlatformContainerSpec {
+  image: string;
+  tag: string;
+  port: number;
+  cpu: number;
+  memory_mb: number;
+}
+
+export interface PlatformDeploymentSpec {
+  strategy: "rolling" | "recreate" | "canary";
+}
+
+export interface PlatformRegistrySpec {
+  provider?: string;
+  registry_id?: string;
+  endpoint?: string;
+  image_path?: string;
+}
+
+export interface PlatformSecretsSpec {
+  provider?: string;
+  vault_role?: string;
+  vault_path?: string;
+}
+
+export interface PlatformCICDSpec {
+  provider?: string; // "github-actions" | "gitlab-ci" | "jenkins"
+  enabled: boolean;
+  branch?: string;
+  /** Deploy method: ""|"v1" = IDP API, "ssh", "nomad", "kubectl", "helm". */
+  style?: string;
+}
+
+export interface PlatformObservabilitySpec {
+  logs_enabled: boolean;
+  metrics_enabled: boolean;
+  labels?: Record<string, string>;
+}
+
+export interface PlatformSpec {
+  service: PlatformServiceSpec;
+  runtime: PlatformRuntimeSpec;
+  container: PlatformContainerSpec;
+  deployment: PlatformDeploymentSpec;
+  registry: PlatformRegistrySpec;
+  secrets: PlatformSecretsSpec;
+  cicd: PlatformCICDSpec;
+  observability: PlatformObservabilitySpec;
+}
+
+// ─── Platform Apps ────────────────────────────────────────────────────────────
+
+export interface PlatformApp {
+  id: string;
+  workspace_id: string;
+  environment_id: string;
+  blueprint_id: string;
+  blueprint_name: string;
+  name: string;
+  runtime_provider: string;
+  status: "pending" | "provisioned" | "failed" | "stopped";
+  generated_manifest?: string;
+  runtime_job_id?: string;
+  provisioned_by: string;
+  spec: PlatformSpec;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface GeneratedResources {
+  runtime_manifest?: string;
+  runtime_provider: string;
+  cicd_workflow?: string;
+  cicd_provider?: string;
+}
+
+export interface ProvisionAppInput {
+  blueprint_name: string;
+  spec: PlatformSpec;
+  /** Manually edited manifest from the preview step overrides generated output. */
+  override_manifest?: string;
+  /** Manually edited CI/CD workflow from the preview step overrides generated output. */
+  override_cicd?: string;
+}
+
+export interface PreviewAppInput {
+  blueprint_name: string;
+  spec: PlatformSpec;
+}
