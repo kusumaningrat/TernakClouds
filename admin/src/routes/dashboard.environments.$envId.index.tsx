@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useState } from "react";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 import {
@@ -6,6 +7,8 @@ import {
   useNomadNodes,
   useNomadNamespaces,
   useNomadJobs,
+  useK8sNodes,
+  useK8sDeployments,
   useServiceDeployments,
   useEnvironmentRegistries,
 } from "@/lib/queries";
@@ -26,6 +29,7 @@ import {
   HardDrive,
   AlertTriangle,
   ScrollText,
+  Box,
 } from "lucide-react";
 import type { CapabilityStatusResponse } from "@/lib/types";
 
@@ -149,16 +153,20 @@ function EnvOverviewPage() {
 
   const { data: capabilities, isLoading: capLoading } = useCapabilities(slug, envId);
 
-  // Only fire Nomad requests once we know a nomad provider is actually bound,
-  // otherwise every page load generates console 503s for unconfigured environments.
-  const hasNomadProvider =
-    !capLoading &&
-    (capabilities ?? []).some(
-      (c) =>
-        c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
-    );
+  const runtimeProviders =
+    (capabilities ?? []).find((c) => c.capability_name === "runtime")?.providers ?? [];
 
-  const { data: nodes, isLoading: nodesLoading } = useNomadNodes(slug, envId, hasNomadProvider);
+  const hasNomadProvider = !capLoading && runtimeProviders.some((p) => p.provider_name === "nomad");
+  const hasK8sProvider =
+    !capLoading && runtimeProviders.some((p) => p.provider_name === "kubernetes");
+  const noRuntimeProvider = !capLoading && !hasNomadProvider && !hasK8sProvider;
+
+  // Nomad data
+  const { data: nomadNodes, isLoading: nomadNodesLoading } = useNomadNodes(
+    slug,
+    envId,
+    hasNomadProvider,
+  );
   const { data: namespaces } = useNomadNamespaces(slug, envId, hasNomadProvider);
   const defaultNs = namespaces?.[0]?.Name ?? "default";
   const { data: jobs, isLoading: jobsLoading } = useNomadJobs(
@@ -167,20 +175,42 @@ function EnvOverviewPage() {
     defaultNs,
     hasNomadProvider,
   );
-  const nomadUnavailable = !capLoading && !hasNomadProvider;
+
+  // K8s data
+  const { data: k8sNodes, isLoading: k8sNodesLoading } = useK8sNodes(slug, envId, hasK8sProvider);
+  const { data: k8sDeployments, isLoading: k8sDeploymentsLoading } = useK8sDeployments(
+    slug,
+    envId,
+    "default",
+    hasK8sProvider,
+  );
+
   const { data: catalogDeployments, isLoading: catalogLoading } = useServiceDeployments(
     slug,
     envId,
   );
   const { data: registries } = useEnvironmentRegistries(slug, envId);
 
-  const healthyNodes = (nodes ?? []).filter((n) => n.Status === "ready").length;
+  const nomadHealthyNodes = (nomadNodes ?? []).filter((n) => n.Status === "ready").length;
   const runningJobs = (jobs ?? []).filter((j) => j.Status === "running").length;
+  const k8sReadyNodes = (k8sNodes ?? []).filter((n) => n.status === "Ready").length;
+  const k8sReadyDeployments = (k8sDeployments ?? []).filter(
+    (d) => d.ready >= d.desired && d.desired > 0,
+  ).length;
   const enabledCaps = (capabilities ?? []).filter((c) => c.is_enabled).length;
 
   const recentJobs = [...(jobs ?? [])]
     .sort((a, b) => (b.SubmitTime ?? 0) - (a.SubmitTime ?? 0))
     .slice(0, 6);
+
+  const recentK8sDeployments = [...(k8sDeployments ?? [])]
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 6);
+
+  // Tab state for the workloads panel when both runtimes are active
+  const [workloadTab, setWorkloadTab] = useState<"nomad" | "kubernetes">("nomad");
+  const activeTab =
+    hasNomadProvider && hasK8sProvider ? workloadTab : hasK8sProvider ? "kubernetes" : "nomad";
 
   return (
     <>
@@ -188,26 +218,72 @@ function EnvOverviewPage() {
       <main className="p-6 space-y-6 overflow-auto">
         {/* Stats */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <StatCard
-            label="Nomad nodes"
-            value={nomadUnavailable ? "—" : `${healthyNodes} / ${(nodes ?? []).length}`}
-            icon={Server}
-            loading={nodesLoading}
-            colorClass={
-              nomadUnavailable
-                ? "text-muted-foreground"
-                : healthyNodes === (nodes ?? []).length && (nodes ?? []).length > 0
-                  ? "text-emerald-500"
-                  : "text-amber-500"
-            }
-          />
-          <StatCard
-            label="Running jobs"
-            value={nomadUnavailable ? "—" : runningJobs}
-            icon={Rocket}
-            loading={jobsLoading}
-            colorClass={nomadUnavailable ? "text-muted-foreground" : "text-primary"}
-          />
+          {/* Nomad stats */}
+          {hasNomadProvider && (
+            <>
+              <StatCard
+                label="Nomad nodes"
+                value={`${nomadHealthyNodes} / ${(nomadNodes ?? []).length}`}
+                icon={Server}
+                loading={nomadNodesLoading}
+                colorClass={
+                  nomadHealthyNodes === (nomadNodes ?? []).length && (nomadNodes ?? []).length > 0
+                    ? "text-emerald-500"
+                    : "text-amber-500"
+                }
+              />
+              <StatCard
+                label="Running jobs"
+                value={runningJobs}
+                icon={Rocket}
+                loading={jobsLoading}
+                colorClass="text-primary"
+              />
+            </>
+          )}
+
+          {/* K8s stats */}
+          {hasK8sProvider && (
+            <>
+              <StatCard
+                label="K8s nodes"
+                value={`${k8sReadyNodes} / ${(k8sNodes ?? []).length}`}
+                icon={Server}
+                loading={k8sNodesLoading}
+                colorClass={
+                  k8sReadyNodes === (k8sNodes ?? []).length && (k8sNodes ?? []).length > 0
+                    ? "text-emerald-500"
+                    : "text-amber-500"
+                }
+              />
+              <StatCard
+                label="Ready deployments"
+                value={`${k8sReadyDeployments} / ${(k8sDeployments ?? []).length}`}
+                icon={Box}
+                loading={k8sDeploymentsLoading}
+                colorClass={
+                  k8sReadyDeployments === (k8sDeployments ?? []).length &&
+                  (k8sDeployments ?? []).length > 0
+                    ? "text-emerald-500"
+                    : "text-primary"
+                }
+              />
+            </>
+          )}
+
+          {/* No runtime fallback */}
+          {noRuntimeProvider && (
+            <>
+              <StatCard label="Nodes" value="—" icon={Server} colorClass="text-muted-foreground" />
+              <StatCard
+                label="Workloads"
+                value="—"
+                icon={Rocket}
+                colorClass="text-muted-foreground"
+              />
+            </>
+          )}
+
           <StatCard
             label="Catalog deployments"
             value={(catalogDeployments ?? []).length}
@@ -258,50 +334,134 @@ function EnvOverviewPage() {
             )}
           </div>
 
-          {/* Recent Nomad jobs */}
+          {/* Recent workloads — runtime-aware */}
           <div className="glass rounded-xl p-5">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm flex items-center gap-2">
-                <Rocket className="size-4 text-primary" /> Recent jobs
-                <span className="text-[11px] font-mono text-muted-foreground font-normal">
-                  ns: {defaultNs}
-                </span>
-              </h3>
-              <Link
-                to="/dashboard/environments/$envId/deployments"
-                params={{ envId }}
-                className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition"
-              >
-                All jobs <ChevronRight className="size-3" />
-              </Link>
-            </div>
-            {jobsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-                <Loader2 className="size-4 animate-spin" /> Loading…
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm flex items-center gap-2">
+                  {activeTab === "nomad" ? (
+                    <Rocket className="size-4 text-primary" />
+                  ) : (
+                    <Box className="size-4 text-primary" />
+                  )}
+                  {activeTab === "nomad" ? "Recent jobs" : "Recent deployments"}
+                </h3>
+                {activeTab === "nomad" && (
+                  <span className="text-[11px] font-mono text-muted-foreground font-normal">
+                    ns: {defaultNs}
+                  </span>
+                )}
               </div>
-            ) : nomadUnavailable ? (
-              <NoProviderBanner capability="runtime" envId={envId} />
-            ) : recentJobs.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">No jobs in this namespace.</p>
-            ) : (
-              <div className="space-y-0">
-                {recentJobs.map((job) => (
-                  <div
-                    key={job.ID}
-                    className="flex items-center gap-3 py-2 border-b border-border last:border-0"
-                  >
-                    <span
-                      className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${JOB_STATUS_COLORS[job.Status] ?? "text-muted-foreground bg-muted"}`}
+              <div className="flex items-center gap-2">
+                {hasNomadProvider && hasK8sProvider && (
+                  <div className="flex rounded-md border border-border overflow-hidden text-[11px]">
+                    <button
+                      onClick={() => setWorkloadTab("nomad")}
+                      className={`px-2 py-0.5 transition ${workloadTab === "nomad" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
                     >
-                      {job.Status}
-                    </span>
-                    <span className="font-mono text-xs font-medium flex-1 truncate">{job.ID}</span>
-                    <span className="text-[11px] text-muted-foreground shrink-0">
-                      {formatSubmitTime(job.SubmitTime)}
-                    </span>
+                      Nomad
+                    </button>
+                    <button
+                      onClick={() => setWorkloadTab("kubernetes")}
+                      className={`px-2 py-0.5 transition ${workloadTab === "kubernetes" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      K8s
+                    </button>
                   </div>
-                ))}
+                )}
+                <Link
+                  to={
+                    activeTab === "nomad"
+                      ? "/dashboard/environments/$envId/deployments"
+                      : "/dashboard/environments/$envId/pods"
+                  }
+                  params={{ envId }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition"
+                >
+                  {activeTab === "nomad" ? "All jobs" : "All pods"}{" "}
+                  <ChevronRight className="size-3" />
+                </Link>
               </div>
+            </div>
+
+            {/* Nomad jobs panel */}
+            {activeTab === "nomad" && (
+              <>
+                {jobsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                    <Loader2 className="size-4 animate-spin" /> Loading…
+                  </div>
+                ) : noRuntimeProvider ? (
+                  <NoProviderBanner capability="runtime" envId={envId} />
+                ) : recentJobs.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">No jobs in this namespace.</p>
+                ) : (
+                  <div className="space-y-0">
+                    {recentJobs.map((job) => (
+                      <div
+                        key={job.ID}
+                        className="flex items-center gap-3 py-2 border-b border-border last:border-0"
+                      >
+                        <span
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${JOB_STATUS_COLORS[job.Status] ?? "text-muted-foreground bg-muted"}`}
+                        >
+                          {job.Status}
+                        </span>
+                        <span className="font-mono text-xs font-medium flex-1 truncate">
+                          {job.ID}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground shrink-0">
+                          {formatSubmitTime(job.SubmitTime)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* K8s deployments panel */}
+            {activeTab === "kubernetes" && (
+              <>
+                {k8sDeploymentsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+                    <Loader2 className="size-4 animate-spin" /> Loading…
+                  </div>
+                ) : noRuntimeProvider ? (
+                  <NoProviderBanner capability="runtime" envId={envId} />
+                ) : recentK8sDeployments.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">
+                    No deployments in default namespace.
+                  </p>
+                ) : (
+                  <div className="space-y-0">
+                    {recentK8sDeployments.map((dep) => (
+                      <div
+                        key={`${dep.namespace}/${dep.name}`}
+                        className="flex items-center gap-3 py-2 border-b border-border last:border-0"
+                      >
+                        <span
+                          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${
+                            dep.ready >= dep.desired && dep.desired > 0
+                              ? "text-emerald-600 bg-emerald-500/10"
+                              : dep.ready === 0
+                                ? "text-gray-500 bg-gray-400/10"
+                                : "text-amber-600 bg-amber-500/10"
+                          }`}
+                        >
+                          {dep.ready}/{dep.desired}
+                        </span>
+                        <span className="font-mono text-xs font-medium flex-1 truncate">
+                          {dep.name}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground shrink-0">
+                          {dep.namespace}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </div>

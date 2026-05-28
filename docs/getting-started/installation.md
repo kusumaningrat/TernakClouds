@@ -4,16 +4,16 @@
 
 ## Prerequisites
 
-| Tool | Version | Required |
-|---|---|---|
-| Go | ≥ 1.22 | Yes |
-| Node.js | ≥ 20 | Yes |
-| npm | ≥ 10 | Yes |
-| Docker | ≥ 24 | Yes |
-| Docker Compose | ≥ 2 | Yes |
-| HashiCorp Vault | ≥ 1.15 | Only if `VAULT_ENABLED=true` |
-| Nomad | ≥ 1.7 | Only if using Nomad runtime |
-| kubectl | Any | Only if using Kubernetes runtime |
+| Tool            | Version | Required                         |
+| --------------- | ------- | -------------------------------- |
+| Go              | ≥ 1.22  | Yes                              |
+| Node.js         | ≥ 20    | Yes                              |
+| npm             | ≥ 10    | Yes                              |
+| Docker          | ≥ 24    | Yes                              |
+| Docker Compose  | ≥ 2     | Yes                              |
+| HashiCorp Vault | ≥ 1.15  | Only if `VAULT_ENABLED=true`     |
+| Nomad           | ≥ 1.7   | Only if using Nomad runtime      |
+| kubectl         | Any     | Only if using Kubernetes runtime |
 
 ---
 
@@ -194,31 +194,31 @@ VAULT_KV_MOUNT=secret
 
 ### `server/.env`
 
-| Variable | Default | Required | Description |
-|---|---|---|---|
-| `APP_PORT` | `8022` | Yes | HTTP listen port |
-| `GIN_MODE` | `debug` | No | `debug` (dev) or `release` (prod) |
-| `DB_HOST` | `localhost` | Yes | PostgreSQL host |
-| `DB_PORT` | `5432` | Yes | PostgreSQL port |
-| `DB_USER` | `postgres` | Yes | PostgreSQL user |
-| `DB_PASSWORD` | — | Yes | PostgreSQL password |
-| `DB_NAME` | `idp_platform` | Yes | Database name |
-| `DB_SSLMODE` | `disable` | No | `disable` in dev, `require` in prod |
-| `JWT_SECRET` | — | Yes | HMAC-SHA256 signing key (min 32 chars) |
-| `JWT_ACCESS_EXPIRY` | `15m` | No | Access token TTL |
-| `JWT_REFRESH_EXPIRY` | `168h` | No | Refresh token TTL |
-| `ADMIN_EMAIL` | — | Yes | Bootstrap admin email |
-| `ADMIN_PASSWORD` | — | Yes | Bootstrap admin password |
-| `VAULT_ENABLED` | `false` | No | Enable Vault integration |
-| `VAULT_ADDR` | `http://localhost:8200` | If Vault | Vault server URL |
-| `VAULT_ROLE_ID` | — | If Vault | AppRole role ID |
-| `VAULT_SECRET_ID` | — | If Vault | AppRole secret ID |
-| `VAULT_KV_MOUNT` | `secret` | If Vault | KV v2 mount path |
+| Variable             | Default                 | Required | Description                            |
+| -------------------- | ----------------------- | -------- | -------------------------------------- |
+| `APP_PORT`           | `8022`                  | Yes      | HTTP listen port                       |
+| `GIN_MODE`           | `debug`                 | No       | `debug` (dev) or `release` (prod)      |
+| `DB_HOST`            | `localhost`             | Yes      | PostgreSQL host                        |
+| `DB_PORT`            | `5432`                  | Yes      | PostgreSQL port                        |
+| `DB_USER`            | `postgres`              | Yes      | PostgreSQL user                        |
+| `DB_PASSWORD`        | —                       | Yes      | PostgreSQL password                    |
+| `DB_NAME`            | `idp_platform`          | Yes      | Database name                          |
+| `DB_SSLMODE`         | `disable`               | No       | `disable` in dev, `require` in prod    |
+| `JWT_SECRET`         | —                       | Yes      | HMAC-SHA256 signing key (min 32 chars) |
+| `JWT_ACCESS_EXPIRY`  | `15m`                   | No       | Access token TTL                       |
+| `JWT_REFRESH_EXPIRY` | `168h`                  | No       | Refresh token TTL                      |
+| `ADMIN_EMAIL`        | —                       | Yes      | Bootstrap admin email                  |
+| `ADMIN_PASSWORD`     | —                       | Yes      | Bootstrap admin password               |
+| `VAULT_ENABLED`      | `false`                 | No       | Enable Vault integration               |
+| `VAULT_ADDR`         | `http://localhost:8200` | If Vault | Vault server URL                       |
+| `VAULT_ROLE_ID`      | —                       | If Vault | AppRole role ID                        |
+| `VAULT_SECRET_ID`    | —                       | If Vault | AppRole secret ID                      |
+| `VAULT_KV_MOUNT`     | `secret`                | If Vault | KV v2 mount path                       |
 
 ### `admin/.env`
 
-| Variable | Required | Description |
-|---|---|---|
+| Variable       | Required  | Description                                       |
+| -------------- | --------- | ------------------------------------------------- |
 | `VITE_API_URL` | Prod only | Backend URL. Empty in dev (Vite proxy handles it) |
 
 ---
@@ -246,6 +246,7 @@ make build
 ```
 
 Produces:
+
 - `server/bin/api` — Go binary
 - `admin/dist/` — Admin dashboard static bundle
 - `dist/` — Public website static bundle
@@ -253,6 +254,7 @@ Produces:
 ### Serve
 
 **Backend:**
+
 ```bash
 GIN_MODE=release ./server/bin/api
 ```
