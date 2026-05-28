@@ -204,7 +204,10 @@ function ContainerLogsDrawer({
                 <span className="text-[11px] text-success font-medium">live</span>
               </>
             ) : streamError ? (
-              <span className="text-[11px] text-destructive truncate max-w-[200px]" title={streamError}>
+              <span
+                className="text-[11px] text-destructive truncate max-w-[200px]"
+                title={streamError}
+              >
                 {streamError}
               </span>
             ) : (

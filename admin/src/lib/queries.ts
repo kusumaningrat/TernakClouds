@@ -1368,8 +1368,7 @@ export const dockerKeys = {
 export function useDockerContainers(slug: string, envSlug: string, enabled = true) {
   return useQuery<DockerContainerStub[], ApiError>({
     queryKey: dockerKeys.containers(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers`),
     enabled: !!slug && !!envSlug && enabled,
     staleTime: 15_000,
   });
@@ -1380,7 +1379,9 @@ export function useDockerContainer(slug: string, envSlug: string, id: string, en
   return useQuery<DockerContainerDetail, ApiError>({
     queryKey: dockerKeys.container(slug, envSlug, id),
     queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers/${encodeURIComponent(id)}`),
+      api.get(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers/${encodeURIComponent(id)}`,
+      ),
     enabled: !!slug && !!envSlug && !!id && enabled,
     staleTime: 10_000,
   });
@@ -1390,8 +1391,7 @@ export function useDockerContainer(slug: string, envSlug: string, id: string, en
 export function useDockerImages(slug: string, envSlug: string, enabled = true) {
   return useQuery<DockerImageStub[], ApiError>({
     queryKey: dockerKeys.images(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/images`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/images`),
     enabled: !!slug && !!envSlug && enabled,
     staleTime: 30_000,
   });
@@ -1401,8 +1401,7 @@ export function useDockerImages(slug: string, envSlug: string, enabled = true) {
 export function useDockerNetworks(slug: string, envSlug: string, enabled = true) {
   return useQuery<DockerNetworkStub[], ApiError>({
     queryKey: dockerKeys.networks(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/networks`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/networks`),
     enabled: !!slug && !!envSlug && enabled,
     staleTime: 30_000,
   });
@@ -1412,8 +1411,7 @@ export function useDockerNetworks(slug: string, envSlug: string, enabled = true)
 export function useDockerVolumes(slug: string, envSlug: string, enabled = true) {
   return useQuery<DockerVolumeStub[], ApiError>({
     queryKey: dockerKeys.volumes(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/volumes`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/docker/volumes`),
     enabled: !!slug && !!envSlug && enabled,
     staleTime: 30_000,
   });
@@ -1444,11 +1442,7 @@ export function useDockerContainerAction() {
 // DELETE /api/v1/workspaces/:slug/environments/:envSlug/docker/containers/:id
 export function useRemoveDockerContainer() {
   const queryClient = useQueryClient();
-  return useMutation<
-    { message: string },
-    ApiError,
-    { slug: string; envSlug: string; id: string }
-  >({
+  return useMutation<{ message: string }, ApiError, { slug: string; envSlug: string; id: string }>({
     mutationFn: ({ slug, envSlug, id }) =>
       api.delete(
         `/api/v1/workspaces/${slug}/environments/${envSlug}/docker/containers/${encodeURIComponent(id)}`,
