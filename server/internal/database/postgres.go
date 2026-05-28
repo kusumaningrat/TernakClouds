@@ -333,6 +333,7 @@ func seedCapabilityCatalogue(db *gorm.DB) error {
 		// Runtime
 		{ID: uuid.MustParse("00000001-0000-0000-0000-000000000001"), Name: "nomad", DisplayName: "HashiCorp Nomad", CapabilityName: capability.CapRuntime, Description: "Flexible workload orchestrator"},
 		{ID: uuid.MustParse("00000001-0000-0000-0000-000000000002"), Name: "kubernetes", DisplayName: "Kubernetes", CapabilityName: capability.CapRuntime, Description: "Container orchestration platform"},
+		{ID: uuid.MustParse("00000001-0000-0000-0000-000000000003"), Name: "docker", DisplayName: "Docker Engine", CapabilityName: capability.CapRuntime, Description: "Lightweight container runtime for VPS, edge, and local deployments"},
 		// Secrets
 		{ID: uuid.MustParse("00000002-0000-0000-0000-000000000001"), Name: "vault", DisplayName: "HashiCorp Vault", CapabilityName: capability.CapSecrets, Description: "Secrets management and encryption"},
 		// Networking

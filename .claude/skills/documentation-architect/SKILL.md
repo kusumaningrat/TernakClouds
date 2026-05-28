@@ -1,5 +1,5 @@
 ---
-name: TernakClouds Documentation Architect
+name: ternak-clouds-documentation-architect
 description: Design, organize, improve, and maintain comprehensive documentation for the TernakClouds Internal Developer Platform. Use when writing README files, architecture documentation, installation guides, feature documentation, developer onboarding docs, runtime integration docs, observability guides, API references, frontend UX docs, or platform engineering documentation. Focus on making the platform understandable for developers, operators, and contributors while keeping README concise and moving detailed guides into dedicated documentation pages.
 allowed-tools: Bash, Read, Grep, Glob, Edit, Write
 ---
