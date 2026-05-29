@@ -9,7 +9,9 @@ job "[[.JobID]]" {
     min_healthy_time = "30s"
     healthy_deadline = "5m"
     auto_revert      = true
-    canary           = [[if eq .Strategy "canary"]]1[[else]]0[[end]]
+    [[- if eq .Strategy "canary"]]
+    canary           = 1
+    [[- end]]
   }
 
   group "[[.ServiceName]]" {
