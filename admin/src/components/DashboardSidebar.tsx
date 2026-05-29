@@ -28,6 +28,7 @@ import {
   Container,
   Package,
   Blocks,
+  GitFork,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { tokenTTLSeconds } from "@/lib/auth";
@@ -202,6 +203,7 @@ const WORKSPACE_NAV = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { to: "/dashboard/environments", label: "Environments", icon: Globe },
   { to: "/dashboard/registries", label: "Registries", icon: Container },
+  { to: "/dashboard/repositories", label: "Repositories", icon: GitFork },
   { to: "/dashboard/teams", label: "Teams", icon: UsersRound },
   // { to: "/dashboard/policies", label: "Policies", icon: Shield },
   // { to: "/dashboard/settings", label: "Settings", icon: Settings2 },

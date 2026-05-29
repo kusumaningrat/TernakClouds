@@ -45,10 +45,14 @@ export function friendlyError(error: ApiError | Error | null | undefined): Frien
         description: "A required provider is not set up for this environment.",
       };
     case 500:
-    case 502:
       return {
         title: "Server error",
         description: "Something went wrong on our end. Please try again.",
+      };
+    case 502:
+      return {
+        title: "Provider error",
+        description: error.message || "The external provider returned an error. Check your credentials and permissions.",
       };
     default:
       if (!status) {
