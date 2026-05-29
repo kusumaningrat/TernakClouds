@@ -1,4 +1,4 @@
-module github.com/kusumaningrat/idp-backend
+module github.com/kusumaningrat/ternakclouds
 
 go 1.25.6
 

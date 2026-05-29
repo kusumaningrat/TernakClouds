@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/kusumaningrat/idp-backend/internal/config"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	"github.com/kusumaningrat/ternakclouds/internal/config"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
 // InitVault authenticates with Vault using AppRole and returns a ready Client.

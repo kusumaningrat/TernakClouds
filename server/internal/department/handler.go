@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type DepartmentHandler struct{ service *DepartmentService }
@@ -19,13 +19,13 @@ func NewDepartmentHandler(service *DepartmentService) *DepartmentHandler {
 func (h *DepartmentHandler) Create(c *gin.Context) {
 	var input CreateDepartmentInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
 	dept, err := h.service.Create(input)
 	if errors.Is(err, ErrSlugTaken) {
-		pkg.RespondErr(c, http.StatusConflict, err.Error())
+		pkg.RespondErr(c, http.StatusConflict, "Department name is already in use. Please choose a different name.")
 		return
 	}
 	if err != nil {
@@ -64,7 +64,7 @@ func (h *DepartmentHandler) GetByID(c *gin.Context) {
 
 	dept, err := h.service.Get(id)
 	if errors.Is(err, ErrNotFound) {
-		pkg.RespondErr(c, http.StatusNotFound, err.Error())
+		pkg.RespondErr(c, http.StatusNotFound, "Department not found.")
 		return
 	}
 	if err != nil {
@@ -85,13 +85,13 @@ func (h *DepartmentHandler) Update(c *gin.Context) {
 
 	var input UpdateDepartmentInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
 	dept, err := h.service.Update(id, input)
 	if errors.Is(err, ErrNotFound) {
-		pkg.RespondErr(c, http.StatusNotFound, err.Error())
+		pkg.RespondErr(c, http.StatusNotFound, "Department not found.")
 		return
 	}
 	if err != nil {

@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/middleware"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/internal/middleware"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -33,7 +33,7 @@ func (h *Handler) ListGrants(c *gin.Context) {
 
 	grants, err := h.svc.List(envID)
 	if err != nil {
-		pkg.RespondErr(c, http.StatusInternalServerError, err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to retrieve secret grants.")
 		return
 	}
 
@@ -61,7 +61,7 @@ func (h *Handler) CreateGrant(c *gin.Context) {
 
 	var input CreateGrantInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -72,7 +72,7 @@ func (h *Handler) CreateGrant(c *gin.Context) {
 
 	g, err := h.svc.Create(c.Request.Context(), envID, wsID, callerID, input)
 	if err != nil {
-		pkg.RespondErr(c, http.StatusInternalServerError, err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to create secret grant.")
 		return
 	}
 
@@ -93,7 +93,7 @@ func (h *Handler) UpdateGrant(c *gin.Context) {
 
 	var input UpdateGrantInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -108,7 +108,7 @@ func (h *Handler) UpdateGrant(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusNotFound, "secret grant not found")
 			return
 		}
-		pkg.RespondErr(c, http.StatusInternalServerError, err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to update secret grant.")
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *Handler) DeleteGrant(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusNotFound, "secret grant not found")
 			return
 		}
-		pkg.RespondErr(c, http.StatusInternalServerError, err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to delete secret grant.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, gin.H{"deleted": true})
@@ -149,7 +149,7 @@ func (h *Handler) WriteValue(c *gin.Context) {
 
 	var input WriteSecretInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -158,7 +158,7 @@ func (h *Handler) WriteValue(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusNotFound, "secret grant not found")
 			return
 		}
-		pkg.RespondErr(c, http.StatusBadGateway, "vault error: "+err.Error())
+		pkg.RespondErr(c, http.StatusBadGateway, "Unable to write secret. Storage returned an error.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, gin.H{"written": true})
@@ -179,7 +179,7 @@ func (h *Handler) GetValue(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusNotFound, "secret grant not found")
 			return
 		}
-		pkg.RespondErr(c, http.StatusBadGateway, "vault error: "+err.Error())
+		pkg.RespondErr(c, http.StatusBadGateway, "Unable to read secret. Storage returned an error.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, resp)

@@ -6,8 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/middleware"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/internal/middleware"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -22,7 +22,7 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Create(c *gin.Context) {
 	var input CreateWorkspaceInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -111,7 +111,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	var input UpdateWorkspaceInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -187,7 +187,7 @@ func (h *Handler) AddMember(c *gin.Context) {
 
 	var input AddMemberInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 

@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -26,7 +26,7 @@ func (h *Handler) Create(c *gin.Context) {
 
 	var input CreateEnvironmentInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *Handler) Update(c *gin.Context) {
 
 	var input UpdateEnvironmentInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -132,13 +132,13 @@ func (h *Handler) Delete(c *gin.Context) {
 func workspaceIDFromCtx(c *gin.Context) (uuid.UUID, bool) {
 	val, exists := c.Get("workspace_id")
 	if !exists {
-		pkg.RespondErr(c, http.StatusInternalServerError, "workspace context missing")
+		pkg.RespondErr(c, http.StatusInternalServerError, "Something went wrong. Please try again.")
 		c.Abort()
 		return uuid.Nil, false
 	}
 	id, ok := val.(uuid.UUID)
 	if !ok {
-		pkg.RespondErr(c, http.StatusInternalServerError, "workspace context invalid")
+		pkg.RespondErr(c, http.StatusInternalServerError, "Something went wrong. Please try again.")
 		c.Abort()
 		return uuid.Nil, false
 	}

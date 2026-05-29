@@ -1,6 +1,6 @@
 package blueprint
 
-import "github.com/kusumaningrat/idp-backend/internal/models"
+import "github.com/kusumaningrat/ternakclouds/internal/models"
 
 // Blueprint is a reusable, versioned deployment template.
 // System blueprints are seeded by the platform; custom ones can be created per workspace.

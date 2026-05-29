@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
-	pkgjwt "github.com/kusumaningrat/idp-backend/pkg/jwt"
+	"github.com/kusumaningrat/ternakclouds/pkg"
+	pkgjwt "github.com/kusumaningrat/ternakclouds/pkg/jwt"
 )
 
 const (
@@ -20,7 +20,7 @@ func JWT(secret string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if len(authHeader) < 8 || authHeader[:7] != "Bearer " {
-			pkg.RespondErr(c, http.StatusUnauthorized, "missing or invalid authorization header")
+			pkg.RespondErr(c, http.StatusUnauthorized, "Authentication required. Please sign in.")
 			c.Abort()
 			return
 		}

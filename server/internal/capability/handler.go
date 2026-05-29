@@ -7,8 +7,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/middleware"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/internal/middleware"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -39,7 +39,7 @@ func (h *Handler) Get(c *gin.Context) {
 
 	status, err := h.svc.GetStatus(envID, capName)
 	if err != nil {
-		pkg.RespondErr(c, http.StatusNotFound, err.Error())
+		pkg.RespondErr(c, http.StatusNotFound, "Capability not found.")
 		return
 	}
 
@@ -67,7 +67,7 @@ func (h *Handler) BindProvider(c *gin.Context) {
 
 	var input BindProviderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *Handler) BindProvider(c *gin.Context) {
 			return
 		}
 		slog.Error("bind provider failed", "err", err, "env_id", envID, "cap", capName)
-		pkg.RespondErr(c, http.StatusInternalServerError, "failed to bind provider: "+err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to bind the provider. Please try again.")
 		return
 	}
 
@@ -102,7 +102,7 @@ func (h *Handler) UpdateProvider(c *gin.Context) {
 
 	var input UpdateProviderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 

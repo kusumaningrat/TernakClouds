@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	registryprovider "github.com/kusumaningrat/idp-backend/internal/providers/registry"
+	registryprovider "github.com/kusumaningrat/ternakclouds/internal/providers/registry"
 )
 
 // Provider is a stub for AWS Elastic Container Registry.

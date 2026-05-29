@@ -70,8 +70,8 @@ The server is stateless; all persistent state lives in PostgreSQL. Provider cred
 
 ```bash
 # 1. Clone and enter
-git clone https://github.com/kusumaningrat/idp-backend
-cd idp-backend
+git clone https://github.com/kusumaningrat/ternakclouds
+cd ternakclouds
 
 # 2. Start vault instance
 docker compose -f docker-compose-vault.yml up -d

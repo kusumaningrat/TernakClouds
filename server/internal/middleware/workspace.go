@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 // WorkspaceRef holds the minimal workspace fields needed by the middleware.
@@ -49,7 +49,7 @@ func RequireWorkspaceMember(checker WorkspaceAccessChecker) gin.HandlerFunc {
 
 		ok, err := checker.HasWorkspaceAccess(userID, wsID)
 		if err != nil {
-			pkg.RespondErr(c, http.StatusInternalServerError, "membership check failed")
+			pkg.RespondErr(c, http.StatusInternalServerError, "Something went wrong. Please try again.")
 			c.Abort()
 			return
 		}
@@ -71,7 +71,7 @@ func RequireWorkspaceOwner(checker WorkspaceAccessChecker) gin.HandlerFunc {
 
 		ok, err := checker.IsOwner(userID, wsID)
 		if err != nil {
-			pkg.RespondErr(c, http.StatusInternalServerError, "ownership check failed")
+			pkg.RespondErr(c, http.StatusInternalServerError, "Something went wrong. Please try again.")
 			c.Abort()
 			return
 		}

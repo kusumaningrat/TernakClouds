@@ -5,7 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 // PermissionChecker is satisfied by role.RoleService without creating an import cycle.
@@ -21,12 +21,12 @@ func RequirePermission(checker PermissionChecker, permission string) gin.Handler
 
 		ok, err := checker.HasPermission(userID, permission)
 		if err != nil {
-			pkg.RespondErr(c, http.StatusInternalServerError, "permission check failed")
+			pkg.RespondErr(c, http.StatusInternalServerError, "Something went wrong. Please try again.")
 			c.Abort()
 			return
 		}
 		if !ok {
-			pkg.RespondErr(c, http.StatusForbidden, "forbidden: requires "+permission)
+			pkg.RespondErr(c, http.StatusForbidden, "You don't have permission to perform this action.")
 			c.Abort()
 			return
 		}

@@ -6,9 +6,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/middleware"
-	"github.com/kusumaningrat/idp-backend/internal/nomad"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/internal/middleware"
+	"github.com/kusumaningrat/ternakclouds/internal/nomad"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -37,7 +37,7 @@ func (h *Handler) Deploy(c *gin.Context) {
 
 	var input DeployInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 
@@ -53,7 +53,7 @@ func (h *Handler) Deploy(c *gin.Context) {
 		case errors.Is(err, nomad.ErrNoNomadProvider):
 			pkg.RespondErr(c, http.StatusServiceUnavailable, err.Error())
 		default:
-			pkg.RespondErr(c, http.StatusInternalServerError, "deploy failed: "+err.Error())
+			pkg.RespondErr(c, http.StatusInternalServerError, "Deployment failed. Please try again.")
 		}
 		return
 	}
@@ -108,7 +108,7 @@ func (h *Handler) StopAndDelete(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusNotFound, err.Error())
 			return
 		}
-		pkg.RespondErr(c, http.StatusInternalServerError, "failed to stop deployment: "+err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to stop deployment. Please try again.")
 		return
 	}
 	pkg.RespondMessage(c, http.StatusOK, "deployment stopped and removed")

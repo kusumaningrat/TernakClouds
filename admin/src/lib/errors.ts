@@ -12,6 +12,11 @@ export function friendlyError(error: ApiError | Error | null | undefined): Frien
   const status = (error as ApiError).status;
 
   switch (status) {
+    case 400:
+      return {
+        title: "Invalid request",
+        description: error.message || "Please review your input and try again.",
+      };
     case 401:
       return {
         title: "Session expired",
@@ -20,12 +25,17 @@ export function friendlyError(error: ApiError | Error | null | undefined): Frien
     case 403:
       return {
         title: "Access denied",
-        description: "You don't have permission to view this. Contact your workspace admin.",
+        description: "You don't have permission to perform this action. Contact your workspace admin.",
       };
     case 404:
       return {
         title: "Not found",
         description: "The requested resource does not exist.",
+      };
+    case 409:
+      return {
+        title: "Conflict",
+        description: error.message || "This action could not be completed. The resource may already exist.",
       };
     case 503:
       return {

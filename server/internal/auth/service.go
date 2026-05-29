@@ -9,10 +9,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/config"
-	"github.com/kusumaningrat/idp-backend/internal/department"
-	"github.com/kusumaningrat/idp-backend/internal/user"
-	pkgjwt "github.com/kusumaningrat/idp-backend/pkg/jwt"
+	"github.com/kusumaningrat/ternakclouds/internal/config"
+	"github.com/kusumaningrat/ternakclouds/internal/department"
+	"github.com/kusumaningrat/ternakclouds/internal/user"
+	pkgjwt "github.com/kusumaningrat/ternakclouds/pkg/jwt"
 )
 
 var ErrInvalidToken = errors.New("invalid or expired token")

@@ -2,7 +2,7 @@ package capability
 
 import (
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/models"
+	"github.com/kusumaningrat/ternakclouds/internal/models"
 )
 
 // Name constants for the capability catalogue.

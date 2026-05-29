@@ -8,11 +8,11 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/capability"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	"github.com/kusumaningrat/ternakclouds/internal/capability"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
-var ErrNoNomadProvider = errors.New("no nomad provider configured for this environment; set NOMAD_ADDR or bind a nomad provider via capabilities")
+var ErrNoNomadProvider = errors.New("No Nomad provider is configured for this environment. Please bind a provider in the Capabilities settings.")
 
 type Service struct {
 	capRepo *capability.Repository

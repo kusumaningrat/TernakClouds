@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/capability"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	"github.com/kusumaningrat/ternakclouds/internal/capability"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
-var ErrNoK8sProvider = errors.New("no kubernetes provider configured for this environment; set KUBE_HOST or bind a kubernetes provider via capabilities")
+var ErrNoK8sProvider = errors.New("No Kubernetes provider is configured for this environment. Please bind a provider in the Capabilities settings.")
 
 type Service struct {
 	capRepo *capability.Repository

@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
-var ErrVaultDisabled = errors.New("vault is not configured; cannot store provider token")
+var ErrVaultDisabled = errors.New("Secret storage is not configured. Please set up a Vault provider first.")
 
 type Service struct {
 	repo  *Repository

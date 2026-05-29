@@ -6,7 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -37,7 +37,7 @@ func (h *Handler) CreateProvider(c *gin.Context) {
 	wsID := contextWorkspaceID(c)
 	var input CreateProviderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 	p, err := h.svc.CreateProvider(c.Request.Context(), wsID, input)
@@ -46,7 +46,7 @@ func (h *Handler) CreateProvider(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		pkg.RespondErr(c, http.StatusInternalServerError, "failed to create registry: "+err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to create registry. Please try again.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusCreated, toProviderResponse(p))
@@ -80,7 +80,7 @@ func (h *Handler) UpdateProvider(c *gin.Context) {
 	}
 	var input UpdateProviderInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 	p, err := h.svc.UpdateProvider(c.Request.Context(), id, input)
@@ -89,7 +89,7 @@ func (h *Handler) UpdateProvider(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		pkg.RespondErr(c, http.StatusInternalServerError, "failed to update registry: "+err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to update registry. Please try again.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, toProviderResponse(p))
@@ -121,7 +121,7 @@ func (h *Handler) ValidateConnection(c *gin.Context) {
 		return
 	}
 	if err := h.svc.ValidateConnection(c.Request.Context(), id); err != nil {
-		pkg.RespondErr(c, http.StatusBadGateway, "registry connection failed: "+err.Error())
+		pkg.RespondErr(c, http.StatusBadGateway, "Registry connection failed. Please check the registry configuration.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, gin.H{"status": "ok"})
@@ -140,7 +140,7 @@ func (h *Handler) ListRepositories(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		pkg.RespondErr(c, http.StatusBadGateway, "failed to list repositories: "+err.Error())
+		pkg.RespondErr(c, http.StatusBadGateway, "Failed to fetch repositories.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, repos)
@@ -164,7 +164,7 @@ func (h *Handler) ListTags(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		pkg.RespondErr(c, http.StatusBadGateway, "failed to list tags: "+err.Error())
+		pkg.RespondErr(c, http.StatusBadGateway, "Failed to fetch image tags.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, tags)
@@ -190,7 +190,7 @@ func (h *Handler) CreateBinding(c *gin.Context) {
 	envID := contextEnvironmentID(c)
 	var input CreateBindingInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 	b, err := h.svc.CreateBinding(c.Request.Context(), envID, input)
@@ -203,7 +203,7 @@ func (h *Handler) CreateBinding(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		pkg.RespondErr(c, http.StatusInternalServerError, "failed to create binding: "+err.Error())
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to bind registry to environment.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusCreated, gin.H{
@@ -247,7 +247,7 @@ func (h *Handler) ListBoundRepositories(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		pkg.RespondErr(c, http.StatusBadGateway, "failed to list repositories: "+err.Error())
+		pkg.RespondErr(c, http.StatusBadGateway, "Failed to fetch repositories.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, repos)
@@ -272,7 +272,7 @@ func (h *Handler) ListBoundTags(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		pkg.RespondErr(c, http.StatusBadGateway, "failed to list tags: "+err.Error())
+		pkg.RespondErr(c, http.StatusBadGateway, "Failed to fetch image tags.")
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, tags)

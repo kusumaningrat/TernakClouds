@@ -7,11 +7,11 @@ import (
 	"os"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/capability"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	"github.com/kusumaningrat/ternakclouds/internal/capability"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
-var ErrNoDockerProvider = errors.New("no docker provider configured for this environment; set DOCKER_HOST or bind a docker provider via capabilities")
+var ErrNoDockerProvider = errors.New("No Docker provider is configured for this environment. Please bind a provider in the Capabilities settings.")
 
 type Service struct {
 	capRepo *capability.Repository

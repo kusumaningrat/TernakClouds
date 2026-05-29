@@ -1,6 +1,6 @@
 package department
 
-import "github.com/kusumaningrat/idp-backend/internal/models"
+import "github.com/kusumaningrat/ternakclouds/internal/models"
 
 type Department struct {
 	models.Base

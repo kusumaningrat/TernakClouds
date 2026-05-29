@@ -1,4 +1,4 @@
-APP_NAME=idp-backend
+APP_NAME=ternakclouds
 
 run:
 	go run ./cmd/api

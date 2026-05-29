@@ -3,7 +3,7 @@ package platformapp
 import (
 	"errors"
 
-	"github.com/kusumaningrat/idp-backend/internal/generator"
+	"github.com/kusumaningrat/ternakclouds/internal/generator"
 )
 
 var (

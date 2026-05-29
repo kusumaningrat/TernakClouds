@@ -2,7 +2,7 @@ package registry
 
 import (
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/models"
+	"github.com/kusumaningrat/ternakclouds/internal/models"
 )
 
 type RegistryProvider struct {

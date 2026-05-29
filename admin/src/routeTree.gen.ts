@@ -45,9 +45,9 @@ import { Route as DashboardEnvironmentsEnvIdMetricsRouteImport } from './routes/
 import { Route as DashboardEnvironmentsEnvIdLogsRouteImport } from './routes/dashboard.environments.$envId.logs'
 import { Route as DashboardEnvironmentsEnvIdIntegrationsRouteImport } from './routes/dashboard.environments.$envId.integrations'
 import { Route as DashboardEnvironmentsEnvIdDeploymentsRouteImport } from './routes/dashboard.environments.$envId.deployments'
+import { Route as DashboardEnvironmentsEnvIdContainersRouteImport } from './routes/dashboard.environments.$envId.containers'
 import { Route as DashboardEnvironmentsEnvIdBlueprintsRouteImport } from './routes/dashboard.environments.$envId.blueprints'
 import { Route as DashboardEnvironmentsEnvIdApplicationsRouteImport } from './routes/dashboard.environments.$envId.applications'
-import { Route as DashboardEnvironmentsEnvIdContainersRouteImport } from './routes/dashboard.environments.$envId.containers'
 import { Route as DashboardEnvironmentsEnvIdServicesIndexRouteImport } from './routes/dashboard.environments.$envId.services.index'
 import { Route as DashboardEnvironmentsEnvIdPodsIndexRouteImport } from './routes/dashboard.environments.$envId.pods.index'
 import { Route as DashboardEnvironmentsEnvIdDeploymentsIndexRouteImport } from './routes/dashboard.environments.$envId.deployments.index'
@@ -259,6 +259,12 @@ const DashboardEnvironmentsEnvIdDeploymentsRoute =
     path: '/deployments',
     getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
   } as any)
+const DashboardEnvironmentsEnvIdContainersRoute =
+  DashboardEnvironmentsEnvIdContainersRouteImport.update({
+    id: '/containers',
+    path: '/containers',
+    getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
+  } as any)
 const DashboardEnvironmentsEnvIdBlueprintsRoute =
   DashboardEnvironmentsEnvIdBlueprintsRouteImport.update({
     id: '/blueprints',
@@ -269,12 +275,6 @@ const DashboardEnvironmentsEnvIdApplicationsRoute =
   DashboardEnvironmentsEnvIdApplicationsRouteImport.update({
     id: '/applications',
     path: '/applications',
-    getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
-  } as any)
-const DashboardEnvironmentsEnvIdContainersRoute =
-  DashboardEnvironmentsEnvIdContainersRouteImport.update({
-    id: '/containers',
-    path: '/containers',
     getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
   } as any)
 const DashboardEnvironmentsEnvIdServicesIndexRoute =
@@ -922,6 +922,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardEnvironmentsEnvIdDeploymentsRouteImport
       parentRoute: typeof DashboardEnvironmentsEnvIdRoute
     }
+    '/dashboard/environments/$envId/containers': {
+      id: '/dashboard/environments/$envId/containers'
+      path: '/containers'
+      fullPath: '/dashboard/environments/$envId/containers'
+      preLoaderRoute: typeof DashboardEnvironmentsEnvIdContainersRouteImport
+      parentRoute: typeof DashboardEnvironmentsEnvIdRoute
+    }
     '/dashboard/environments/$envId/blueprints': {
       id: '/dashboard/environments/$envId/blueprints'
       path: '/blueprints'
@@ -934,13 +941,6 @@ declare module '@tanstack/react-router' {
       path: '/applications'
       fullPath: '/dashboard/environments/$envId/applications'
       preLoaderRoute: typeof DashboardEnvironmentsEnvIdApplicationsRouteImport
-      parentRoute: typeof DashboardEnvironmentsEnvIdRoute
-    }
-    '/dashboard/environments/$envId/containers': {
-      id: '/dashboard/environments/$envId/containers'
-      path: '/containers'
-      fullPath: '/dashboard/environments/$envId/containers'
-      preLoaderRoute: typeof DashboardEnvironmentsEnvIdContainersRouteImport
       parentRoute: typeof DashboardEnvironmentsEnvIdRoute
     }
     '/dashboard/environments/$envId/services/': {

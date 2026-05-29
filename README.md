@@ -28,17 +28,17 @@ Platform engineers get:
 
 ## Features
 
-| Area | Capabilities |
-|---|---|
+| Area                   | Capabilities                                                                          |
+| ---------------------- | ------------------------------------------------------------------------------------- |
 | **Runtime management** | Kubernetes and Nomad via provider abstraction; workload inspection, scaling, restarts |
-| **Deployments** | Service deployments across environments, rollout tracking, job management |
-| **Service catalog** | Deployable service templates that developers can self-serve |
-| **Logs platform** | Centralized runtime log streaming (Loki-backed); search, filter, live tail |
-| **Secrets** | Vault-backed secret grants; environment-scoped RBAC |
-| **Registries** | Container registry management, workspace and environment scoped |
-| **Access control** | Platform RBAC (admin/manager/developer/viewer) + workspace ownership model |
-| **Access requests** | Self-service workspace access request workflow with admin approval |
-| **Multi-tenancy** | Isolated workspaces, each with their own environments, members, and capabilities |
+| **Deployments**        | Service deployments across environments, rollout tracking, job management             |
+| **Service catalog**    | Deployable service templates that developers can self-serve                           |
+| **Logs platform**      | Centralized runtime log streaming (Loki-backed); search, filter, live tail            |
+| **Secrets**            | Vault-backed secret grants; environment-scoped RBAC                                   |
+| **Registries**         | Container registry management, workspace and environment scoped                       |
+| **Access control**     | Platform RBAC (admin/manager/developer/viewer) + workspace ownership model            |
+| **Access requests**    | Self-service workspace access request workflow with admin approval                    |
+| **Multi-tenancy**      | Isolated workspaces, each with their own environments, members, and capabilities      |
 
 ---
 
@@ -116,7 +116,7 @@ cp admin/.env.example admin/.env
 make docker-up
 
 # 4. Install dependencies + start
-make install && make dev
+make prepare && make dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and log in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` you set in `server/.env`.
@@ -127,27 +127,27 @@ Full setup guide: [`docs/getting-started/installation.md`](./docs/getting-starte
 
 ## Documentation
 
-| Guide | Description |
-|---|---|
-| [Introduction](./docs/introduction/overview.md) | Platform overview and design philosophy |
-| [Architecture](./docs/architecture/overview.md) | System components, request flows, data model |
-| [Installation](./docs/getting-started/installation.md) | Prerequisites, configuration, first run |
-| [Runtimes](./docs/runtimes/overview.md) | Kubernetes and Nomad provider abstractions |
-| [Logs platform](./docs/logs/overview.md) | Centralized log streaming, Loki integration |
-| [Authentication & RBAC](./docs/authentication/rbac.md) | Auth model, roles, permission system |
-| [Contributing](./docs/contributing/guide.md) | Development setup, code standards, PR workflow |
+| Guide                                                  | Description                                    |
+| ------------------------------------------------------ | ---------------------------------------------- |
+| [Introduction](./docs/introduction/overview.md)        | Platform overview and design philosophy        |
+| [Architecture](./docs/architecture/overview.md)        | System components, request flows, data model   |
+| [Installation](./docs/getting-started/installation.md) | Prerequisites, configuration, first run        |
+| [Runtimes](./docs/runtimes/overview.md)                | Kubernetes and Nomad provider abstractions     |
+| [Logs platform](./docs/logs/overview.md)               | Centralized log streaming, Loki integration    |
+| [Authentication & RBAC](./docs/authentication/rbac.md) | Auth model, roles, permission system           |
+| [Contributing](./docs/contributing/guide.md)           | Development setup, code standards, PR workflow |
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Backend | Go 1.22, Gin, GORM, PostgreSQL 16 |
+| Layer    | Technology                                          |
+| -------- | --------------------------------------------------- |
+| Backend  | Go 1.22, Gin, GORM, PostgreSQL 16                   |
 | Frontend | React, TanStack Start, TanStack Query, Tailwind CSS |
-| Secrets | HashiCorp Vault (KV v2, AppRole auth) |
-| Runtimes | Kubernetes (via API server), Nomad (via HTTP API) |
-| Logs | Loki (provider-backed streaming) |
+| Secrets  | HashiCorp Vault (KV v2, AppRole auth)               |
+| Runtimes | Kubernetes (via API server), Nomad (via HTTP API)   |
+| Logs     | Loki (provider-backed streaming)                    |
 
 ---
 

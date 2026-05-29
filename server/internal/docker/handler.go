@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -49,7 +49,7 @@ func (h *Handler) StartContainer(c *gin.Context) {
 		respondDockerErr(c, err)
 		return
 	}
-	pkg.RespondMessage(c, http.StatusOK, "started")
+	pkg.RespondMessage(c, http.StatusOK, "Container started successfully.")
 }
 
 // POST /workspaces/:slug/environments/:envSlug/docker/containers/:id/stop
@@ -59,7 +59,7 @@ func (h *Handler) StopContainer(c *gin.Context) {
 		respondDockerErr(c, err)
 		return
 	}
-	pkg.RespondMessage(c, http.StatusOK, "stopped")
+	pkg.RespondMessage(c, http.StatusOK, "Container stopped successfully.")
 }
 
 // POST /workspaces/:slug/environments/:envSlug/docker/containers/:id/restart
@@ -69,7 +69,7 @@ func (h *Handler) RestartContainer(c *gin.Context) {
 		respondDockerErr(c, err)
 		return
 	}
-	pkg.RespondMessage(c, http.StatusOK, "restarted")
+	pkg.RespondMessage(c, http.StatusOK, "Container restarted successfully.")
 }
 
 // DELETE /workspaces/:slug/environments/:envSlug/docker/containers/:id
@@ -79,7 +79,7 @@ func (h *Handler) RemoveContainer(c *gin.Context) {
 		respondDockerErr(c, err)
 		return
 	}
-	pkg.RespondMessage(c, http.StatusOK, "removed")
+	pkg.RespondMessage(c, http.StatusOK, "Container removed successfully.")
 }
 
 // GET /workspaces/:slug/environments/:envSlug/docker/containers/:id/logs?follow=true
@@ -99,7 +99,7 @@ func (h *Handler) StreamContainerLogs(c *gin.Context) {
 
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		pkg.RespondErr(c, http.StatusInternalServerError, "streaming not supported")
+		pkg.RespondErr(c, http.StatusInternalServerError, "Log streaming is not available in this environment.")
 		return
 	}
 
@@ -173,7 +173,7 @@ func respondDockerErr(c *gin.Context, err error) {
 		return
 	}
 	slog.Error("docker upstream error", "path", c.Request.URL.Path, "err", err)
-	pkg.RespondErr(c, http.StatusBadGateway, "docker error: "+err.Error())
+	pkg.RespondErr(c, http.StatusBadGateway, "Unable to complete the request. The Docker daemon returned an error.")
 }
 
 func contextEnvironmentID(c *gin.Context) uuid.UUID {

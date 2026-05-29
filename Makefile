@@ -22,7 +22,8 @@
 
 # ── Dependencies ─────────────────────────────────────────────────────────────
 
-install:
+prepare:
+	cd server && go mod tidy
 	npm install
 	cd admin && npm install
 

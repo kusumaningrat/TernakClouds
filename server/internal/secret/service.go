@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/capability"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	"github.com/kusumaningrat/ternakclouds/internal/capability"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
 type Service struct {

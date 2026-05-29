@@ -3,10 +3,10 @@ package main
 import (
 	"log"
 
-	"github.com/kusumaningrat/idp-backend/internal/bootstrap"
-	"github.com/kusumaningrat/idp-backend/internal/config"
-	"github.com/kusumaningrat/idp-backend/internal/database"
-	"github.com/kusumaningrat/idp-backend/internal/server"
+	"github.com/kusumaningrat/ternakclouds/internal/bootstrap"
+	"github.com/kusumaningrat/ternakclouds/internal/config"
+	"github.com/kusumaningrat/ternakclouds/internal/database"
+	"github.com/kusumaningrat/ternakclouds/internal/server"
 )
 
 func main() {

@@ -5,13 +5,13 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	registryprovider "github.com/kusumaningrat/idp-backend/internal/providers/registry"
-	"github.com/kusumaningrat/idp-backend/internal/providers/registry/dockerhub"
-	"github.com/kusumaningrat/idp-backend/internal/providers/registry/ecr"
-	"github.com/kusumaningrat/idp-backend/internal/providers/registry/gcr"
-	"github.com/kusumaningrat/idp-backend/internal/providers/registry/ghcr"
-	"github.com/kusumaningrat/idp-backend/internal/providers/registry/harbor"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	registryprovider "github.com/kusumaningrat/ternakclouds/internal/providers/registry"
+	"github.com/kusumaningrat/ternakclouds/internal/providers/registry/dockerhub"
+	"github.com/kusumaningrat/ternakclouds/internal/providers/registry/ecr"
+	"github.com/kusumaningrat/ternakclouds/internal/providers/registry/gcr"
+	"github.com/kusumaningrat/ternakclouds/internal/providers/registry/ghcr"
+	"github.com/kusumaningrat/ternakclouds/internal/providers/registry/harbor"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
 type Service struct {

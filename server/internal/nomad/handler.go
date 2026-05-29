@@ -12,7 +12,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -153,7 +153,7 @@ func (h *Handler) StreamLogs(c *gin.Context) {
 
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		pkg.RespondErr(c, http.StatusInternalServerError, "streaming not supported")
+		pkg.RespondErr(c, http.StatusInternalServerError, "Log streaming is not available in this environment.")
 		return
 	}
 
@@ -257,7 +257,8 @@ func respondNomadErr(c *gin.Context, err error) {
 		pkg.RespondErr(c, http.StatusServiceUnavailable, err.Error())
 		return
 	}
-	pkg.RespondErr(c, http.StatusBadGateway, "nomad error: "+err.Error())
+	slog.Error("nomad upstream error", "path", c.Request.URL.Path, "err", err)
+	pkg.RespondErr(c, http.StatusBadGateway, "Unable to complete the request. The Nomad cluster returned an error.")
 }
 
 func contextEnvironmentID(c *gin.Context) uuid.UUID {

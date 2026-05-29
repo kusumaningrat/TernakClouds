@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	registryprovider "github.com/kusumaningrat/idp-backend/internal/providers/registry"
+	registryprovider "github.com/kusumaningrat/ternakclouds/internal/providers/registry"
 )
 
 type Provider struct {

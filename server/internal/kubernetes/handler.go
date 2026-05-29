@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/pkg"
+	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
 type Handler struct {
@@ -123,14 +123,14 @@ func (h *Handler) ScaleDeployment(c *gin.Context) {
 	name := c.Param("name")
 	var input ScaleInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
 		return
 	}
 	if err := h.svc.ScaleDeployment(c.Request.Context(), contextEnvironmentID(c), namespace, name, *input.Replicas); err != nil {
 		respondK8sErr(c, err)
 		return
 	}
-	pkg.RespondMessage(c, http.StatusOK, "scaled")
+	pkg.RespondMessage(c, http.StatusOK, "Deployment scaled successfully.")
 }
 
 // GET .../kubernetes/pods/:namespace/:podName/logs?container=<name>&follow=true
@@ -158,7 +158,7 @@ func (h *Handler) StreamPodLogs(c *gin.Context) {
 
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
-		pkg.RespondErr(c, http.StatusInternalServerError, "streaming not supported")
+		pkg.RespondErr(c, http.StatusInternalServerError, "Log streaming is not available in this environment.")
 		return
 	}
 
@@ -204,7 +204,7 @@ func respondK8sErr(c *gin.Context, err error) {
 		return
 	}
 	slog.Error("kubernetes upstream error", "path", c.Request.URL.Path, "err", err)
-	pkg.RespondErr(c, http.StatusBadGateway, "kubernetes error: "+err.Error())
+	pkg.RespondErr(c, http.StatusBadGateway, "Unable to complete the request. The Kubernetes cluster returned an error.")
 }
 
 func contextEnvironmentID(c *gin.Context) uuid.UUID {

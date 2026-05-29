@@ -6,9 +6,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/blueprint"
-	"github.com/kusumaningrat/idp-backend/internal/generator"
-	"github.com/kusumaningrat/idp-backend/internal/nomad"
+	"github.com/kusumaningrat/ternakclouds/internal/blueprint"
+	"github.com/kusumaningrat/ternakclouds/internal/generator"
+	"github.com/kusumaningrat/ternakclouds/internal/nomad"
 )
 
 type Service struct {

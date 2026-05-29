@@ -8,10 +8,10 @@ import (
 	"text/template"
 
 	"github.com/google/uuid"
-	"github.com/kusumaningrat/idp-backend/internal/capability"
-	"github.com/kusumaningrat/idp-backend/internal/nomad"
-	"github.com/kusumaningrat/idp-backend/internal/registry"
-	"github.com/kusumaningrat/idp-backend/internal/vault"
+	"github.com/kusumaningrat/ternakclouds/internal/capability"
+	"github.com/kusumaningrat/ternakclouds/internal/nomad"
+	"github.com/kusumaningrat/ternakclouds/internal/registry"
+	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
 // hclTemplate uses [[ ]] as Go template delimiters so that Nomad's Consul

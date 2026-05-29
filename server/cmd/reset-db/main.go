@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 
-	"github.com/kusumaningrat/idp-backend/internal/config"
-	"github.com/kusumaningrat/idp-backend/internal/database"
+	"github.com/kusumaningrat/ternakclouds/internal/config"
+	"github.com/kusumaningrat/ternakclouds/internal/database"
 )
 
 func main() {

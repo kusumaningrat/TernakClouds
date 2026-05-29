@@ -12,8 +12,8 @@ var (
 	ErrCatalogNotFound    = errors.New("catalog item not found")
 	ErrDeploymentNotFound = errors.New("deployment not found")
 	ErrRegistryNotBound   = errors.New("registry not bound to this environment")
-	ErrRegistryRequired   = errors.New("registry_id required for non-public catalog items")
-	ErrNoVaultCapability  = errors.New("no vault provider found in the secrets capability for this environment")
+	ErrRegistryRequired   = errors.New("A registry must be selected for private catalog items.")
+	ErrNoVaultCapability  = errors.New("Secret storage is not available for this environment. Please configure a Vault provider.")
 )
 
 type DeployInput struct {
