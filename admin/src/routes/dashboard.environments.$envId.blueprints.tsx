@@ -32,7 +32,13 @@ import {
 import { toast } from "sonner";
 import type { Blueprint, PlatformSpec, GeneratedResources } from "@/lib/types";
 import type { ApiError } from "@/lib/api";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/blueprints")({
   head: () => ({ meta: [{ title: "Blueprints · TernakClouds" }] }),
@@ -77,7 +83,10 @@ function BlueprintCard({
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-start gap-3 mb-3">
           <div className="size-10 rounded-lg bg-secondary grid place-items-center shrink-0 group-hover:bg-primary/10 transition">
-            <BlueprintIcon icon={bp.icon} className="size-5 text-muted-foreground group-hover:text-primary transition" />
+            <BlueprintIcon
+              icon={bp.icon}
+              className="size-5 text-muted-foreground group-hover:text-primary transition"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5">
@@ -152,7 +161,9 @@ function StepIndicator({ current }: { current: number }) {
             ) : (
               <span
                 className={`size-4 rounded-full grid place-items-center text-[10px] ${
-                  i === current ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+                  i === current
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground"
                 }`}
               >
                 {i + 1}
@@ -160,7 +171,9 @@ function StepIndicator({ current }: { current: number }) {
             )}
             <span className="hidden sm:inline">{label}</span>
           </div>
-          {i < STEPS.length - 1 && <ChevronRight className="size-3 text-muted-foreground/30 mx-0.5" />}
+          {i < STEPS.length - 1 && (
+            <ChevronRight className="size-3 text-muted-foreground/30 mx-0.5" />
+          )}
         </div>
       ))}
     </div>
@@ -212,13 +225,17 @@ function Step1Runtime({
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-2 block">Runtime provider *</label>
+        <label className="text-xs font-medium text-muted-foreground mb-2 block">
+          Runtime provider *
+        </label>
         <div className="grid grid-cols-3 gap-2">
           {bp.supported_runtimes.map((rt) => (
             <button
               key={rt}
               onClick={() =>
-                onChange({ runtime: { ...spec.runtime, provider: rt as PlatformSpec["runtime"]["provider"] } })
+                onChange({
+                  runtime: { ...spec.runtime, provider: rt as PlatformSpec["runtime"]["provider"] },
+                })
               }
               className={`px-3 py-2.5 rounded-md border text-sm font-medium transition ${
                 spec.runtime.provider === rt
@@ -233,22 +250,30 @@ function Step1Runtime({
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Application name *</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          Application name *
+        </label>
         <input
           value={spec.service.name}
           onChange={(e) => onChange({ service: { ...spec.service, name: e.target.value } })}
           placeholder={`my-${bp.name}`}
           className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
         />
-        <p className="text-[11px] text-muted-foreground mt-1">Slug format. Used as the deployment identifier.</p>
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Slug format. Used as the deployment identifier.
+        </p>
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Deployment strategy</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          Deployment strategy
+        </label>
         <select
           value={spec.deployment.strategy}
           onChange={(e) =>
-            onChange({ deployment: { strategy: e.target.value as PlatformSpec["deployment"]["strategy"] } })
+            onChange({
+              deployment: { strategy: e.target.value as PlatformSpec["deployment"]["strategy"] },
+            })
           }
           className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
         >
@@ -290,7 +315,9 @@ function Step2RuntimeConfig({
       {isNomad && (
         <>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Datacenter *</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Datacenter *
+            </label>
             {datacenters.length > 0 ? (
               <select
                 value={spec.runtime.datacenter}
@@ -299,7 +326,9 @@ function Step2RuntimeConfig({
               >
                 <option value="">Select datacenter…</option>
                 {datacenters.map((dc) => (
-                  <option key={dc} value={dc}>{dc}</option>
+                  <option key={dc} value={dc}>
+                    {dc}
+                  </option>
                 ))}
               </select>
             ) : (
@@ -313,7 +342,9 @@ function Step2RuntimeConfig({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Worker node *</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Worker node *
+            </label>
             {workers.length > 0 ? (
               <select
                 value={spec.runtime.worker_name}
@@ -322,7 +353,9 @@ function Step2RuntimeConfig({
               >
                 <option value="">Select worker…</option>
                 {workers.map((n) => (
-                  <option key={n.ID} value={n.Name}>{n.Name} ({n.Address})</option>
+                  <option key={n.ID} value={n.Name}>
+                    {n.Name} ({n.Address})
+                  </option>
                 ))}
               </select>
             ) : (
@@ -336,7 +369,9 @@ function Step2RuntimeConfig({
           </div>
 
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Namespace</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Namespace
+            </label>
             <input
               value={spec.runtime.namespace}
               onChange={(e) => updateRuntime({ namespace: e.target.value })}
@@ -350,7 +385,9 @@ function Step2RuntimeConfig({
       {isK8s && (
         <>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Kubernetes namespace</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Kubernetes namespace
+            </label>
             <input
               value={spec.runtime.k8s_namespace}
               onChange={(e) => updateRuntime({ k8s_namespace: e.target.value })}
@@ -359,7 +396,9 @@ function Step2RuntimeConfig({
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Replicas</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Replicas
+            </label>
             <input
               type="number"
               min={1}
@@ -373,7 +412,9 @@ function Step2RuntimeConfig({
 
       {isNomad && (
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Manifest variant</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            Manifest variant
+          </label>
           <select
             value={spec.runtime.variant ?? ""}
             onChange={(e) => updateRuntime({ variant: e.target.value || undefined })}
@@ -388,7 +429,9 @@ function Step2RuntimeConfig({
 
       {isK8s && (
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Manifest variant</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            Manifest variant
+          </label>
           <select
             value={spec.runtime.variant ?? ""}
             onChange={(e) => updateRuntime({ variant: e.target.value || undefined })}
@@ -403,13 +446,19 @@ function Step2RuntimeConfig({
       )}
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Observability</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          Observability
+        </label>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
               checked={spec.observability.logs_enabled}
-              onChange={(e) => onChange({ observability: { ...spec.observability, logs_enabled: e.target.checked } })}
+              onChange={(e) =>
+                onChange({
+                  observability: { ...spec.observability, logs_enabled: e.target.checked },
+                })
+              }
               className="rounded"
             />
             Enable centralized logs
@@ -455,7 +504,9 @@ function Step3Container({
       </div>
 
       <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Container port *</label>
+        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          Container port *
+        </label>
         <input
           type="number"
           min={1}
@@ -469,7 +520,9 @@ function Step3Container({
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">CPU (MHz)</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            CPU (MHz)
+          </label>
           <input
             type="number"
             min={100}
@@ -480,7 +533,9 @@ function Step3Container({
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Memory (MB)</label>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            Memory (MB)
+          </label>
           <input
             type="number"
             min={64}
@@ -511,10 +566,14 @@ function Step4SecretsCICD({
   return (
     <div className="space-y-6">
       <div className="space-y-3">
-        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Vault Secrets</h3>
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Vault Secrets
+        </h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Vault role</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Vault role
+            </label>
             <input
               value={spec.secrets.vault_role ?? ""}
               onChange={(e) => updateSecrets({ vault_role: e.target.value })}
@@ -523,7 +582,9 @@ function Step4SecretsCICD({
             />
           </div>
           <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Vault path</label>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Vault path
+            </label>
             <input
               value={spec.secrets.vault_path ?? ""}
               onChange={(e) => updateSecrets({ vault_path: e.target.value })}
@@ -533,13 +594,16 @@ function Step4SecretsCICD({
           </div>
         </div>
         <p className="text-[11px] text-muted-foreground">
-          Optional. Relative path within the KV engine (e.g. <span className="font-mono">myapp/env</span>).
+          Optional. Relative path within the KV engine (e.g.{" "}
+          <span className="font-mono">myapp/env</span>).
         </p>
       </div>
 
       <div className="space-y-3 border-t border-border pt-4">
         <div className="flex items-center gap-3">
-          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex-1">CI/CD Generation</h3>
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex-1">
+            CI/CD Generation
+          </h3>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input
               type="checkbox"
@@ -555,7 +619,9 @@ function Step4SecretsCICD({
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Provider</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Provider
+                </label>
                 <select
                   value={spec.cicd.provider}
                   onChange={(e) => updateCICD({ provider: e.target.value, style: "" })}
@@ -567,7 +633,9 @@ function Step4SecretsCICD({
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Trigger branch</label>
+                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  Trigger branch
+                </label>
                 <input
                   value={spec.cicd.branch ?? "main"}
                   onChange={(e) => updateCICD({ branch: e.target.value })}
@@ -577,7 +645,9 @@ function Step4SecretsCICD({
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Deploy style</label>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Deploy style
+              </label>
               <select
                 value={spec.cicd.style ?? ""}
                 onChange={(e) => updateCICD({ style: e.target.value || undefined })}
@@ -590,11 +660,16 @@ function Step4SecretsCICD({
                 <option value="helm">Helm — upgrade --install</option>
               </select>
               <p className="text-[11px] text-muted-foreground mt-1">
-                {(!spec.cicd.style || spec.cicd.style === "") && "Triggers a redeploy via the TernakClouds IDP API."}
-                {spec.cicd.style === "ssh" && "Requires SSH_HOST, SSH_USER and SSH_PRIVATE_KEY secrets in your CI provider."}
-                {spec.cicd.style === "nomad" && "Requires NOMAD_ADDR and NOMAD_TOKEN secrets. Expects a .nomad.hcl job file in your repo."}
-                {spec.cicd.style === "kubectl" && "Requires KUBE_CONFIG_DATA (base64 kubeconfig) secret in your CI provider."}
-                {spec.cicd.style === "helm" && "Requires KUBE_CONFIG_DATA secret and a ./chart directory in your repo."}
+                {(!spec.cicd.style || spec.cicd.style === "") &&
+                  "Triggers a redeploy via the TernakClouds IDP API."}
+                {spec.cicd.style === "ssh" &&
+                  "Requires SSH_HOST, SSH_USER and SSH_PRIVATE_KEY secrets in your CI provider."}
+                {spec.cicd.style === "nomad" &&
+                  "Requires NOMAD_ADDR and NOMAD_TOKEN secrets. Expects a .nomad.hcl job file in your repo."}
+                {spec.cicd.style === "kubectl" &&
+                  "Requires KUBE_CONFIG_DATA (base64 kubeconfig) secret in your CI provider."}
+                {spec.cicd.style === "helm" &&
+                  "Requires KUBE_CONFIG_DATA secret and a ./chart directory in your repo."}
               </p>
             </div>
           </div>
@@ -657,14 +732,17 @@ function Step5Preview({
 
   const isEditing = editingTab === activeTab;
   const currentContent = activeTab === "runtime" ? editedManifest : editedCICD;
-  const originalContent = activeTab === "runtime" ? (resources.runtime_manifest ?? "") : (resources.cicd_workflow ?? "");
+  const originalContent =
+    activeTab === "runtime" ? (resources.runtime_manifest ?? "") : (resources.cicd_workflow ?? "");
   const isDirty = currentContent !== originalContent;
 
   return (
     <div className="space-y-3">
       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 flex items-center gap-2 text-emerald-600">
         <CheckCircle className="size-4 shrink-0" />
-        <span className="text-xs font-medium">Resources generated. Review and edit before provisioning.</span>
+        <span className="text-xs font-medium">
+          Resources generated. Review and edit before provisioning.
+        </span>
       </div>
 
       <div className="flex items-center gap-1">
@@ -672,7 +750,10 @@ function Step5Preview({
           {tabs.map((t) => (
             <button
               key={t.key}
-              onClick={() => { setActiveTab(t.key); setEditingTab(null); }}
+              onClick={() => {
+                setActiveTab(t.key);
+                setEditingTab(null);
+              }}
               className={`px-3 py-1.5 rounded text-xs font-medium transition ${
                 activeTab === t.key
                   ? "bg-primary text-primary-foreground"
@@ -787,7 +868,8 @@ function ProvisionWizard({
     if (!spec || !blueprint) return false;
     if (step === 0) return spec.service.name.trim() !== "" && !!spec.runtime.provider;
     if (step === 1) {
-      if (spec.runtime.provider === "nomad") return !!spec.runtime.datacenter && !!spec.runtime.worker_name;
+      if (spec.runtime.provider === "nomad")
+        return !!spec.runtime.datacenter && !!spec.runtime.worker_name;
       return true;
     }
     if (step === 2) return spec.container.image.trim() !== "" && spec.container.port > 0;
@@ -817,7 +899,8 @@ function ProvisionWizard({
   const handleProvision = async () => {
     if (!blueprint || !spec) return;
     try {
-      const overrideManifest = editedManifest !== (preview?.runtime_manifest ?? "") ? editedManifest : undefined;
+      const overrideManifest =
+        editedManifest !== (preview?.runtime_manifest ?? "") ? editedManifest : undefined;
       const overrideCICD = editedCICD !== (preview?.cicd_workflow ?? "") ? editedCICD : undefined;
       await provisionMutation.mutateAsync({
         blueprint_name: blueprint.name,
@@ -853,7 +936,12 @@ function ProvisionWizard({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -868,7 +956,12 @@ function ProvisionWizard({
           <div className="mt-2">
             {step === 0 && <Step1Runtime bp={blueprint} spec={spec} onChange={patchSpec} />}
             {step === 1 && (
-              <Step2RuntimeConfig spec={spec} workspaceSlug={workspaceSlug} envSlug={envSlug} onChange={patchSpec} />
+              <Step2RuntimeConfig
+                spec={spec}
+                workspaceSlug={workspaceSlug}
+                envSlug={envSlug}
+                onChange={patchSpec}
+              />
             )}
             {step === 2 && <Step3Container spec={spec} onChange={patchSpec} />}
             {step === 3 && <Step4SecretsCICD spec={spec} onChange={patchSpec} />}
@@ -900,7 +993,9 @@ function ProvisionWizard({
                   ))}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  The platform will generate the runtime manifest and submit it to <strong>{spec.runtime.provider}</strong>. This action cannot be automatically undone.
+                  The platform will generate the runtime manifest and submit it to{" "}
+                  <strong>{spec.runtime.provider}</strong>. This action cannot be automatically
+                  undone.
                 </p>
               </div>
             )}
@@ -913,11 +1008,7 @@ function ProvisionWizard({
             onClick={step === 0 ? handleClose : () => setStep((s) => s - 1)}
             className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-secondary hover:bg-accent text-sm transition"
           >
-            {step === 0 ? (
-              <X className="size-3.5" />
-            ) : (
-              <ArrowLeft className="size-3.5" />
-            )}
+            {step === 0 ? <X className="size-3.5" /> : <ArrowLeft className="size-3.5" />}
             {step === 0 ? "Cancel" : "Back"}
           </button>
 
@@ -986,7 +1077,9 @@ function BlueprintsPage() {
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3">
             <AlertCircle className="size-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
-              <div className="text-sm font-medium text-amber-700">No runtime provider configured</div>
+              <div className="text-sm font-medium text-amber-700">
+                No runtime provider configured
+              </div>
               <div className="text-xs text-amber-600 mt-0.5">
                 Bind a runtime provider in <strong>Platform → Runtime</strong> before provisioning.
               </div>

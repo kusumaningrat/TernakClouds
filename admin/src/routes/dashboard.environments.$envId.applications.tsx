@@ -33,7 +33,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/applications")({
   head: () => ({ meta: [{ title: "Applications · TernakClouds" }] }),
@@ -77,7 +83,12 @@ const BLUEPRINT_ICONS: Record<string, React.ElementType> = {
 
 function ManifestDialog({ app, onClose }: { app: PlatformApp; onClose: () => void }) {
   return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -227,7 +238,8 @@ function ApplicationsPage() {
             </div>
             <div className="font-semibold text-sm mb-1">No applications yet</div>
             <p className="text-xs text-muted-foreground mb-5 leading-relaxed">
-              Provision your first application from a blueprint. The platform generates the runtime manifest and deploys it automatically.
+              Provision your first application from a blueprint. The platform generates the runtime
+              manifest and deploys it automatically.
             </p>
             <button
               onClick={() =>
@@ -243,11 +255,21 @@ function ApplicationsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Application</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Runtime</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Job ID</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Provisioned</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Application
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Runtime
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Job ID
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Provisioned
+                  </th>
                   <th className="px-4 py-2.5" />
                 </tr>
               </thead>
@@ -273,19 +295,25 @@ function ApplicationsPage() {
 
       <AlertDialog
         open={!!deleting}
-        onOpenChange={(v) => { if (!v) setDeleting(null); }}
+        onOpenChange={(v) => {
+          if (!v) setDeleting(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove application?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{deleting?.name}</strong> will be stopped in <strong>{deleting?.runtime_provider}</strong> and removed from this environment. This cannot be undone.
+              <strong>{deleting?.name}</strong> will be stopped in{" "}
+              <strong>{deleting?.runtime_provider}</strong> and removed from this environment. This
+              cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { void handleDelete(); }}
+              onClick={() => {
+                void handleDelete();
+              }}
               disabled={deleteApp.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
