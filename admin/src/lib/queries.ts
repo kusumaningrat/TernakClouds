@@ -1579,8 +1579,7 @@ export const platformAppKeys = {
 export function usePlatformApps(slug: string, envSlug: string) {
   return useQuery<PlatformApp[], ApiError>({
     queryKey: platformAppKeys.list(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps`),
     enabled: !!slug && !!envSlug,
     staleTime: 15_000,
     retry: false,
@@ -1605,10 +1604,7 @@ export function usePlatformApp(slug: string, envSlug: string, id: string) {
 export function usePreviewApp(slug: string, envSlug: string) {
   return useMutation<GeneratedResources, ApiError, PreviewAppInput>({
     mutationFn: (input) =>
-      api.post(
-        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/preview`,
-        input,
-      ),
+      api.post(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/preview`, input),
   });
 }
 
@@ -1617,10 +1613,7 @@ export function useProvisionApp(slug: string, envSlug: string) {
   const queryClient = useQueryClient();
   return useMutation<PlatformApp, ApiError, ProvisionAppInput>({
     mutationFn: (input) =>
-      api.post(
-        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps`,
-        input,
-      ),
+      api.post(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps`, input),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: platformAppKeys.list(slug, envSlug),
@@ -1634,9 +1627,7 @@ export function useDeletePlatformApp(slug: string, envSlug: string) {
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, string>({
     mutationFn: (id) =>
-      api.delete(
-        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/${id}`,
-      ),
+      api.delete(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/${id}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: platformAppKeys.list(slug, envSlug),
