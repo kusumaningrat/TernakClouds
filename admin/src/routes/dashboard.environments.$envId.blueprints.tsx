@@ -5,6 +5,8 @@ import {
   useBlueprints,
   useCapabilities,
   useNomadNodes,
+  useNomadNamespaces,
+  useK8sNamespaces,
   usePreviewApp,
   useProvisionApp,
 } from "@/lib/queries";
@@ -302,6 +304,16 @@ function Step2RuntimeConfig({
   const isK8s = spec.runtime.provider === "kubernetes";
 
   const { data: nodes } = useNomadNodes(workspaceSlug, envSlug, isNomad);
+  const { data: nomadNamespaces, isLoading: nomadNsLoading } = useNomadNamespaces(
+    workspaceSlug,
+    envSlug,
+    isNomad,
+  );
+  const { data: k8sNamespaces, isLoading: k8sNsLoading } = useK8sNamespaces(
+    workspaceSlug,
+    envSlug,
+    isK8s,
+  );
   const datacenters = [...new Set((nodes ?? []).map((n) => n.Datacenter))];
   const workers = (nodes ?? []).filter(
     (n) => !spec.runtime.datacenter || n.Datacenter === spec.runtime.datacenter,
@@ -372,12 +384,22 @@ function Step2RuntimeConfig({
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Namespace
             </label>
-            <input
+            <select
               value={spec.runtime.namespace}
               onChange={(e) => updateRuntime({ namespace: e.target.value })}
-              placeholder="default"
-              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-            />
+              disabled={nomadNsLoading}
+              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm disabled:opacity-60"
+            >
+              {nomadNamespaces && nomadNamespaces.length > 0 ? (
+                nomadNamespaces.map((ns) => (
+                  <option key={ns.Name} value={ns.Name}>
+                    {ns.Name}
+                  </option>
+                ))
+              ) : (
+                <option value="default">default</option>
+              )}
+            </select>
           </div>
         </>
       )}
@@ -388,12 +410,22 @@ function Step2RuntimeConfig({
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
               Kubernetes namespace
             </label>
-            <input
+            <select
               value={spec.runtime.k8s_namespace}
               onChange={(e) => updateRuntime({ k8s_namespace: e.target.value })}
-              placeholder="default"
-              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-            />
+              disabled={k8sNsLoading}
+              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm disabled:opacity-60"
+            >
+              {k8sNamespaces && k8sNamespaces.length > 0 ? (
+                k8sNamespaces.map((ns) => (
+                  <option key={ns.name} value={ns.name}>
+                    {ns.name}
+                  </option>
+                ))
+              ) : (
+                <option value="default">default</option>
+              )}
+            </select>
           </div>
           <div>
             <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
