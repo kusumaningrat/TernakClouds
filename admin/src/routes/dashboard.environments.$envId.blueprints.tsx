@@ -9,10 +9,20 @@ import {
   useK8sNamespaces,
   useEnvironmentRegistries,
   useBoundRepos,
+  useSecretGrants,
+  useCreateSecretGrant,
   usePreviewApp,
   useProvisionApp,
 } from "@/lib/queries";
+import { isAdminGrant } from "@/lib/types";
+import type {
+  SecretGrantAdminView,
+  Blueprint,
+  PlatformSpec,
+  GeneratedResources,
+} from "@/lib/types";
 import { useState } from "react";
+import { toast } from "sonner";
 import {
   Globe,
   Cpu,
@@ -33,8 +43,6 @@ import {
   ChevronRight,
   Rocket,
 } from "lucide-react";
-import { toast } from "sonner";
-import type { Blueprint, PlatformSpec, GeneratedResources } from "@/lib/types";
 import type { ApiError } from "@/lib/api";
 import {
   Dialog,
@@ -732,54 +740,266 @@ function Step3Container({
 }
 
 // Step 4 — secrets + CI/CD
+type SecretMode = "none" | "existing" | "new";
+
 function Step4SecretsCICD({
   spec,
   onChange,
+  workspaceSlug,
+  envSlug,
 }: {
   spec: PlatformSpec;
   onChange: (patch: Partial<PlatformSpec>) => void;
+  workspaceSlug: string;
+  envSlug: string;
 }) {
   const updateSecrets = (patch: Partial<PlatformSpec["secrets"]>) =>
     onChange({ secrets: { ...spec.secrets, ...patch } });
   const updateCICD = (patch: Partial<PlatformSpec["cicd"]>) =>
     onChange({ cicd: { ...spec.cicd, ...patch } });
 
+  const [secretMode, setSecretMode] = useState<SecretMode>("none");
+  const [selectedGrantId, setSelectedGrantId] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPath, setNewPath] = useState("");
+  const [newDesc, setNewDesc] = useState("");
+  const [createdGrant, setCreatedGrant] = useState<SecretGrantAdminView | null>(null);
+
+  const { data: grants = [] } = useSecretGrants(workspaceSlug, envSlug);
+  const createGrant = useCreateSecretGrant();
+
+  const handleModeChange = (mode: SecretMode) => {
+    setSecretMode(mode);
+    setSelectedGrantId("");
+    setCreatedGrant(null);
+    if (mode === "none") {
+      updateSecrets({ vault_role: undefined, vault_path: undefined });
+    } else {
+      updateSecrets({ vault_path: undefined });
+    }
+  };
+
+  const handleSelectGrant = (id: string) => {
+    setSelectedGrantId(id);
+    const grant = grants.find((g) => g.id === id);
+    if (!grant) return;
+    updateSecrets({ vault_path: isAdminGrant(grant) ? grant.vault_path : undefined });
+  };
+
+  const handleCreateGrant = async () => {
+    if (!newName.trim() || !newPath.trim()) return;
+    try {
+      const result = await createGrant.mutateAsync({
+        slug: workspaceSlug,
+        envSlug,
+        input: {
+          name: newName.trim(),
+          vault_path: newPath.trim(),
+          description: newDesc.trim() || undefined,
+        },
+      });
+      setCreatedGrant(result);
+      updateSecrets({ vault_path: result.vault_path });
+      toast.success("Secret grant created", { description: result.name });
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : "Failed to create secret grant");
+    }
+  };
+
+  const MODE_BUTTONS: { key: SecretMode; label: string }[] = [
+    { key: "none", label: "None" },
+    { key: "existing", label: "Use existing" },
+    { key: "new", label: "Create new" },
+  ];
+
+  const selectedGrant = grants.find((g) => g.id === selectedGrantId);
+
   return (
     <div className="space-y-6">
+      {/* ── Vault Secrets ──────────────────────────────────────────── */}
       <div className="space-y-3">
         <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           Vault Secrets
         </h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Vault role
-            </label>
-            <input
-              value={spec.secrets.vault_role ?? ""}
-              onChange={(e) => updateSecrets({ vault_role: e.target.value })}
-              placeholder="my-app-role"
-              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-              Vault path
-            </label>
-            <input
-              value={spec.secrets.vault_path ?? ""}
-              onChange={(e) => updateSecrets({ vault_path: e.target.value })}
-              placeholder="myapp/env"
-              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
-            />
-          </div>
+
+        {/* Mode picker */}
+        <div className="flex rounded-md border border-border overflow-hidden text-xs w-fit">
+          {MODE_BUTTONS.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => handleModeChange(key)}
+              className={`px-3 py-1.5 transition ${
+                secretMode === key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:bg-accent"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
         </div>
-        <p className="text-[11px] text-muted-foreground">
-          Optional. Relative path within the KV engine (e.g.{" "}
-          <span className="font-mono">myapp/env</span>).
-        </p>
+
+        {/* Use existing grant */}
+        {secretMode === "existing" && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                Secret grant
+              </label>
+              {grants.length === 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  No secret grants found in this environment. Switch to{" "}
+                  <button
+                    type="button"
+                    className="underline hover:text-foreground transition"
+                    onClick={() => handleModeChange("new")}
+                  >
+                    Create new
+                  </button>{" "}
+                  to add one.
+                </p>
+              ) : (
+                <select
+                  value={selectedGrantId}
+                  onChange={(e) => handleSelectGrant(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                >
+                  <option value="">Select secret grant…</option>
+                  {grants.map((g) => (
+                    <option key={g.id} value={g.id}>
+                      {g.name}
+                      {isAdminGrant(g) ? ` — ${g.vault_path}` : ""}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {selectedGrant && (
+              <>
+                {/* Path badge */}
+                {isAdminGrant(selectedGrant) ? (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 text-xs font-mono text-muted-foreground">
+                    <span className="text-muted-foreground/50 shrink-0">Vault path</span>
+                    <span className="text-foreground">{selectedGrant.vault_path}</span>
+                  </div>
+                ) : (
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                      Vault path
+                    </label>
+                    <input
+                      value={spec.secrets.vault_path ?? ""}
+                      onChange={(e) => updateSecrets({ vault_path: e.target.value })}
+                      placeholder="myapp/env"
+                      className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Vault path not visible — enter it manually.
+                    </p>
+                  </div>
+                )}
+
+                {/* Vault role */}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Vault role
+                  </label>
+                  <input
+                    value={spec.secrets.vault_role ?? ""}
+                    onChange={(e) => updateSecrets({ vault_role: e.target.value })}
+                    placeholder="my-app-role"
+                    className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                  />
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Create new grant */}
+        {secretMode === "new" && (
+          <div className="space-y-3">
+            {createdGrant ? (
+              /* Success state — grant was created */
+              <>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-600">
+                  <CheckCircle className="size-3.5 shrink-0" />
+                  <span>
+                    <span className="font-medium">{createdGrant.name}</span> created —{" "}
+                    <span className="font-mono">{createdGrant.vault_path}</span>
+                  </span>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Vault role
+                  </label>
+                  <input
+                    value={spec.secrets.vault_role ?? ""}
+                    onChange={(e) => updateSecrets({ vault_role: e.target.value })}
+                    placeholder="my-app-role"
+                    className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                  />
+                </div>
+              </>
+            ) : (
+              /* Create form */
+              <>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Grant name *
+                  </label>
+                  <input
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="my-app-secrets"
+                    className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Vault path *
+                  </label>
+                  <input
+                    value={newPath}
+                    onChange={(e) => setNewPath(e.target.value)}
+                    placeholder="myapp/env"
+                    className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                  />
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Relative path within the KV engine (e.g.{" "}
+                    <span className="font-mono">myapp/env</span>).
+                  </p>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Description{" "}
+                    <span className="font-normal text-muted-foreground/60">optional</span>
+                  </label>
+                  <input
+                    value={newDesc}
+                    onChange={(e) => setNewDesc(e.target.value)}
+                    placeholder="Runtime secrets for my-app"
+                    className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => void handleCreateGrant()}
+                  disabled={!newName.trim() || !newPath.trim() || createGrant.isPending}
+                  className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition disabled:opacity-50"
+                >
+                  {createGrant.isPending && <Loader2 className="size-3.5 animate-spin" />}
+                  Create secret grant
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
+      {/* ── CI/CD ──────────────────────────────────────────────────── */}
       <div className="space-y-3 border-t border-border pt-4">
         <div className="flex items-center gap-3">
           <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex-1">
@@ -1152,7 +1372,14 @@ function ProvisionWizard({
                 envSlug={envSlug}
               />
             )}
-            {step === 3 && <Step4SecretsCICD spec={spec} onChange={patchSpec} />}
+            {step === 3 && (
+              <Step4SecretsCICD
+                spec={spec}
+                onChange={patchSpec}
+                workspaceSlug={workspaceSlug}
+                envSlug={envSlug}
+              />
+            )}
             {step === 4 && (
               <Step5Preview
                 resources={preview}
