@@ -7,6 +7,7 @@ import {
   useDeployService,
   useStopDeployment,
   useNomadNodes,
+  useNomadNamespaces,
   useEnvironmentRegistries,
   useNomadJob,
   useCapabilities,
@@ -243,6 +244,11 @@ function DeployDialog({
   hasNomadProvider: boolean;
 }) {
   const { data: nodes } = useNomadNodes(workspaceSlug, envSlug, hasNomadProvider);
+  const { data: nomadNamespaces, isLoading: nomadNsLoading } = useNomadNamespaces(
+    workspaceSlug,
+    envSlug,
+    hasNomadProvider,
+  );
   const { data: bindings } = useEnvironmentRegistries(workspaceSlug, envSlug);
   const deploy = useDeployService(workspaceSlug, envSlug);
 
@@ -434,13 +440,23 @@ function DeployDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground">Namespace *</label>
-              <input
+              <select
                 required
                 value={namespace}
                 onChange={(e) => setNamespace(e.target.value)}
-                placeholder="default"
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-              />
+                disabled={nomadNsLoading}
+                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm disabled:opacity-60"
+              >
+                {nomadNamespaces && nomadNamespaces.length > 0 ? (
+                  nomadNamespaces.map((ns) => (
+                    <option key={ns.Name} value={ns.Name}>
+                      {ns.Name}
+                    </option>
+                  ))
+                ) : (
+                  <option value="default">default</option>
+                )}
+              </select>
             </div>
             <div>
               <label className="text-xs font-medium text-muted-foreground">Exposed port *</label>
