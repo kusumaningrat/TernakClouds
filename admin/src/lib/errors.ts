@@ -25,7 +25,8 @@ export function friendlyError(error: ApiError | Error | null | undefined): Frien
     case 403:
       return {
         title: "Access denied",
-        description: "You don't have permission to perform this action. Contact your workspace admin.",
+        description:
+          "You don't have permission to perform this action. Contact your workspace admin.",
       };
     case 404:
       return {
@@ -35,7 +36,8 @@ export function friendlyError(error: ApiError | Error | null | undefined): Frien
     case 409:
       return {
         title: "Conflict",
-        description: error.message || "This action could not be completed. The resource may already exist.",
+        description:
+          error.message || "This action could not be completed. The resource may already exist.",
       };
     case 503:
       return {
