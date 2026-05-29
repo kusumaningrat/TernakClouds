@@ -7,6 +7,8 @@ import {
   useNomadNodes,
   useNomadNamespaces,
   useK8sNamespaces,
+  useEnvironmentRegistries,
+  useBoundRepos,
   usePreviewApp,
   useProvisionApp,
 } from "@/lib/queries";
@@ -505,36 +507,182 @@ function Step2RuntimeConfig({
 function Step3Container({
   spec,
   onChange,
+  workspaceSlug,
+  envSlug,
 }: {
   spec: PlatformSpec;
   onChange: (patch: Partial<PlatformSpec>) => void;
+  workspaceSlug: string;
+  envSlug: string;
 }) {
   const updateContainer = (patch: Partial<PlatformSpec["container"]>) =>
     onChange({ container: { ...spec.container, ...patch } });
 
+  // Registry source: "" = public image, otherwise a registry_id
+  const [registryId, setRegistryId] = useState("");
+  const [selectedRepo, setSelectedRepo] = useState("");
+  const [customRepo, setCustomRepo] = useState("");
+  const [isCustomRepo, setIsCustomRepo] = useState(false);
+
+  const { data: bindings = [] } = useEnvironmentRegistries(workspaceSlug, envSlug);
+  const { data: repos = [], isLoading: reposLoading } = useBoundRepos(
+    workspaceSlug,
+    envSlug,
+    registryId,
+    !!registryId,
+  );
+
+  const selectedRegistry = bindings.find((b) => b.registry_id === registryId);
+
+  const buildImage = (endpoint: string, repo: string) =>
+    repo ? `${endpoint.replace(/\/$/, "")}/${repo}` : endpoint.replace(/\/$/, "");
+
+  const handleRegistryChange = (newId: string) => {
+    setRegistryId(newId);
+    setSelectedRepo("");
+    setCustomRepo("");
+    setIsCustomRepo(false);
+    updateContainer({ image: "" });
+  };
+
+  const handleRepoSelect = (value: string) => {
+    if (value === "__new__") {
+      setIsCustomRepo(true);
+      setSelectedRepo("");
+      updateContainer({ image: "" });
+    } else {
+      setIsCustomRepo(false);
+      setSelectedRepo(value);
+      if (selectedRegistry?.registry_endpoint) {
+        updateContainer({ image: buildImage(selectedRegistry.registry_endpoint, value) });
+      }
+    }
+  };
+
+  const handleCustomRepoChange = (value: string) => {
+    setCustomRepo(value);
+    if (selectedRegistry?.registry_endpoint) {
+      updateContainer({ image: buildImage(selectedRegistry.registry_endpoint, value) });
+    }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-3 gap-3">
-        <div className="col-span-2">
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Image *</label>
-          <input
-            value={spec.container.image}
-            onChange={(e) => updateContainer({ image: e.target.value })}
-            placeholder="nginx or registry.example.com/myorg/myapp"
-            className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
-          />
-        </div>
-        <div>
-          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tag</label>
-          <input
-            value={spec.container.tag}
-            onChange={(e) => updateContainer({ tag: e.target.value })}
-            placeholder="latest"
-            className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
-          />
-        </div>
+      {/* Image source */}
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          Image source *
+        </label>
+        <select
+          value={registryId}
+          onChange={(e) => handleRegistryChange(e.target.value)}
+          className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+        >
+          <option value="">Public image</option>
+          {bindings.map((b) => (
+            <option key={b.registry_id} value={b.registry_id}>
+              {b.registry_name ?? b.registry_endpoint ?? b.registry_id}
+            </option>
+          ))}
+        </select>
       </div>
 
+      {/* Public image — free-text path + tag side by side */}
+      {!registryId && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2">
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Image *
+            </label>
+            <input
+              value={spec.container.image}
+              onChange={(e) => updateContainer({ image: e.target.value })}
+              placeholder="nginx or registry.example.com/myorg/myapp"
+              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tag</label>
+            <input
+              value={spec.container.tag}
+              onChange={(e) => updateContainer({ tag: e.target.value })}
+              placeholder="latest"
+              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Private registry flow */}
+      {registryId && (
+        <>
+          {/* Registry endpoint badge */}
+          {selectedRegistry?.registry_endpoint && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 border border-border text-xs font-mono text-muted-foreground">
+              <span className="text-muted-foreground/50 shrink-0">Registry</span>
+              <span className="text-foreground truncate">{selectedRegistry.registry_endpoint}</span>
+            </div>
+          )}
+
+          {/* Project / image path */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+              Project / image path *
+            </label>
+            {reposLoading ? (
+              <div className="flex items-center gap-2 h-10 text-xs text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin" /> Loading repositories…
+              </div>
+            ) : (
+              <select
+                value={isCustomRepo ? "__new__" : selectedRepo}
+                onChange={(e) => handleRepoSelect(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+              >
+                <option value="">Select project…</option>
+                {repos.map((r) => (
+                  <option key={r.name} value={r.name}>
+                    {r.name}
+                  </option>
+                ))}
+                <option value="__new__">＋ Create new project…</option>
+              </select>
+            )}
+            {isCustomRepo && (
+              <input
+                autoFocus
+                value={customRepo}
+                onChange={(e) => handleCustomRepoChange(e.target.value)}
+                placeholder="myproject/myimage"
+                className="mt-2 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+              />
+            )}
+          </div>
+
+          {/* Tag */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Tag</label>
+            <input
+              value={spec.container.tag}
+              onChange={(e) => updateContainer({ tag: e.target.value })}
+              placeholder="latest"
+              className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+            />
+          </div>
+
+          {/* Composed image preview */}
+          {spec.container.image && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 text-xs font-mono text-muted-foreground break-all">
+              <span className="text-muted-foreground/50 shrink-0">Image</span>
+              <span className="text-foreground">
+                {spec.container.image}:{spec.container.tag || "latest"}
+              </span>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Container port */}
       <div>
         <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
           Container port *
@@ -550,6 +698,7 @@ function Step3Container({
         />
       </div>
 
+      {/* CPU + Memory */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
@@ -995,7 +1144,14 @@ function ProvisionWizard({
                 onChange={patchSpec}
               />
             )}
-            {step === 2 && <Step3Container spec={spec} onChange={patchSpec} />}
+            {step === 2 && (
+              <Step3Container
+                spec={spec}
+                onChange={patchSpec}
+                workspaceSlug={workspaceSlug}
+                envSlug={envSlug}
+              />
+            )}
             {step === 3 && <Step4SecretsCICD spec={spec} onChange={patchSpec} />}
             {step === 4 && (
               <Step5Preview
