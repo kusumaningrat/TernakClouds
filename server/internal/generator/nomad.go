@@ -29,6 +29,7 @@ type nomadTemplateVars struct {
 	Image            string
 	PortLabel        string
 	Strategy         string
+	HealthPath       string
 	RegistryUsername string
 	RegistryPassword string
 	VaultRole        string
@@ -74,6 +75,11 @@ func GenerateNomadHCL(spec PlatformSpec, workspaceSlug, envSlug string) (string,
 		strategy = "rolling"
 	}
 
+	healthPath := spec.Container.HealthPath
+	if healthPath == "" {
+		healthPath = "/health"
+	}
+
 	image := spec.Container.Image
 	if spec.Container.Tag != "" {
 		image = image + ":" + spec.Container.Tag
@@ -106,6 +112,7 @@ func GenerateNomadHCL(spec PlatformSpec, workspaceSlug, envSlug string) (string,
 		Image:            image,
 		PortLabel:        "http",
 		Strategy:         strategy,
+		HealthPath:       healthPath,
 		RegistryUsername: spec.Container.RegistryUsername,
 		RegistryPassword: spec.Container.RegistryPassword,
 		VaultRole:        spec.Secrets.VaultRole,

@@ -542,8 +542,10 @@ function Step3Container({
 
   const selectedRegistry = bindings.find((b) => b.registry_id === registryId);
 
-  const buildImage = (endpoint: string, repo: string) =>
-    repo ? `${endpoint.replace(/\/$/, "")}/${repo}` : endpoint.replace(/\/$/, "");
+  const buildImage = (endpoint: string, repo: string) => {
+    const host = endpoint.replace(/^https?:\/\//, "").replace(/\/$/, "");
+    return repo ? `${host}/${repo}` : host;
+  };
 
   const handleRegistryChange = (newId: string) => {
     setRegistryId(newId);
@@ -690,20 +692,33 @@ function Step3Container({
         </>
       )}
 
-      {/* Container port */}
-      <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
-          Container port *
-        </label>
-        <input
-          type="number"
-          min={1}
-          max={65535}
-          value={spec.container.port}
-          onChange={(e) => updateContainer({ port: parseInt(e.target.value, 10) || 8080 })}
-          placeholder="8080"
-          className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-        />
+      {/* Container port + Health path */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            Container port *
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={65535}
+            value={spec.container.port}
+            onChange={(e) => updateContainer({ port: parseInt(e.target.value, 10) || 8080 })}
+            placeholder="8080"
+            className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            Health check path
+          </label>
+          <input
+            value={spec.container.health_path ?? ""}
+            onChange={(e) => updateContainer({ health_path: e.target.value || undefined })}
+            placeholder="/health"
+            className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+          />
+        </div>
       </div>
 
       {/* CPU + Memory */}

@@ -988,6 +988,7 @@ export interface PlatformContainerSpec {
   port: number;
   cpu: number;
   memory_mb: number;
+  health_path?: string;
 }
 
 export interface PlatformDeploymentSpec {

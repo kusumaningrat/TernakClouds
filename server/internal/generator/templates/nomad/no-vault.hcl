@@ -27,14 +27,14 @@ job "[[.JobID]]" {
 
     service {
       name     = "[[.ServiceName]]"
-      tags     = ["apps", "blueprints", "[[.BlueprintType]]"[[if .WorkspaceLabel]], "workspace:[[.WorkspaceLabel]]"[[end]]]
+      tags     = ["apps", "logs.promtail", "blueprints", "[[.BlueprintType]]"[[if .WorkspaceLabel]], "workspace:[[.WorkspaceLabel]]"[[end]]]
       port     = "[[.PortLabel]]"
       [[- if ne .BlueprintType "worker"]]
       check {
         name     = "health"
         type     = "http"
         port     = "[[.PortLabel]]"
-        path     = "/health"
+        path     = "[[.HealthPath]]"
         interval = "30s"
         timeout  = "10s"
       }
@@ -53,10 +53,6 @@ job "[[.JobID]]" {
         image = "[[.Image]]"
         ports = ["[[.PortLabel]]"]
         [[- if .RegistryUsername]]
-        auth {
-          username = "[[.RegistryUsername]]"
-          password = "[[.RegistryPassword]]"
-        }
         [[- end]]
         dns_servers = ["172.17.0.1", "172.18.0.1", "8.8.8.8", "1.1.1.1"]
         labels {

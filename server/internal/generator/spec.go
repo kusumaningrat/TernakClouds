@@ -49,6 +49,9 @@ type ContainerSpec struct {
 	CPU      int    `json:"cpu"`      // MHz (Nomad) / millicores (K8s)
 	MemoryMB int    `json:"memory_mb"` // megabytes
 
+	// HealthPath is the HTTP path used for the service health check (default "/health").
+	HealthPath string `json:"health_path,omitempty"`
+
 	// Auth for private registries — populated by the provisioning service.
 	RegistryUsername string `json:"registry_username,omitempty"`
 	RegistryPassword string `json:"registry_password,omitempty"`
