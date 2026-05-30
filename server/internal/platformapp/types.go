@@ -48,6 +48,39 @@ type GeneratedResources struct {
 	CICDProvider    string `json:"cicd_provider,omitempty"`
 }
 
+// PlatformAppPage is the paginated response for platform applications.
+type PlatformAppPage struct {
+	Items []PlatformAppResponse `json:"items"`
+	Total int64                 `json:"total"`
+	Page  int                   `json:"page"`
+	Limit int                   `json:"limit"`
+}
+
+// DeploymentHistoryPage is the paginated response for deployment records.
+type DeploymentHistoryPage struct {
+	Items []DeploymentRecordResponse `json:"items"`
+	Total int64                      `json:"total"`
+	Page  int                        `json:"page"`
+	Limit int                        `json:"limit"`
+}
+
+// DeploymentRecordResponse is the HTTP response for a single deployment event.
+type DeploymentRecordResponse struct {
+	ID            string `json:"id"`
+	PlatformAppID string `json:"platform_app_id"`
+	TriggeredBy   string `json:"triggered_by"`
+	Status        string `json:"status"`
+	RuntimeJobID  string `json:"runtime_job_id,omitempty"`
+	RepoName      string `json:"repo_name,omitempty"`
+	RepoBranch    string `json:"repo_branch,omitempty"`
+	CommitSHA     string `json:"commit_sha,omitempty"`
+	PRNumber      int    `json:"pr_number,omitempty"`
+	PRURL         string `json:"pr_url,omitempty"`
+	CICDProvider  string `json:"cicd_provider,omitempty"`
+	Message       string `json:"message,omitempty"`
+	CreatedAt     string `json:"created_at"`
+}
+
 // PlatformAppResponse is the HTTP response for a platform application.
 type PlatformAppResponse struct {
 	ID                string                 `json:"id"`

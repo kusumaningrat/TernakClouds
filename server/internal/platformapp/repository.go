@@ -17,12 +17,16 @@ func (r *Repository) Create(app *PlatformApp) error {
 	return r.db.Create(app).Error
 }
 
-func (r *Repository) List(envID uuid.UUID) ([]PlatformApp, error) {
+func (r *Repository) List(envID uuid.UUID, offset, limit int) ([]PlatformApp, int64, error) {
 	var apps []PlatformApp
-	return apps, r.db.
-		Where("environment_id = ?", envID).
-		Order("created_at desc").
-		Find(&apps).Error
+	var total int64
+
+	base := r.db.Model(&PlatformApp{}).Where("environment_id = ?", envID)
+	if err := base.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := base.Order("created_at desc").Offset(offset).Limit(limit).Find(&apps).Error
+	return apps, total, err
 }
 
 func (r *Repository) FindByID(id uuid.UUID) (*PlatformApp, error) {
@@ -55,4 +59,22 @@ func (r *Repository) UpdateRepoInfo(id uuid.UUID, commitSHA, prURL string, prNum
 
 func (r *Repository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&PlatformApp{}, "id = ?", id).Error
+}
+
+// ── Deployment records ────────────────────────────────────────────────────────
+
+func (r *Repository) CreateDeployment(d *DeploymentRecord) error {
+	return r.db.Create(d).Error
+}
+
+func (r *Repository) ListDeployments(appID uuid.UUID, offset, limit int) ([]DeploymentRecord, int64, error) {
+	var records []DeploymentRecord
+	var total int64
+
+	base := r.db.Model(&DeploymentRecord{}).Where("platform_app_id = ?", appID)
+	if err := base.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	err := base.Order("created_at desc").Offset(offset).Limit(limit).Find(&records).Error
+	return records, total, err
 }

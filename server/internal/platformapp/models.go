@@ -1,6 +1,8 @@
 package platformapp
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 	"github.com/kusumaningrat/ternakclouds/internal/models"
 )
@@ -40,4 +42,30 @@ type PlatformApp struct {
 	CommitSHA      string `json:"commit_sha,omitempty"`
 	PRNumber       int    `json:"pr_number,omitempty"`
 	PRURL          string `json:"pr_url,omitempty"`
+}
+
+// DeploymentRecord captures a single provisioning or redeploy event for a PlatformApp.
+// Each call to Provision() creates one record; future redeploy webhooks create additional ones.
+type DeploymentRecord struct {
+	ID            uuid.UUID `gorm:"type:uuid;primaryKey"    json:"id"`
+	PlatformAppID uuid.UUID `gorm:"type:uuid;not null;index" json:"platform_app_id"`
+	TriggeredBy   uuid.UUID `gorm:"type:uuid;not null"      json:"triggered_by"`
+	// Status mirrors PlatformApp status at the time of this deployment.
+	Status       string `gorm:"not null"    json:"status"`
+	RuntimeJobID string `json:"runtime_job_id,omitempty"`
+	// Repository / CI/CD traceability fields.
+	RepoName     string `json:"repo_name,omitempty"`
+	RepoBranch   string `json:"repo_branch,omitempty"`
+	CommitSHA    string `json:"commit_sha,omitempty"`
+	PRNumber     int    `json:"pr_number,omitempty"`
+	PRURL        string `json:"pr_url,omitempty"`
+	CICDProvider string `json:"cicd_provider,omitempty"`
+	Message      string `gorm:"type:text" json:"message,omitempty"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+func (d *DeploymentRecord) BeforeCreate(_ interface{}) {
+	if d.ID == uuid.Nil {
+		d.ID = uuid.New()
+	}
 }
