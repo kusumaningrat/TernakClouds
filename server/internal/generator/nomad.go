@@ -9,8 +9,9 @@ import (
 // nomad templates use [[ ]] delimiters so Consul Template {{ }} syntax
 // inside vault template blocks passes through unchanged.
 var nomadTemplates = map[string]*template.Template{
-	"v1":          loadTemplate("nomad", "v1.hcl", "[[", "]]"),
-	"no-vault":    loadTemplate("nomad", "no-vault.hcl", "[[", "]]"),
+	"default":     loadTemplate("nomad", "with-vault.hcl", "[[", "]]"),
+	"no-vault":    loadTemplate("nomad", "default.hcl", "[[", "]]"),
+	"with-vault":  loadTemplate("nomad", "with-vault.hcl", "[[", "]]"),
 	"with-volume": loadTemplate("nomad", "with-volume.hcl", "[[", "]]"),
 }
 
@@ -49,8 +50,8 @@ func GenerateNomadHCL(spec PlatformSpec, workspaceSlug, envSlug string) (string,
 	}
 
 	variant := spec.Runtime.Variant
-	if variant == "" {
-		variant = "v1"
+	if variant == "" || variant == "v1" {
+		variant = "default"
 	}
 	tmpl, ok := nomadTemplates[variant]
 	if !ok {
@@ -98,14 +99,14 @@ func GenerateNomadHCL(spec PlatformSpec, workspaceSlug, envSlug string) (string,
 	volumeMountPath := "/data"
 
 	vars := nomadTemplateVars{
-		JobID:            spec.Service.Name + "-bp",
+		JobID:            spec.Service.Name,
 		ServiceName:      spec.Service.Name,
 		BlueprintType:    spec.Service.Type,
 		JobType:          jobType,
 		Datacenter:       spec.Runtime.Datacenter,
 		Namespace:        ns,
 		WorkerName:       spec.Runtime.WorkerName,
-		ExposedPort:      spec.Container.Port,
+		ExposedPort:      hostPort(spec.Container.HostPort, spec.Container.Port),
 		ContainerPort:    spec.Container.Port,
 		CPU:              cpu,
 		MemoryMB:         mem,
@@ -128,4 +129,13 @@ func GenerateNomadHCL(spec PlatformSpec, workspaceSlug, envSlug string) (string,
 		return "", fmt.Errorf("nomad/%s generator: %w", variant, err)
 	}
 	return buf.String(), nil
+}
+
+// hostPort returns the external host port. Falls back to containerPort when
+// no dedicated host port is configured (hostPort == 0).
+func hostPort(hostPort, containerPort int) int {
+	if hostPort > 0 {
+		return hostPort
+	}
+	return containerPort
 }

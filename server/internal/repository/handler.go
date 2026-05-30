@@ -146,6 +146,32 @@ func (h *Handler) ListRepositories(c *gin.Context) {
 	pkg.RespondOK(c, http.StatusOK, repos)
 }
 
+// GET /workspaces/:slug/repo-providers/:id/contents?repo=owner/name[&branch=main][&path=subdir]
+func (h *Handler) ListContents(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		pkg.RespondErr(c, http.StatusBadRequest, "invalid provider id")
+		return
+	}
+	fullName := c.Query("repo")
+	if fullName == "" {
+		pkg.RespondErr(c, http.StatusBadRequest, "query parameter 'repo' is required")
+		return
+	}
+	branch := c.Query("branch")
+	path := c.Query("path")
+	entries, err := h.svc.ListContents(c.Request.Context(), id, fullName, path, branch)
+	if errors.Is(err, ErrNotFound) {
+		pkg.RespondErr(c, http.StatusNotFound, "repository provider not found")
+		return
+	}
+	if err != nil {
+		pkg.RespondErr(c, http.StatusBadGateway, "failed to list contents: "+err.Error())
+		return
+	}
+	pkg.RespondOK(c, http.StatusOK, entries)
+}
+
 // GET /workspaces/:slug/repo-providers/:id/branches?repo=owner/name
 func (h *Handler) ListBranches(c *gin.Context) {
 	id, err := uuid.Parse(c.Param("id"))

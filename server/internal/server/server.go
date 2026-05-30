@@ -86,7 +86,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	repoService := repository.NewService(repoRepo, vc)
 	catalogService := servicecatalog.NewService(catalogRepo, nomadService, registryRepo, capRepo, vc)
 	blueprintService := blueprint.NewService(blueprintRepo)
-	platformAppService := platformapp.NewService(platformAppRepo, blueprintService, nomadService)
+	platformAppService := platformapp.NewService(platformAppRepo, blueprintService, nomadService, repoService, secretService)
 
 	// ── Handlers ─────────────────────────────────────────────────────────────
 	authHandler := auth.NewAuthHandler(authService, roleService)

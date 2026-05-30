@@ -7,7 +7,7 @@ import (
 )
 
 var k8sTemplates = map[string]*template.Template{
-	"v1":           loadTemplate("kubernetes", "v1.yaml", "", ""),
+	"default":      loadTemplate("kubernetes", "default.yaml", "", ""),
 	"with-hpa":     loadTemplate("kubernetes", "with-hpa.yaml", "", ""),
 	"with-ingress": loadTemplate("kubernetes", "with-ingress.yaml", "", ""),
 	"with-pvc":     loadTemplate("kubernetes", "with-pvc.yaml", "", ""),
@@ -49,8 +49,8 @@ func GenerateKubernetesYAML(spec PlatformSpec, workspaceSlug, envSlug string) (s
 	}
 
 	variant := spec.Runtime.Variant
-	if variant == "" {
-		variant = "v1"
+	if variant == "" || variant == "v1" {
+		variant = "default"
 	}
 	tmpl, ok := k8sTemplates[variant]
 	if !ok {

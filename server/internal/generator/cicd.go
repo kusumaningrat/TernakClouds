@@ -10,21 +10,21 @@ import (
 // All variants are loaded at init time so template parse errors surface at startup.
 var cicdTemplates = map[string]map[string]*template.Template{
 	"github-actions": {
-		"v1":      loadTemplate("github-actions", "v1.yaml", "", ""),
+		"default": loadTemplate("github-actions", "default.yaml", "", ""),
 		"ssh":     loadTemplate("github-actions", "ssh.yaml", "", ""),
 		"nomad":   loadTemplate("github-actions", "nomad.yaml", "", ""),
 		"kubectl": loadTemplate("github-actions", "kubectl.yaml", "", ""),
 		"helm":    loadTemplate("github-actions", "helm.yaml", "", ""),
 	},
 	"gitlab-ci": {
-		"v1":      loadTemplate("gitlab-ci", "v1.yaml", "", ""),
+		"default": loadTemplate("gitlab-ci", "default.yaml", "", ""),
 		"ssh":     loadTemplate("gitlab-ci", "ssh.yaml", "", ""),
 		"nomad":   loadTemplate("gitlab-ci", "nomad.yaml", "", ""),
 		"kubectl": loadTemplate("gitlab-ci", "kubectl.yaml", "", ""),
 		"helm":    loadTemplate("gitlab-ci", "helm.yaml", "", ""),
 	},
 	"jenkins": {
-		"v1":      loadTemplate("jenkins", "v1.groovy", "", ""),
+		"default": loadTemplate("jenkins", "default.groovy", "", ""),
 		"ssh":     loadTemplate("jenkins", "ssh.groovy", "", ""),
 		"nomad":   loadTemplate("jenkins", "nomad.groovy", "", ""),
 		"kubectl": loadTemplate("jenkins", "kubectl.groovy", "", ""),
@@ -42,13 +42,19 @@ type cicdTemplateVars struct {
 	WorkspaceLabel   string
 	Namespace        string // Nomad namespace (used by nomad-style templates)
 	K8sNamespace     string // Kubernetes namespace (used by kubectl/helm templates)
+	// BuildContext is the Docker build context path (relative to repo root).
+	// Empty string means repo root (".");  a service subdirectory means "./app1".
+	BuildContext string
+	// DockerfileName is the environment-specific Dockerfile, e.g. "Dockerfile.dev".
+	// Computed from the environment slug: "Dockerfile." + envSlug.
+	DockerfileName string
 }
 
 // GenerateCICD generates a CI/CD workflow selected by spec.CICD.Provider and spec.CICD.Style.
 func GenerateCICD(spec PlatformSpec, workspaceSlug, envSlug string) (string, error) {
 	style := spec.CICD.Style
 	if style == "" {
-		style = "v1"
+		style = "default"
 	}
 
 	providerMap, ok := cicdTemplates[spec.CICD.Provider]
@@ -84,6 +90,8 @@ func GenerateCICD(spec PlatformSpec, workspaceSlug, envSlug string) (string, err
 		WorkspaceLabel:   workspaceSlug,
 		Namespace:        ns,
 		K8sNamespace:     k8sNS,
+		BuildContext:     spec.CICD.BuildContext,
+		DockerfileName:   "Dockerfile." + envSlug,
 	}
 
 	var buf bytes.Buffer

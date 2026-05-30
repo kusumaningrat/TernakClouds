@@ -170,6 +170,42 @@ func (p *Provider) ListBranches(ctx context.Context, fullName string) ([]repopro
 	return branches, nil
 }
 
+func (p *Provider) ListContents(ctx context.Context, fullName, path, branch string) ([]repoprovider.ContentEntry, error) {
+	apiPath := fmt.Sprintf("/api/v4/projects/%s/repository/tree", encodedPath(fullName))
+	query := "per_page=100"
+	if path != "" {
+		query += "&path=" + url.QueryEscape(path)
+	}
+	if branch != "" {
+		query += "&ref=" + url.QueryEscape(branch)
+	}
+	resp, err := p.do(ctx, http.MethodGet, apiPath+"?"+query, nil)
+	if err != nil {
+		return nil, fmt.Errorf("gitlab: list contents: %w", err)
+	}
+	b, _ := readBody(resp)
+	if err := checkStatus(resp, b); err != nil {
+		return nil, err
+	}
+	var raw []struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+		Type string `json:"type"` // "blob" or "tree"
+	}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil, fmt.Errorf("gitlab: decode contents: %w", err)
+	}
+	entries := make([]repoprovider.ContentEntry, 0, len(raw))
+	for _, r := range raw {
+		t := "file"
+		if r.Type == "tree" {
+			t = "dir"
+		}
+		entries = append(entries, repoprovider.ContentEntry{Name: r.Name, Path: r.Path, Type: t})
+	}
+	return entries, nil
+}
+
 func (p *Provider) CommitFiles(ctx context.Context, req repoprovider.CommitRequest) (*repoprovider.CommitResult, error) {
 	if req.CreateBranch {
 		if err := p.ensureBranch(ctx, req.Repository, req.Branch); err != nil {

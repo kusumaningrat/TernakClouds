@@ -4,24 +4,37 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kusumaningrat/ternakclouds/internal/blueprint"
 	"github.com/kusumaningrat/ternakclouds/internal/generator"
 	"github.com/kusumaningrat/ternakclouds/internal/nomad"
+	"github.com/kusumaningrat/ternakclouds/internal/repository"
+	"github.com/kusumaningrat/ternakclouds/internal/secret"
 )
 
 type Service struct {
 	repo         *Repository
 	blueprintSvc *blueprint.Service
 	nomadSvc     *nomad.Service
+	repoSvc      *repository.Service
+	secretSvc    *secret.Service
 }
 
-func NewService(repo *Repository, blueprintSvc *blueprint.Service, nomadSvc *nomad.Service) *Service {
+func NewService(
+	repo *Repository,
+	blueprintSvc *blueprint.Service,
+	nomadSvc *nomad.Service,
+	repoSvc *repository.Service,
+	secretSvc *secret.Service,
+) *Service {
 	return &Service{
 		repo:         repo,
 		blueprintSvc: blueprintSvc,
 		nomadSvc:     nomadSvc,
+		repoSvc:      repoSvc,
+		secretSvc:    secretSvc,
 	}
 }
 
@@ -43,7 +56,6 @@ func (s *Service) Preview(input PreviewInput, workspaceSlug, envSlug string) (*G
 	}
 	resources.RuntimeManifest = manifest
 
-	// Generate CI/CD workflow if requested.
 	if spec.CICD.Enabled && spec.CICD.Provider != "" {
 		cicd, cicdErr := generateCICD(spec, workspaceSlug, envSlug)
 		if cicdErr == nil {
@@ -52,11 +64,12 @@ func (s *Service) Preview(input PreviewInput, workspaceSlug, envSlug string) (*G
 		}
 	}
 
-	_ = bp // blueprint metadata available for future validation
+	_ = bp
 	return resources, nil
 }
 
-// Provision creates a PlatformApp record and deploys it to the runtime.
+// Provision creates a PlatformApp record, writes initial secrets to Vault (if provided),
+// deploys to the runtime, and commits generated manifests to the repository (if configured).
 func (s *Service) Provision(
 	ctx context.Context,
 	workspaceID, envID, callerID uuid.UUID,
@@ -70,12 +83,22 @@ func (s *Service) Provision(
 
 	spec := input.Spec
 
+	// ── Generate runtime manifest ─────────────────────────────────────────────
 	manifest, err := generateManifest(spec, workspaceSlug, envSlug)
 	if err != nil {
 		return nil, fmt.Errorf("generate manifest: %w", err)
 	}
 	if input.OverrideManifest != "" {
 		manifest = input.OverrideManifest
+	}
+
+	// ── Generate CI/CD workflow (if requested) ────────────────────────────────
+	var cicdWorkflow string
+	if spec.CICD.Enabled && spec.CICD.Provider != "" {
+		cicdWorkflow, _ = generateCICD(spec, workspaceSlug, envSlug)
+		if input.OverrideCICD != "" {
+			cicdWorkflow = input.OverrideCICD
+		}
 	}
 
 	specJSON, err := json.Marshal(spec)
@@ -88,6 +111,18 @@ func (s *Service) Provision(
 		return nil, fmt.Errorf("invalid blueprint id: %w", err)
 	}
 
+	// ── Write initial secrets to Vault (before deploy so runtime can read them) ─
+	if len(input.InitialSecrets) > 0 && input.SecretGrantID != "" {
+		grantID, err := uuid.Parse(input.SecretGrantID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid secret grant id: %w", err)
+		}
+		if err := s.secretSvc.WriteValue(ctx, envID, grantID, "", input.InitialSecrets); err != nil {
+			return nil, fmt.Errorf("write initial secrets: %w", err)
+		}
+	}
+
+	// ── Persist PlatformApp record ────────────────────────────────────────────
 	app := &PlatformApp{
 		WorkspaceID:       workspaceID,
 		EnvironmentID:     envID,
@@ -100,24 +135,45 @@ func (s *Service) Provision(
 		GeneratedManifest: manifest,
 		ProvisionedBy:     callerID,
 	}
+	if input.Repository != nil {
+		baseBranch := input.Repository.BaseBranch
+		if baseBranch == "" {
+			baseBranch = "main"
+		}
+		app.RepoProviderID = input.Repository.ProviderID
+		app.RepoName = input.Repository.Repository
+		app.RepoBranch = baseBranch
+	}
 
 	if err := s.repo.Create(app); err != nil {
 		return nil, fmt.Errorf("create app record: %w", err)
 	}
 
-	// Deploy to runtime.
-	runtimeJobID, deployErr := s.deploy(ctx, envID, spec, manifest)
-	status := StatusProvisioned
-	if deployErr != nil {
-		status = StatusFailed
-		runtimeJobID = ""
+	// Manifests are provisioned — CI/CD pipeline handles the actual runtime deploy.
+	_ = s.repo.UpdateStatus(app.ID, StatusProvisioned, "")
+	app.Status = StatusProvisioned
+
+	// ── Commit manifests to repository ───────────────────────────────────────
+	resp := toResponse(app, spec)
+	if input.Repository != nil && input.Repository.ProviderID != "" {
+		commitSHA, prNum, prURL, repoErr := s.commitManifestsAndPR(
+			ctx,
+			input.Repository,
+			spec,
+			manifest,
+			cicdWorkflow,
+		)
+		app.CommitSHA = commitSHA
+		app.PRNumber = prNum
+		app.PRURL = prURL
+		_ = s.repo.UpdateRepoInfo(app.ID, commitSHA, prURL, prNum)
+		resp.CommitSHA = commitSHA
+		resp.PRNumber = prNum
+		resp.PRURL = prURL
+		resp.RepoError = repoErr
 	}
 
-	_ = s.repo.UpdateStatus(app.ID, status, runtimeJobID)
-	app.Status = status
-	app.RuntimeJobID = runtimeJobID
-
-	return toResponse(app, spec), nil
+	return resp, nil
 }
 
 // List returns all platform apps for an environment.
@@ -183,21 +239,125 @@ func generateCICD(spec generator.PlatformSpec, workspaceSlug, envSlug string) (s
 	return generator.GenerateCICD(spec, workspaceSlug, envSlug)
 }
 
-func (s *Service) deploy(ctx context.Context, envID uuid.UUID, spec generator.PlatformSpec, manifest string) (string, error) {
-	switch spec.Runtime.Provider {
-	case "nomad":
-		if err := s.nomadSvc.DeployHCL(ctx, envID, manifest); err != nil {
-			return "", err
-		}
-		// Nomad job ID is deterministic from the spec.
-		return spec.Service.Name + "-bp", nil
-	case "kubernetes":
-		// K8s deployment is submitted via kubectl-equivalent in the k8s service.
-		// For now we store the manifest; actual K8s apply is a future integration point.
-		return spec.Service.Name, nil
-	default:
-		return "", fmt.Errorf("%w: %s", ErrUnsupportedRuntime, spec.Runtime.Provider)
+// commitManifestsAndPR commits the runtime manifest (and CI/CD workflow if present)
+// to a new branch and opens a pull request.
+// Returns (commitSHA, prNumber, prURL, repoError). repoError is non-empty if any step failed.
+func (s *Service) commitManifestsAndPR(
+	ctx context.Context,
+	repoCfg *RepositoryProvisionConfig,
+	spec generator.PlatformSpec,
+	manifest string,
+	cicdWorkflow string,
+) (commitSHA string, prNumber int, prURL string, repoError string) {
+	if s.repoSvc == nil {
+		repoError = "repository service not available"
+		return
 	}
+
+	providerID, err := uuid.Parse(repoCfg.ProviderID)
+	if err != nil {
+		repoError = fmt.Sprintf("invalid provider id: %v", err)
+		return
+	}
+
+	baseBranch := repoCfg.BaseBranch
+	if baseBranch == "" {
+		baseBranch = "main"
+	}
+	headBranch := fmt.Sprintf("idp/deploy/%s-%d", spec.Service.Name, time.Now().Unix())
+
+	// Build file list.
+	files := []repository.FileEntryInput{
+		{
+			Path:    runtimeManifestPath(spec.Service.Name, spec.Runtime.Provider),
+			Content: manifest,
+		},
+	}
+	if cicdWorkflow != "" {
+		files = append(files, repository.FileEntryInput{
+			Path:    cicdWorkflowPath(spec.Service.Name, spec.CICD.Provider),
+			Content: cicdWorkflow,
+		})
+	}
+
+	// Commit to new branch.
+	result, err := s.repoSvc.CommitFiles(ctx, providerID, repository.CommitFilesInput{
+		Repository:   repoCfg.Repository,
+		Branch:       headBranch,
+		Message:      fmt.Sprintf("feat: provision %s via TernakClouds IDP", spec.Service.Name),
+		Files:        files,
+		CreateBranch: true,
+	})
+	if err != nil {
+		repoError = fmt.Sprintf("commit failed: %v", err)
+		return
+	}
+	if result == nil {
+		repoError = "commit returned no result"
+		return
+	}
+	commitSHA = result.SHA
+
+	// Open pull request.
+	prResult, err := s.repoSvc.CreatePullRequest(ctx, providerID, repository.PullRequestInput{
+		Repository: repoCfg.Repository,
+		Title:      fmt.Sprintf("feat: provision %s via TernakClouds IDP", spec.Service.Name),
+		Body:       buildPRBody(spec, manifest, cicdWorkflow),
+		Head:       headBranch,
+		Base:       baseBranch,
+	})
+	if err != nil {
+		repoError = fmt.Sprintf("PR creation failed (commit succeeded at %s): %v", commitSHA[:7], err)
+		return
+	}
+	if prResult == nil {
+		repoError = "PR creation returned no result"
+		return
+	}
+	prNumber = prResult.Number
+	prURL = prResult.URL
+	return
+}
+
+// runtimeManifestPath returns the repo-relative path for the runtime manifest.
+func runtimeManifestPath(appName, runtimeProvider string) string {
+	switch runtimeProvider {
+	case "nomad":
+		return fmt.Sprintf("nomad/%s.hcl", appName)
+	case "kubernetes":
+		return fmt.Sprintf("kubernetes/%s.yaml", appName)
+	default:
+		return fmt.Sprintf("deployments/%s.txt", appName)
+	}
+}
+
+// cicdWorkflowPath returns the repo-relative path for the CI/CD workflow file.
+func cicdWorkflowPath(appName, cicdProvider string) string {
+	switch cicdProvider {
+	case "github-actions":
+		return fmt.Sprintf(".github/workflows/%s.yml", appName)
+	case "gitlab-ci":
+		return fmt.Sprintf("ci/%s.gitlab-ci.yml", appName)
+	case "jenkins":
+		return fmt.Sprintf("jenkins/%s.groovy", appName)
+	default:
+		return fmt.Sprintf("ci/%s.yml", appName)
+	}
+}
+
+func buildPRBody(spec generator.PlatformSpec, manifest, cicdWorkflow string) string {
+	body := fmt.Sprintf("## TernakClouds IDP — %s\n\n", spec.Service.Name)
+	body += fmt.Sprintf("| Field | Value |\n|---|---|\n")
+	body += fmt.Sprintf("| **Blueprint** | `%s` |\n", spec.Service.Type)
+	body += fmt.Sprintf("| **Runtime** | `%s` |\n", spec.Runtime.Provider)
+	body += fmt.Sprintf("| **Image** | `%s:%s` |\n", spec.Container.Image, spec.Container.Tag)
+	body += fmt.Sprintf("| **Strategy** | `%s` |\n\n", spec.Deployment.Strategy)
+	if cicdWorkflow != "" {
+		body += fmt.Sprintf("CI/CD workflow (`%s`) included.\n\n", spec.CICD.Provider)
+	}
+	body += "_Generated by TernakClouds IDP — merge after pipeline checks pass._\n"
+	_ = manifest
+	return body
 }
 
 func toResponse(app *PlatformApp, spec generator.PlatformSpec) *PlatformAppResponse {
@@ -214,6 +374,12 @@ func toResponse(app *PlatformApp, spec generator.PlatformSpec) *PlatformAppRespo
 		RuntimeJobID:      app.RuntimeJobID,
 		ProvisionedBy:     app.ProvisionedBy.String(),
 		Spec:              spec,
+		RepoProviderID:    app.RepoProviderID,
+		RepoName:          app.RepoName,
+		RepoBranch:        app.RepoBranch,
+		CommitSHA:         app.CommitSHA,
+		PRNumber:          app.PRNumber,
+		PRURL:             app.PRURL,
 		CreatedAt:         app.CreatedAt.Format("2006-01-02T15:04:05Z"),
 		UpdatedAt:         app.UpdatedAt.Format("2006-01-02T15:04:05Z"),
 	}
