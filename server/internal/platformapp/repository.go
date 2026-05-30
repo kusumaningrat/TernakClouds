@@ -43,6 +43,16 @@ func (r *Repository) UpdateStatus(id uuid.UUID, status, runtimeJobID string) err
 		}).Error
 }
 
+func (r *Repository) UpdateRepoInfo(id uuid.UUID, commitSHA, prURL string, prNumber int) error {
+	return r.db.Model(&PlatformApp{}).
+		Where("id = ?", id).
+		Updates(map[string]interface{}{
+			"commit_sha": commitSHA,
+			"pr_url":     prURL,
+			"pr_number":  prNumber,
+		}).Error
+}
+
 func (r *Repository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&PlatformApp{}, "id = ?", id).Error
 }

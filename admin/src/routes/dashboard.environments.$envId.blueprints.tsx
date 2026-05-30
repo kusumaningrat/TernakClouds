@@ -11,6 +11,9 @@ import {
   useEnvironmentRegistries,
   useBoundRepos,
   useRegistryRepos,
+  useRepoProviders,
+  useRepoProviderRepos,
+  useRepoProviderContents,
   useSecretGrants,
   useCreateSecretGrant,
   usePreviewApp,
@@ -24,6 +27,7 @@ import type {
   GeneratedResources,
   RegistryProvider,
   RegistryProviderType,
+  RepositoryProvisionConfig,
 } from "@/lib/types";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -466,7 +470,7 @@ function Step2RuntimeConfig({
             onChange={(e) => updateRuntime({ variant: e.target.value || undefined })}
             className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
           >
-            <option value="">Default (v1 — with Vault)</option>
+            <option value="">Default (with Vault)</option>
             <option value="no-vault">No Vault (plain env vars)</option>
             <option value="with-volume">With persistent volume</option>
           </select>
@@ -580,12 +584,15 @@ function Step3Container({
     return repo ? `${host}/${repo}` : host;
   };
 
+  const cleanEndpoint = (ep: string) => ep.replace(/^https?:\/\//, "").replace(/\/$/, "");
+
   const handleRegistryChange = (newId: string) => {
     setRegistryId(newId);
     setSelectedRepo("");
     setCustomRepo("");
     setIsCustomRepo(false);
     updateContainer({ image: "" });
+    onChange({ registry: {} }); // clear registry spec when source changes
   };
 
   const handleRepoSelect = (value: string) => {
@@ -593,12 +600,21 @@ function Step3Container({
       setIsCustomRepo(true);
       setSelectedRepo("");
       updateContainer({ image: "" });
+      onChange({ registry: { ...spec.registry, image_path: "" } });
     } else {
       setIsCustomRepo(false);
       setSelectedRepo(value);
       if (selectedEndpoint) {
         updateContainer({ image: buildImage(selectedEndpoint, value) });
       }
+      // Populate spec.registry so the CI/CD template gets the correct endpoint + image path.
+      onChange({
+        registry: {
+          registry_id: isBoundReg ? boundRegId : wsRegId,
+          endpoint: cleanEndpoint(selectedEndpoint ?? ""),
+          image_path: value,
+        },
+      });
     }
   };
 
@@ -607,6 +623,13 @@ function Step3Container({
     if (selectedEndpoint) {
       updateContainer({ image: buildImage(selectedEndpoint, value) });
     }
+    onChange({
+      registry: {
+        registry_id: isBoundReg ? boundRegId : wsRegId,
+        endpoint: cleanEndpoint(selectedEndpoint ?? ""),
+        image_path: value,
+      },
+    });
   };
 
   return (
@@ -745,8 +768,8 @@ function Step3Container({
         </>
       )}
 
-      {/* Container port + Health path */}
-      <div className="grid grid-cols-2 gap-3">
+      {/* Ports + Health path */}
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
             Container port *
@@ -760,6 +783,27 @@ function Step3Container({
             placeholder="8080"
             className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
           />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+            Host port
+            <span className="ml-1 text-muted-foreground/60 font-normal">(optional)</span>
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={65535}
+            value={spec.container.host_port ?? ""}
+            onChange={(e) => {
+              const v = parseInt(e.target.value, 10);
+              updateContainer({ host_port: v > 0 ? v : undefined });
+            }}
+            placeholder="dynamic"
+            className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+          />
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            Leave blank for dynamic (Nomad) or same as container port (K8s).
+          </p>
         </div>
         <div>
           <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
@@ -807,6 +851,234 @@ function Step3Container({
   );
 }
 
+// ─── Repository section (used inside Step4) ────────────────────────────────
+
+function RepoSection({
+  appName,
+  workspaceSlug,
+  repoConfig,
+  onRepoConfigChange,
+  buildContext,
+  onBuildContextChange,
+}: {
+  appName: string;
+  workspaceSlug: string;
+  repoConfig: RepositoryProvisionConfig | null;
+  onRepoConfigChange: (cfg: RepositoryProvisionConfig | null) => void;
+  buildContext: string;
+  onBuildContextChange: (v: string) => void;
+}) {
+  const enabled = repoConfig !== null;
+  const { data: providers = [] } = useRepoProviders(workspaceSlug);
+  const providerId = repoConfig?.provider_id ?? "";
+  const selectedRepo = repoConfig?.repository ?? "";
+  const selectedBranch = repoConfig?.base_branch ?? "main";
+
+  const { data: repos = [], isLoading: reposLoading } = useRepoProviderRepos(
+    workspaceSlug,
+    providerId,
+    !!providerId,
+  );
+
+  // Fetch top-level directory entries for the build context picker.
+  const { data: contents = [], isLoading: contentsLoading } = useRepoProviderContents(
+    workspaceSlug,
+    providerId,
+    selectedRepo,
+    selectedBranch,
+    "",
+    !!providerId && !!selectedRepo,
+  );
+  const dirs = contents.filter((e) => e.type === "dir");
+
+  const [customContext, setCustomContext] = useState("");
+  const [isCustomMode, setIsCustomMode] = useState(false);
+  // When dirs load and buildContext is already set to a non-listed value, auto-enter custom mode.
+  const showCustomInput =
+    isCustomMode || (buildContext !== "" && !dirs.some((d) => d.path === buildContext));
+
+  const toggle = (on: boolean) => {
+    if (!on) {
+      onRepoConfigChange(null);
+      onBuildContextChange("");
+    } else {
+      onRepoConfigChange({ provider_id: "", repository: "", base_branch: "main" });
+    }
+  };
+
+  const patch = (p: Partial<RepositoryProvisionConfig>) =>
+    onRepoConfigChange({
+      ...(repoConfig ?? { provider_id: "", repository: "", base_branch: "main" }),
+      ...p,
+    });
+
+  const headBranch = appName ? `idp/deploy/${appName}` : "idp/deploy/app";
+
+  return (
+    <div className="space-y-3 border-t border-border pt-4">
+      <div className="flex items-center gap-3">
+        <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex-1">
+          Repository
+        </h3>
+        <label className="flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => toggle(e.target.checked)}
+            className="rounded"
+          />
+          Commit manifests to repo
+        </label>
+      </div>
+
+      {enabled && (
+        <div className="space-y-3">
+          {providers.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No repository providers registered. Add one from the workspace{" "}
+              <strong>Repositories</strong> page.
+            </p>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Provider
+                  </label>
+                  <select
+                    value={providerId}
+                    onChange={(e) => {
+                      patch({ provider_id: e.target.value, repository: "" });
+                      onBuildContextChange("");
+                    }}
+                    className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  >
+                    <option value="">Select provider…</option>
+                    {providers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.provider_type === "github" ? "GitHub" : "GitLab"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Base branch (PR target)
+                  </label>
+                  <input
+                    value={repoConfig?.base_branch ?? "main"}
+                    onChange={(e) => patch({ base_branch: e.target.value || "main" })}
+                    placeholder="main"
+                    className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                  />
+                </div>
+              </div>
+
+              {providerId && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Repository
+                  </label>
+                  {reposLoading ? (
+                    <div className="flex items-center gap-2 h-10 text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" /> Loading repositories…
+                    </div>
+                  ) : (
+                    <select
+                      value={selectedRepo}
+                      onChange={(e) => {
+                        patch({ repository: e.target.value });
+                        onBuildContextChange("");
+                      }}
+                      className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                    >
+                      <option value="">Select repository…</option>
+                      {repos.map((r) => (
+                        <option key={r.full_name} value={r.full_name}>
+                          {r.full_name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              )}
+
+              {/* Build context — only shown once a repo is selected */}
+              {selectedRepo && (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                    Build context (Dockerfile location)
+                  </label>
+                  {contentsLoading ? (
+                    <div className="flex items-center gap-2 h-10 text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" /> Loading directories…
+                    </div>
+                  ) : (
+                    <select
+                      value={showCustomInput ? "__custom__" : buildContext}
+                      onChange={(e) => {
+                        if (e.target.value === "__custom__") {
+                          setIsCustomMode(true);
+                          // Keep buildContext as-is — user will type in the input below
+                        } else {
+                          setIsCustomMode(false);
+                          setCustomContext("");
+                          onBuildContextChange(e.target.value);
+                        }
+                      }}
+                      className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                    >
+                      <option value="">Repository root (Dockerfile at /)</option>
+                      {dirs.map((d) => (
+                        <option key={d.path} value={d.path}>
+                          {d.path}/
+                        </option>
+                      ))}
+                      <option value="__custom__">Custom path…</option>
+                    </select>
+                  )}
+                  {showCustomInput && (
+                    <input
+                      autoFocus
+                      value={customContext || buildContext}
+                      onChange={(e) => {
+                        setCustomContext(e.target.value);
+                        onBuildContextChange(e.target.value);
+                      }}
+                      placeholder="services/api"
+                      className="mt-2 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                    />
+                  )}
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Select the directory that contains the{" "}
+                    <code className="font-mono">Dockerfile</code>. Leave blank if it&apos;s at the
+                    repo root.
+                  </p>
+                </div>
+              )}
+
+              {repoConfig?.repository && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary/5 border border-primary/20 text-xs font-mono text-muted-foreground">
+                  <span className="text-muted-foreground/50 shrink-0">PR</span>
+                  <span className="text-foreground font-medium">{headBranch}</span>
+                  <span className="text-muted-foreground/50">→</span>
+                  <span>{repoConfig.base_branch || "main"}</span>
+                  {buildContext && (
+                    <>
+                      <span className="text-muted-foreground/50 ml-2">context</span>
+                      <span className="text-foreground">./{buildContext}</span>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Step 4 — secrets + CI/CD
 type SecretMode = "none" | "existing" | "new";
 
@@ -815,11 +1087,25 @@ function Step4SecretsCICD({
   onChange,
   workspaceSlug,
   envSlug,
+  onGrantIdChange,
+  initialSecretsRaw,
+  onInitialSecretsChange,
+  repoConfig,
+  onRepoConfigChange,
+  buildContext,
+  onBuildContextChange,
 }: {
   spec: PlatformSpec;
   onChange: (patch: Partial<PlatformSpec>) => void;
   workspaceSlug: string;
   envSlug: string;
+  onGrantIdChange: (id: string) => void;
+  initialSecretsRaw: string;
+  onInitialSecretsChange: (v: string) => void;
+  repoConfig: RepositoryProvisionConfig | null;
+  onRepoConfigChange: (cfg: RepositoryProvisionConfig | null) => void;
+  buildContext: string;
+  onBuildContextChange: (v: string) => void;
 }) {
   const updateSecrets = (patch: Partial<PlatformSpec["secrets"]>) =>
     onChange({ secrets: { ...spec.secrets, ...patch } });
@@ -840,6 +1126,7 @@ function Step4SecretsCICD({
     setSecretMode(mode);
     setSelectedGrantId("");
     setCreatedGrant(null);
+    onGrantIdChange("");
     if (mode === "none") {
       updateSecrets({ vault_role: undefined, vault_path: undefined });
     } else {
@@ -849,6 +1136,7 @@ function Step4SecretsCICD({
 
   const handleSelectGrant = (id: string) => {
     setSelectedGrantId(id);
+    onGrantIdChange(id);
     const grant = grants.find((g) => g.id === id);
     if (!grant) return;
     updateSecrets({ vault_path: isAdminGrant(grant) ? grant.vault_path : undefined });
@@ -867,6 +1155,7 @@ function Step4SecretsCICD({
         },
       });
       setCreatedGrant(result);
+      onGrantIdChange(result.id);
       updateSecrets({ vault_path: result.vault_path });
       toast.success("Secret grant created", { description: result.name });
     } catch (err: unknown) {
@@ -1066,6 +1355,36 @@ function Step4SecretsCICD({
           </div>
         )}
       </div>
+
+      {/* ── Initial secrets ────────────────────────────────────────── */}
+      {secretMode !== "none" && (
+        <div className="space-y-2 border-t border-border pt-4">
+          <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+            Initial secrets
+          </h3>
+          <textarea
+            value={initialSecretsRaw}
+            onChange={(e) => onInitialSecretsChange(e.target.value)}
+            placeholder={"DB_PASSWORD=mysecret\nAPI_KEY=abc123\n# comments are ignored"}
+            rows={5}
+            className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono resize-none"
+          />
+          <p className="text-[11px] text-muted-foreground">
+            One <code>KEY=VALUE</code> per line. These will be written to the grant&apos;s Vault
+            path before the runtime job starts.
+          </p>
+        </div>
+      )}
+
+      {/* ── Repository ─────────────────────────────────────────────── */}
+      <RepoSection
+        appName={spec.service.name}
+        workspaceSlug={workspaceSlug}
+        repoConfig={repoConfig}
+        onRepoConfigChange={onRepoConfigChange}
+        buildContext={buildContext}
+        onBuildContextChange={onBuildContextChange}
+      />
 
       {/* ── CI/CD ──────────────────────────────────────────────────── */}
       <div className="space-y-3 border-t border-border pt-4">
@@ -1314,9 +1633,25 @@ function ProvisionWizard({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [editedManifest, setEditedManifest] = useState("");
   const [editedCICD, setEditedCICD] = useState("");
+  const [grantId, setGrantId] = useState("");
+  const [initialSecretsRaw, setInitialSecretsRaw] = useState("");
+  const [repoConfig, setRepoConfig] = useState<RepositoryProvisionConfig | null>(null);
+  const [buildContext, setBuildContext] = useState("");
 
   const previewMutation = usePreviewApp(workspaceSlug, envSlug);
   const provisionMutation = useProvisionApp(workspaceSlug, envSlug);
+
+  const parseSecrets = (raw: string): Record<string, string> => {
+    const result: Record<string, string> = {};
+    raw.split("\n").forEach((line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) return;
+      const idx = trimmed.indexOf("=");
+      if (idx <= 0) return;
+      result[trimmed.slice(0, idx).trim()] = trimmed.slice(idx + 1);
+    });
+    return result;
+  };
 
   const patchSpec = (patch: Partial<PlatformSpec>) =>
     setSpec((prev) => (prev ? { ...prev, ...patch } : prev));
@@ -1371,15 +1706,31 @@ function ProvisionWizard({
       const overrideManifest =
         editedManifest !== (preview?.runtime_manifest ?? "") ? editedManifest : undefined;
       const overrideCICD = editedCICD !== (preview?.cicd_workflow ?? "") ? editedCICD : undefined;
-      await provisionMutation.mutateAsync({
+      const parsedSecrets = parseSecrets(initialSecretsRaw);
+      const result = await provisionMutation.mutateAsync({
         blueprint_name: blueprint.name,
         spec,
         override_manifest: overrideManifest,
         override_cicd: overrideCICD,
+        repository: repoConfig?.provider_id && repoConfig?.repository ? repoConfig : undefined,
+        initial_secrets: Object.keys(parsedSecrets).length > 0 ? parsedSecrets : undefined,
+        secret_grant_id: grantId || undefined,
       });
-      toast.success(`${spec.service.name} provisioned`, {
-        description: `Blueprint: ${blueprint.display_name} · Runtime: ${spec.runtime.provider}`,
-      });
+
+      if (result.pr_url) {
+        toast.success(`${spec.service.name} provisioned`, {
+          description: `Runtime: ${spec.runtime.provider} · PR #${result.pr_number} opened in ${result.repo_name ?? repoConfig?.repository ?? ""}`,
+        });
+      } else {
+        toast.success(`${spec.service.name} provisioned`, {
+          description: `Blueprint: ${blueprint.display_name} · Runtime: ${spec.runtime.provider}`,
+        });
+      }
+
+      if (repoConfig?.repository && result.repo_error) {
+        toast.warning("Repository commit failed", { description: result.repo_error });
+      }
+
       handleClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Provision failed";
@@ -1394,6 +1745,10 @@ function ProvisionWizard({
     setPreviewError(null);
     setEditedManifest("");
     setEditedCICD("");
+    setGrantId("");
+    setInitialSecretsRaw("");
+    setRepoConfig(null);
+    setBuildContext("");
     onClose();
   };
 
@@ -1446,6 +1801,16 @@ function ProvisionWizard({
                 onChange={patchSpec}
                 workspaceSlug={workspaceSlug}
                 envSlug={envSlug}
+                onGrantIdChange={setGrantId}
+                initialSecretsRaw={initialSecretsRaw}
+                onInitialSecretsChange={setInitialSecretsRaw}
+                repoConfig={repoConfig}
+                onRepoConfigChange={setRepoConfig}
+                buildContext={buildContext}
+                onBuildContextChange={(v) => {
+                  setBuildContext(v);
+                  patchSpec({ cicd: { ...spec.cicd, build_context: v || undefined } });
+                }}
               />
             )}
             {step === 4 && (
@@ -1474,11 +1839,41 @@ function ProvisionWizard({
                       <span className="font-mono text-xs">{v}</span>
                     </div>
                   ))}
+                  {repoConfig?.repository && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground w-28 shrink-0 text-xs">PR target</span>
+                      <span className="font-mono text-xs">
+                        {repoConfig.repository} /{" "}
+                        <span className="text-primary">{repoConfig.base_branch || "main"}</span>
+                      </span>
+                    </div>
+                  )}
+                  {buildContext && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground w-28 shrink-0 text-xs">
+                        Build context
+                      </span>
+                      <span className="font-mono text-xs">./{buildContext}</span>
+                    </div>
+                  )}
+                  {Object.keys(parseSecrets(initialSecretsRaw)).length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-muted-foreground w-28 shrink-0 text-xs">
+                        Vault write
+                      </span>
+                      <span className="font-mono text-xs">
+                        {Object.keys(parseSecrets(initialSecretsRaw)).length} key
+                        {Object.keys(parseSecrets(initialSecretsRaw)).length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground">
                   The platform will generate the runtime manifest and submit it to{" "}
-                  <strong>{spec.runtime.provider}</strong>. This action cannot be automatically
-                  undone.
+                  <strong>{spec.runtime.provider}</strong>.
+                  {repoConfig?.repository &&
+                    " A pull request will be opened with the generated manifests."}{" "}
+                  This action cannot be automatically undone.
                 </p>
               </div>
             )}

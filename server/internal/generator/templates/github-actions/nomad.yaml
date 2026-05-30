@@ -11,13 +11,15 @@ env:
   IMAGE_PATH: {{if .ImagePath}}{{.ImagePath}}{{else}}${{ "{{" }} github.repository {{ "}}" }}/{{.ServiceName}}{{end}}
   NOMAD_NAMESPACE: {{.Namespace}}
 
+permissions:
+  contents: read
+  id-token: write
+
+
 jobs:
   build-and-push:
     name: Build & Push
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
     outputs:
       image_tag: ${{ "{{" }} github.sha {{ "}}" }}
 
@@ -38,7 +40,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: {{if .BuildContext}}./{{.BuildContext}}{{else}}.{{end}}
+          file: {{if .BuildContext}}./{{.BuildContext}}/{{.DockerfileName}}{{else}}{{.DockerfileName}}{{end}}
           push: true
           tags: |
             ${{ "{{" }} env.REGISTRY {{ "}}" }}/${{ "{{" }} env.IMAGE_PATH {{ "}}" }}:${{ "{{" }} github.sha {{ "}}" }}
@@ -56,18 +59,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Nomad CLI
-        run: |
-          curl -fsSL https://releases.hashicorp.com/nomad/1.8.4/nomad_1.8.4_linux_amd64.zip -o nomad.zip
-          unzip -o nomad.zip && chmod +x nomad && sudo mv nomad /usr/local/bin/
+      - name: Setup Nomad
+        uses: hashicorp/setup-nomad@main
 
-      - name: Deploy Nomad job
+      - name: Update Nomad job with image tag
+        run: |
+          sed -i "s|IMAGE_TAG_PLACEHOLDER|${{ "{{" }} needs.build-and-push.outputs.image_tag {{ "}}" }}|g" nomad/{{.ServiceName}}.hcl
+
+      - name: Deploy to Nomad ({{.EnvironmentLabel}})
         env:
           NOMAD_ADDR: ${{ "{{" }} secrets.NOMAD_ADDR {{ "}}" }}
           NOMAD_TOKEN: ${{ "{{" }} secrets.NOMAD_TOKEN {{ "}}" }}
-          IMAGE_TAG: ${{ "{{" }} needs.build-and-push.outputs.image_tag {{ "}}" }}
-        run: |
-          nomad job run \
-            -var="image=${{ "{{" }} env.REGISTRY {{ "}}" }}/${{ "{{" }} env.IMAGE_PATH {{ "}}" }}:${IMAGE_TAG}" \
-            -namespace="${NOMAD_NAMESPACE}" \
-            {{.ServiceName}}.nomad.hcl
+        run: nomad job run nomad/{{.ServiceName}}.hcl

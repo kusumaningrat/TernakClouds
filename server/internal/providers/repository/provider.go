@@ -59,6 +59,13 @@ type PullRequestResult struct {
 	State  string `json:"state"`
 }
 
+// ContentEntry is a file or directory inside a repository tree.
+type ContentEntry struct {
+	Name string `json:"name"`
+	Path string `json:"path"`
+	Type string `json:"type"` // "dir" | "file"
+}
+
 // ProviderCapabilities declares what a provider supports.
 type ProviderCapabilities struct {
 	PullRequests     bool `json:"pull_requests"`
@@ -72,6 +79,9 @@ type Provider interface {
 	ValidateConnection(ctx context.Context) error
 	ListRepositories(ctx context.Context) ([]SCMRepo, error)
 	ListBranches(ctx context.Context, fullName string) ([]Branch, error)
+	// ListContents returns the entries at path inside fullName at the given branch.
+	// Pass path="" and branch="" for the repo root at the default branch.
+	ListContents(ctx context.Context, fullName, path, branch string) ([]ContentEntry, error)
 	CommitFiles(ctx context.Context, req CommitRequest) (*CommitResult, error)
 	CreatePullRequest(ctx context.Context, req PullRequestRequest) (*PullRequestResult, error)
 	Capabilities() ProviderCapabilities

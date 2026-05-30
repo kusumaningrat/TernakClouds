@@ -82,6 +82,7 @@ import type {
   UpdateRepoProviderInput,
   SCMRepo,
   SCMBranch,
+  SCMContentEntry,
   CommitFilesInput,
   CommitResult,
   PullRequestInput,
@@ -1130,6 +1131,8 @@ export const repoProviderKeys = {
     ["workspaces", slug, "repo-providers", id, "repositories"] as const,
   branches: (slug: string, id: string, repo: string) =>
     ["workspaces", slug, "repo-providers", id, "branches", repo] as const,
+  contents: (slug: string, id: string, repo: string, branch: string, path: string) =>
+    ["workspaces", slug, "repo-providers", id, "contents", repo, branch, path] as const,
   capabilities: (slug: string, id: string) =>
     ["workspaces", slug, "repo-providers", id, "capabilities"] as const,
 };
@@ -1200,6 +1203,29 @@ export function useRepoProviderBranches(
       api.get(
         `/api/v1/workspaces/${slug}/repo-providers/${id}/branches?repo=${encodeURIComponent(repoFullName)}`,
       ),
+    enabled: !!slug && !!id && !!repoFullName && enabled,
+  });
+}
+
+// GET /api/v1/workspaces/:slug/repo-providers/:id/contents?repo=&[branch=]&[path=]
+export function useRepoProviderContents(
+  slug: string,
+  id: string,
+  repoFullName: string,
+  branch = "",
+  path = "",
+  enabled = true,
+) {
+  return useQuery<SCMContentEntry[], ApiError>({
+    queryKey: repoProviderKeys.contents(slug, id, repoFullName, branch, path),
+    queryFn: () => {
+      const params = new URLSearchParams({ repo: repoFullName });
+      if (branch) params.set("branch", branch);
+      if (path) params.set("path", path);
+      return api.get(
+        `/api/v1/workspaces/${slug}/repo-providers/${id}/contents?${params.toString()}`,
+      );
+    },
     enabled: !!slug && !!id && !!repoFullName && enabled,
   });
 }

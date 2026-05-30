@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -164,6 +165,38 @@ func (p *Provider) ListBranches(ctx context.Context, fullName string) ([]repopro
 		}
 	}
 	return branches, nil
+}
+
+func (p *Provider) ListContents(ctx context.Context, fullName, path, branch string) ([]repoprovider.ContentEntry, error) {
+	apiPath := fmt.Sprintf("/repos/%s/contents/%s", fullName, path)
+	if branch != "" {
+		apiPath += "?ref=" + url.PathEscape(branch)
+	}
+	resp, err := p.do(ctx, http.MethodGet, apiPath, nil)
+	if err != nil {
+		return nil, fmt.Errorf("github: list contents: %w", err)
+	}
+	b, _ := readBody(resp)
+	if err := checkStatus(resp, b); err != nil {
+		return nil, err
+	}
+	var raw []struct {
+		Name string `json:"name"`
+		Path string `json:"path"`
+		Type string `json:"type"` // "dir" or "file"
+	}
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return nil, fmt.Errorf("github: decode contents: %w", err)
+	}
+	entries := make([]repoprovider.ContentEntry, 0, len(raw))
+	for _, r := range raw {
+		t := "file"
+		if r.Type == "dir" {
+			t = "dir"
+		}
+		entries = append(entries, repoprovider.ContentEntry{Name: r.Name, Path: r.Path, Type: t})
+	}
+	return entries, nil
 }
 
 func (p *Provider) CommitFiles(ctx context.Context, req repoprovider.CommitRequest) (*repoprovider.CommitResult, error) {

@@ -141,6 +141,14 @@ func (s *Service) ListBranches(ctx context.Context, id uuid.UUID, fullName strin
 	return client.ListBranches(ctx, fullName)
 }
 
+func (s *Service) ListContents(ctx context.Context, id uuid.UUID, fullName, path, branch string) ([]repoprovider.ContentEntry, error) {
+	client, err := s.providerClient(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return client.ListContents(ctx, fullName, path, branch)
+}
+
 func (s *Service) CommitFiles(ctx context.Context, id uuid.UUID, input CommitFilesInput) (*repoprovider.CommitResult, error) {
 	client, err := s.providerClient(ctx, id)
 	if err != nil {

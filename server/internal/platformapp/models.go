@@ -32,4 +32,12 @@ type PlatformApp struct {
 	ProvisionedBy     uuid.UUID `gorm:"type:uuid;not null" json:"provisioned_by"`
 	// RuntimeJobID is the job/deployment ID in the runtime (e.g. Nomad job name, K8s deployment name).
 	RuntimeJobID string `json:"runtime_job_id,omitempty"`
+
+	// Repository integration — set when manifests were committed to a repo provider.
+	RepoProviderID string `json:"repo_provider_id,omitempty"`
+	RepoName       string `json:"repo_name,omitempty"`
+	RepoBranch     string `json:"repo_branch,omitempty"` // base branch (PR target)
+	CommitSHA      string `json:"commit_sha,omitempty"`
+	PRNumber       int    `json:"pr_number,omitempty"`
+	PRURL          string `json:"pr_url,omitempty"`
 }

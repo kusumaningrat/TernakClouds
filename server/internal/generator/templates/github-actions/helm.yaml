@@ -11,13 +11,15 @@ env:
   IMAGE_PATH: {{if .ImagePath}}{{.ImagePath}}{{else}}${{ "{{" }} github.repository {{ "}}" }}/{{.ServiceName}}{{end}}
   K8S_NAMESPACE: {{.K8sNamespace}}
 
+permissions:
+  contents: read
+  packages: write
+  
 jobs:
   build-and-push:
     name: Build & Push
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+
     outputs:
       image_tag: ${{ "{{" }} github.sha {{ "}}" }}
 
@@ -38,7 +40,8 @@ jobs:
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: .
+          context: {{if .BuildContext}}./{{.BuildContext}}{{else}}.{{end}}
+          file: {{if .BuildContext}}./{{.BuildContext}}/{{.DockerfileName}}{{else}}{{.DockerfileName}}{{end}}
           push: true
           tags: |
             ${{ "{{" }} env.REGISTRY {{ "}}" }}/${{ "{{" }} env.IMAGE_PATH {{ "}}" }}:${{ "{{" }} github.sha {{ "}}" }}

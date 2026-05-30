@@ -11,7 +11,8 @@ func RegisterRoutes(rg *gin.RouterGroup, h *Handler, resolveWS, memberGuard, own
 		base.GET("/repo-providers", h.ListProviders)
 		base.GET("/repo-providers/:id", h.GetProvider)
 		base.GET("/repo-providers/:id/repositories", h.ListRepositories)
-		base.GET("/repo-providers/:id/branches", h.ListBranches) // ?repo=owner/name
+		base.GET("/repo-providers/:id/branches", h.ListBranches)  // ?repo=owner/name
+		base.GET("/repo-providers/:id/contents", h.ListContents)  // ?repo=&[branch=]&[path=]
 		base.GET("/repo-providers/:id/capabilities", h.GetCapabilities)
 
 		base.POST("/repo-providers", ownerGuard, h.CreateProvider)

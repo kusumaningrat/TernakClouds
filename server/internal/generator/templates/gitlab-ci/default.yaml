@@ -17,7 +17,7 @@ variables:
   before_script:
     - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" $REGISTRY
   script:
-    - docker build -t $REGISTRY/$IMAGE_PATH:$CI_COMMIT_SHORT_SHA -t $REGISTRY/$IMAGE_PATH:latest .
+    - docker build -f {{if .BuildContext}}./{{.BuildContext}}/{{.DockerfileName}}{{else}}{{.DockerfileName}}{{end}} -t $REGISTRY/$IMAGE_PATH:$CI_COMMIT_SHORT_SHA -t $REGISTRY/$IMAGE_PATH:latest {{if .BuildContext}}./{{.BuildContext}}{{else}}.{{end}}
     - docker push $REGISTRY/$IMAGE_PATH:$CI_COMMIT_SHORT_SHA
     - docker push $REGISTRY/$IMAGE_PATH:latest
 

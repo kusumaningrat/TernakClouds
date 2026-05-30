@@ -481,6 +481,12 @@ export interface SCMBranch {
   sha?: string;
 }
 
+export interface SCMContentEntry {
+  name: string;
+  path: string;
+  type: "dir" | "file";
+}
+
 export interface CommitFilesInput {
   repository: string;
   branch: string;
@@ -1052,7 +1058,7 @@ export interface PlatformServiceSpec {
 
 export interface PlatformRuntimeSpec {
   provider: "nomad" | "kubernetes" | "docker";
-  /** Selects manifest template variant. Nomad: ""|"v1"|"no-vault"|"with-volume". K8s: ""|"v1"|"with-hpa"|"with-ingress"|"with-pvc". */
+  /** Selects manifest template variant. Nomad: ""|"no-vault"|"with-volume". K8s: ""|"with-hpa"|"with-ingress"|"with-pvc". */
   variant?: string;
   // Nomad
   datacenter?: string;
@@ -1068,7 +1074,10 @@ export interface PlatformRuntimeSpec {
 export interface PlatformContainerSpec {
   image: string;
   tag: string;
+  /** Internal container port. */
   port: number;
+  /** External host/node port. 0 = dynamic (Nomad) or same as port (K8s). */
+  host_port?: number;
   cpu: number;
   memory_mb: number;
   health_path?: string;
@@ -1095,8 +1104,10 @@ export interface PlatformCICDSpec {
   provider?: string; // "github-actions" | "gitlab-ci" | "jenkins"
   enabled: boolean;
   branch?: string;
-  /** Deploy method: ""|"v1" = IDP API, "ssh", "nomad", "kubectl", "helm". */
+  /** Deploy method: "" = IDP API, "ssh", "nomad", "kubectl", "helm". */
   style?: string;
+  /** Subdirectory containing the Dockerfile (monorepo). Empty = repo root. */
+  build_context?: string;
 }
 
 export interface PlatformObservabilitySpec {
@@ -1131,6 +1142,13 @@ export interface PlatformApp {
   runtime_job_id?: string;
   provisioned_by: string;
   spec: PlatformSpec;
+  repo_provider_id?: string;
+  repo_name?: string;
+  repo_branch?: string;
+  commit_sha?: string;
+  pr_number?: number;
+  pr_url?: string;
+  repo_error?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1142,13 +1160,20 @@ export interface GeneratedResources {
   cicd_provider?: string;
 }
 
+export interface RepositoryProvisionConfig {
+  provider_id: string;
+  repository: string;
+  base_branch: string;
+}
+
 export interface ProvisionAppInput {
   blueprint_name: string;
   spec: PlatformSpec;
-  /** Manually edited manifest from the preview step overrides generated output. */
   override_manifest?: string;
-  /** Manually edited CI/CD workflow from the preview step overrides generated output. */
   override_cicd?: string;
+  repository?: RepositoryProvisionConfig;
+  initial_secrets?: Record<string, string>;
+  secret_grant_id?: string;
 }
 
 export interface PreviewAppInput {
