@@ -495,7 +495,8 @@ export function DashboardSidebar() {
                   badge={
                     envRegistries && envRegistries.length > 0
                       ? envRegistries.length === 1
-                        ? (PROVIDER_DISPLAY[envRegistries[0].registry_type ?? ""] ?? envRegistries[0].registry_type)
+                        ? (PROVIDER_DISPLAY[envRegistries[0].registry_type ?? ""] ??
+                          envRegistries[0].registry_type)
                         : `${envRegistries.length} providers`
                       : undefined
                   }

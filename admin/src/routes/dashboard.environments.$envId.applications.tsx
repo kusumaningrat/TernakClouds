@@ -192,7 +192,11 @@ function ApplicationsPage() {
   const navigate = useNavigate();
 
   const [appsPage, setAppsPage] = useState(1);
-  const { data: appsData, isLoading, error } = usePlatformApps(workspaceSlug, envId, appsPage, APPS_LIMIT);
+  const {
+    data: appsData,
+    isLoading,
+    error,
+  } = usePlatformApps(workspaceSlug, envId, appsPage, APPS_LIMIT);
   const deleteApp = useDeletePlatformApp(workspaceSlug, envId);
 
   const apps = appsData?.items ?? [];

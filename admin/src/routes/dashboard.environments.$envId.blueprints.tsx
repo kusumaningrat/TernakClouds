@@ -1960,10 +1960,8 @@ function relativeTime(iso: string) {
 function cicdPipelineUrl(rec: DeploymentRecord): string | null {
   if (rec.pr_url) return rec.pr_url;
   if (!rec.repo_name) return null;
-  if (rec.cicd_provider === "github-actions")
-    return `https://github.com/${rec.repo_name}/actions`;
-  if (rec.cicd_provider === "gitlab-ci")
-    return `https://gitlab.com/${rec.repo_name}/-/pipelines`;
+  if (rec.cicd_provider === "github-actions") return `https://github.com/${rec.repo_name}/actions`;
+  if (rec.cicd_provider === "gitlab-ci") return `https://gitlab.com/${rec.repo_name}/-/pipelines`;
   return null;
 }
 
@@ -1976,9 +1974,9 @@ function commitUrl(rec: DeploymentRecord): string | null {
 
 const STATUS_STYLES: Record<string, { dot: string; text: string; label: string }> = {
   provisioned: { dot: "bg-emerald-500", text: "text-emerald-600", label: "provisioned" },
-  pending:     { dot: "bg-amber-400",   text: "text-amber-600",   label: "pending"     },
-  failed:      { dot: "bg-red-500",     text: "text-red-600",     label: "failed"      },
-  stopped:     { dot: "bg-slate-400",   text: "text-slate-500",   label: "stopped"     },
+  pending: { dot: "bg-amber-400", text: "text-amber-600", label: "pending" },
+  failed: { dot: "bg-red-500", text: "text-red-600", label: "failed" },
+  stopped: { dot: "bg-slate-400", text: "text-slate-500", label: "stopped" },
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -2194,16 +2192,15 @@ function ProvisionedAppCard({
 
         <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => { setExpanded((e) => !e); setHistPage(1); }}
+            onClick={() => {
+              setExpanded((e) => !e);
+              setHistPage(1);
+            }}
             className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-accent text-muted-foreground transition"
           >
             <History className="size-3.5" />
             History
-            {expanded ? (
-              <ChevronUp className="size-3" />
-            ) : (
-              <ChevronDown className="size-3" />
-            )}
+            {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
           </button>
           <button
             onClick={() => onDelete(app.id, app.name)}
@@ -2273,7 +2270,12 @@ function ProvisionedApplications({
   envSlug: string;
 }) {
   const [appsPage, setAppsPage] = useState(1);
-  const { data: appsData, isLoading } = usePlatformApps(workspaceSlug, envSlug, appsPage, APPS_LIMIT);
+  const { data: appsData, isLoading } = usePlatformApps(
+    workspaceSlug,
+    envSlug,
+    appsPage,
+    APPS_LIMIT,
+  );
   const deleteMutation = useDeletePlatformApp(workspaceSlug, envSlug);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
@@ -2337,7 +2339,12 @@ function ProvisionedApplications({
 
       {/* Delete confirmation dialog */}
       {confirmDelete && (
-        <Dialog open onOpenChange={(v) => { if (!v) setConfirmDelete(null); }}>
+        <Dialog
+          open
+          onOpenChange={(v) => {
+            if (!v) setConfirmDelete(null);
+          }}
+        >
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>Delete {confirmDelete.name}?</DialogTitle>
