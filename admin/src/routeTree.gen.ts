@@ -20,6 +20,7 @@ import { Route as DashboardUsersRouteImport } from './routes/dashboard.users'
 import { Route as DashboardTeamsRouteImport } from './routes/dashboard.teams'
 import { Route as DashboardServicesRouteImport } from './routes/dashboard.services'
 import { Route as DashboardRolesRouteImport } from './routes/dashboard.roles'
+import { Route as DashboardRepositoriesRouteImport } from './routes/dashboard.repositories'
 import { Route as DashboardRegistriesRouteImport } from './routes/dashboard.registries'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
 import { Route as DashboardNoAccessRouteImport } from './routes/dashboard.no-access'
@@ -114,6 +115,11 @@ const DashboardServicesRoute = DashboardServicesRouteImport.update({
 const DashboardRolesRoute = DashboardRolesRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardRepositoriesRoute = DashboardRepositoriesRouteImport.update({
+  id: '/repositories',
+  path: '/repositories',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardRegistriesRoute = DashboardRegistriesRouteImport.update({
@@ -363,6 +369,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/no-access': typeof DashboardNoAccessRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/registries': typeof DashboardRegistriesRoute
+  '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
   '/dashboard/services': typeof DashboardServicesRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
@@ -414,6 +421,7 @@ export interface FileRoutesByTo {
   '/dashboard/no-access': typeof DashboardNoAccessRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/registries': typeof DashboardRegistriesRoute
+  '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
   '/dashboard/services': typeof DashboardServicesRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
@@ -464,6 +472,7 @@ export interface FileRoutesById {
   '/dashboard/no-access': typeof DashboardNoAccessRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/registries': typeof DashboardRegistriesRoute
+  '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
   '/dashboard/services': typeof DashboardServicesRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
@@ -519,6 +528,7 @@ export interface FileRouteTypes {
     | '/dashboard/no-access'
     | '/dashboard/profile'
     | '/dashboard/registries'
+    | '/dashboard/repositories'
     | '/dashboard/roles'
     | '/dashboard/services'
     | '/dashboard/teams'
@@ -570,6 +580,7 @@ export interface FileRouteTypes {
     | '/dashboard/no-access'
     | '/dashboard/profile'
     | '/dashboard/registries'
+    | '/dashboard/repositories'
     | '/dashboard/roles'
     | '/dashboard/services'
     | '/dashboard/teams'
@@ -619,6 +630,7 @@ export interface FileRouteTypes {
     | '/dashboard/no-access'
     | '/dashboard/profile'
     | '/dashboard/registries'
+    | '/dashboard/repositories'
     | '/dashboard/roles'
     | '/dashboard/services'
     | '/dashboard/teams'
@@ -745,6 +757,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/dashboard/roles'
       preLoaderRoute: typeof DashboardRolesRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/repositories': {
+      id: '/dashboard/repositories'
+      path: '/repositories'
+      fullPath: '/dashboard/repositories'
+      preLoaderRoute: typeof DashboardRepositoriesRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/registries': {
@@ -1199,6 +1218,7 @@ interface DashboardRouteChildren {
   DashboardNoAccessRoute: typeof DashboardNoAccessRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardRegistriesRoute: typeof DashboardRegistriesRoute
+  DashboardRepositoriesRoute: typeof DashboardRepositoriesRoute
   DashboardRolesRoute: typeof DashboardRolesRoute
   DashboardServicesRoute: typeof DashboardServicesRoute
   DashboardTeamsRoute: typeof DashboardTeamsRoute
@@ -1216,6 +1236,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardNoAccessRoute: DashboardNoAccessRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardRegistriesRoute: DashboardRegistriesRoute,
+  DashboardRepositoriesRoute: DashboardRepositoriesRoute,
   DashboardRolesRoute: DashboardRolesRoute,
   DashboardServicesRoute: DashboardServicesRoute,
   DashboardTeamsRoute: DashboardTeamsRoute,

@@ -17,6 +17,7 @@ import (
 	"github.com/kusumaningrat/ternakclouds/internal/nomad"
 	"github.com/kusumaningrat/ternakclouds/internal/platformapp"
 	"github.com/kusumaningrat/ternakclouds/internal/registry"
+	"github.com/kusumaningrat/ternakclouds/internal/repository"
 	"github.com/kusumaningrat/ternakclouds/internal/role"
 	"github.com/kusumaningrat/ternakclouds/internal/secret"
 	"github.com/kusumaningrat/ternakclouds/internal/servicecatalog"
@@ -63,6 +64,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	capRepo := capability.NewRepository(db)
 	arRepo := accessrequest.NewRepository(db)
 	registryRepo := registry.NewRepository(db)
+	repoRepo := repository.NewRepository(db)
 	catalogRepo := servicecatalog.NewRepository(db)
 	blueprintRepo := blueprint.NewRepository(db)
 	platformAppRepo := platformapp.NewRepository(db)
@@ -81,6 +83,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	dockerService := docker.NewService(capRepo, vc)
 	secretService := secret.NewService(secret.NewRepository(db), capRepo, vc)
 	registryService := registry.NewService(registryRepo, vc)
+	repoService := repository.NewService(repoRepo, vc)
 	catalogService := servicecatalog.NewService(catalogRepo, nomadService, registryRepo, capRepo, vc)
 	blueprintService := blueprint.NewService(blueprintRepo)
 	platformAppService := platformapp.NewService(platformAppRepo, blueprintService, nomadService)
@@ -99,6 +102,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	secretHandler := secret.NewHandler(secretService)
 	arHandler := accessrequest.NewHandler(arService)
 	registryHandler := registry.NewHandler(registryService)
+	repoHandler := repository.NewHandler(repoService)
 	catalogHandler := servicecatalog.NewHandler(catalogService)
 	blueprintHandler := blueprint.NewHandler(blueprintService)
 	platformAppHandler := platformapp.NewHandler(platformAppService)
@@ -163,6 +167,12 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 		kubernetes.RegisterRoutes(envGroup, k8sHandler)
 		docker.RegisterRoutes(envGroup, dockerHandler)
 		secret.RegisterRoutes(envGroup, secretHandler)
+
+		repository.RegisterRoutes(protected, repoHandler,
+				middleware.ResolveWorkspace(wsAdapter),
+				middleware.RequireWorkspaceMember(wsAdapter),
+				middleware.RequireWorkspaceOwner(wsAdapter),
+			)
 
 		registry.RegisterWorkspaceRoutes(protected, registryHandler,
 			middleware.ResolveWorkspace(wsAdapter),

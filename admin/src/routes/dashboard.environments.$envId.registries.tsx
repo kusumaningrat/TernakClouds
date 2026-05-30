@@ -522,15 +522,21 @@ function BindingCard({
             <div className="font-semibold text-sm truncate">
               {binding.registry_name ?? "Registry"}
             </div>
-            <div className="text-[11px] text-muted-foreground font-mono mt-0.5">{label}</div>
-            {binding.registry_endpoint && (
-              <div className="text-[11px] text-muted-foreground font-mono truncate mt-0.5">
-                {binding.registry_endpoint}
-              </div>
-            )}
+            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+              <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary border border-border font-mono">
+                {label}
+              </span>
+              {binding.registry_endpoint && (
+                <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[140px]">
+                  {binding.registry_endpoint.replace(/^https?:\/\//, "")}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded font-medium shrink-0">
-            <ShieldCheck className="size-3" /> Bound
+          <div className="flex flex-col items-end gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded font-medium">
+              <ShieldCheck className="size-3" /> Bound
+            </div>
           </div>
         </div>
 

@@ -11,6 +11,7 @@ import {
   useK8sDeployments,
   useServiceDeployments,
   useEnvironmentRegistries,
+  useRepoProviders,
 } from "@/lib/queries";
 import {
   Activity,
@@ -30,6 +31,7 @@ import {
   AlertTriangle,
   ScrollText,
   Box,
+  GitFork,
 } from "lucide-react";
 import type { CapabilityStatusResponse } from "@/lib/types";
 
@@ -190,6 +192,7 @@ function EnvOverviewPage() {
     envId,
   );
   const { data: registries } = useEnvironmentRegistries(slug, envId);
+  const { data: repoProviders } = useRepoProviders(slug);
 
   const nomadHealthyNodes = (nomadNodes ?? []).filter((n) => n.Status === "ready").length;
   const runningJobs = (jobs ?? []).filter((j) => j.Status === "running").length;
@@ -464,6 +467,54 @@ function EnvOverviewPage() {
               </>
             )}
           </div>
+        </div>
+
+        {/* Registered repositories */}
+        <div className="glass rounded-xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-sm flex items-center gap-2">
+              <GitFork className="size-4 text-primary" /> Registered repositories
+            </h3>
+            <Link
+              to="/dashboard/repositories"
+              className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition"
+            >
+              Manage <ChevronRight className="size-3" />
+            </Link>
+          </div>
+          {(repoProviders ?? []).length === 0 ? (
+            <p className="text-xs text-muted-foreground py-1">
+              No repository providers registered in this workspace.{" "}
+              <Link
+                to="/dashboard/repositories"
+                className="underline underline-offset-2 hover:text-foreground transition"
+              >
+                Add one
+              </Link>
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {(repoProviders ?? []).map((rp) => (
+                <div
+                  key={rp.id}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg bg-secondary border border-border"
+                >
+                  <GitFork className="size-3.5 text-muted-foreground shrink-0" />
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium truncate">{rp.name}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono">
+                      {rp.provider_type === "github" ? "GitHub" : "GitLab"}
+                      {rp.allowed_repos && rp.allowed_repos.length > 0 && (
+                        <span className="ml-1 text-muted-foreground/60">
+                          · {rp.allowed_repos.length} repo{rp.allowed_repos.length !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Quick links */}

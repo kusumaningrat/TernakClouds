@@ -7,8 +7,10 @@ import {
   useNomadNodes,
   useNomadNamespaces,
   useK8sNamespaces,
+  useRegistries,
   useEnvironmentRegistries,
   useBoundRepos,
+  useRegistryRepos,
   useSecretGrants,
   useCreateSecretGrant,
   usePreviewApp,
@@ -20,6 +22,8 @@ import type {
   Blueprint,
   PlatformSpec,
   GeneratedResources,
+  RegistryProvider,
+  RegistryProviderType,
 } from "@/lib/types";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -526,21 +530,50 @@ function Step3Container({
   const updateContainer = (patch: Partial<PlatformSpec["container"]>) =>
     onChange({ container: { ...spec.container, ...patch } });
 
-  // Registry source: "" = public image, otherwise a registry_id
+  // registryId: "" = public, "b:{binding.registry_id}" = env-bound, "ws:{registry.id}" = workspace
   const [registryId, setRegistryId] = useState("");
   const [selectedRepo, setSelectedRepo] = useState("");
   const [customRepo, setCustomRepo] = useState("");
   const [isCustomRepo, setIsCustomRepo] = useState(false);
 
+  const isWorkspaceReg = registryId.startsWith("ws:");
+  const isBoundReg = registryId.startsWith("b:");
+  const boundRegId = isBoundReg ? registryId.slice(2) : "";
+  const wsRegId = isWorkspaceReg ? registryId.slice(3) : "";
+
   const { data: bindings = [] } = useEnvironmentRegistries(workspaceSlug, envSlug);
-  const { data: repos = [], isLoading: reposLoading } = useBoundRepos(
+  const { data: allRegistries = [] } = useRegistries(workspaceSlug);
+  const boundIds = new Set(bindings.map((b) => b.registry_id));
+  const unboundRegistries = allRegistries.filter((r) => !boundIds.has(r.id));
+
+  const { data: boundRepos = [], isLoading: boundReposLoading } = useBoundRepos(
     workspaceSlug,
     envSlug,
-    registryId,
-    !!registryId,
+    boundRegId,
+    isBoundReg && !!boundRegId,
+  );
+  const { data: wsRepos = [], isLoading: wsReposLoading } = useRegistryRepos(
+    workspaceSlug,
+    wsRegId,
+    isWorkspaceReg && !!wsRegId,
   );
 
-  const selectedRegistry = bindings.find((b) => b.registry_id === registryId);
+  const repos = isWorkspaceReg ? wsRepos : boundRepos;
+  const reposLoading = isWorkspaceReg ? wsReposLoading : boundReposLoading;
+
+  const selectedBinding = bindings.find((b) => b.registry_id === boundRegId);
+  const selectedWsRegistry = allRegistries.find((r) => r.id === wsRegId);
+  const selectedEndpoint = isWorkspaceReg
+    ? selectedWsRegistry?.endpoint
+    : selectedBinding?.registry_endpoint;
+
+  const PROVIDER_LABELS_SMALL: Record<RegistryProviderType, string> = {
+    harbor: "Harbor",
+    dockerhub: "Docker Hub",
+    ghcr: "GHCR",
+    ecr: "AWS ECR",
+    gcr: "Google GCR",
+  };
 
   const buildImage = (endpoint: string, repo: string) => {
     const host = endpoint.replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -563,16 +596,16 @@ function Step3Container({
     } else {
       setIsCustomRepo(false);
       setSelectedRepo(value);
-      if (selectedRegistry?.registry_endpoint) {
-        updateContainer({ image: buildImage(selectedRegistry.registry_endpoint, value) });
+      if (selectedEndpoint) {
+        updateContainer({ image: buildImage(selectedEndpoint, value) });
       }
     }
   };
 
   const handleCustomRepoChange = (value: string) => {
     setCustomRepo(value);
-    if (selectedRegistry?.registry_endpoint) {
-      updateContainer({ image: buildImage(selectedRegistry.registry_endpoint, value) });
+    if (selectedEndpoint) {
+      updateContainer({ image: buildImage(selectedEndpoint, value) });
     }
   };
 
@@ -589,11 +622,26 @@ function Step3Container({
           className="w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
         >
           <option value="">Public image</option>
-          {bindings.map((b) => (
-            <option key={b.registry_id} value={b.registry_id}>
-              {b.registry_name ?? b.registry_endpoint ?? b.registry_id}
-            </option>
-          ))}
+          {bindings.length > 0 && (
+            <optgroup label="── Bound to this environment">
+              {bindings.map((b) => (
+                <option key={b.registry_id} value={`b:${b.registry_id}`}>
+                  {b.registry_name ?? b.registry_endpoint ?? b.registry_id}
+                </option>
+              ))}
+            </optgroup>
+          )}
+          {unboundRegistries.length > 0 && (
+            <optgroup label="── Workspace (not bound)">
+              {unboundRegistries.map((r) => (
+                <option key={r.id} value={`ws:${r.id}`}>
+                  {r.name}
+                  {r.endpoint ? ` · ${r.endpoint.replace(/^https?:\/\//, "")}` : ""}
+                  {` (${PROVIDER_LABELS_SMALL[r.provider_type as RegistryProviderType] ?? r.provider_type})`}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
       </div>
 
@@ -627,10 +675,15 @@ function Step3Container({
       {registryId && (
         <>
           {/* Registry endpoint badge */}
-          {selectedRegistry?.registry_endpoint && (
+          {selectedEndpoint && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-muted/40 border border-border text-xs font-mono text-muted-foreground">
               <span className="text-muted-foreground/50 shrink-0">Registry</span>
-              <span className="text-foreground truncate">{selectedRegistry.registry_endpoint}</span>
+              <span className="text-foreground truncate">{selectedEndpoint}</span>
+              {isWorkspaceReg && (
+                <span className="ml-auto shrink-0 text-[10px] text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded font-medium font-sans">
+                  workspace
+                </span>
+              )}
             </div>
           )}
 

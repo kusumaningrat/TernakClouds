@@ -12,6 +12,7 @@ import (
 	"github.com/kusumaningrat/ternakclouds/internal/environment"
 	"github.com/kusumaningrat/ternakclouds/internal/platformapp"
 	"github.com/kusumaningrat/ternakclouds/internal/registry"
+	"github.com/kusumaningrat/ternakclouds/internal/repository"
 	"github.com/kusumaningrat/ternakclouds/internal/role"
 	"github.com/kusumaningrat/ternakclouds/internal/secret"
 	"github.com/kusumaningrat/ternakclouds/internal/servicecatalog"
@@ -72,6 +73,7 @@ func Migrate(db *gorm.DB) error {
 		&servicecatalog.ServiceDeployment{},
 		&blueprint.Blueprint{},
 		&platformapp.PlatformApp{},
+		&repository.RepoProvider{},
 	)
 }
 
