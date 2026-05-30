@@ -29,7 +29,7 @@ import type {
   RegistryProviderType,
   RepositoryProvisionConfig,
 } from "@/lib/types";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { toast } from "sonner";
 import {
   Globe,
@@ -93,9 +93,11 @@ const CATEGORY_COLORS: Record<string, string> = {
 function BlueprintCard({
   bp,
   onProvision,
+  hasDraft: hasBlueprintDraft,
 }: {
   bp: Blueprint;
   onProvision: (bp: Blueprint) => void;
+  hasDraft?: boolean;
 }) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col hover:border-primary/50 transition group">
@@ -150,7 +152,13 @@ function BlueprintCard({
             onClick={() => onProvision(bp)}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition"
           >
-            <Rocket className="size-3.5" /> Provision
+            <Rocket className="size-3.5" />
+            {hasBlueprintDraft ? "Resume draft" : "Provision"}
+            {hasBlueprintDraft && (
+              <span className="text-[9px] px-1 py-0.5 rounded bg-amber-400/30 text-amber-200 font-medium">
+                draft
+              </span>
+            )}
           </button>
         </div>
       </div>
@@ -220,6 +228,54 @@ function buildDefaultSpec(bp: Blueprint, runtimeProvider: string): PlatformSpec 
     cicd: { enabled: false, provider: "github-actions", branch: "main" },
     observability: { logs_enabled: true, metrics_enabled: false },
   };
+}
+
+// ─── Draft persistence ─────────────────────────────────────────────────────────
+
+interface WizardDraft {
+  step: number;
+  spec: PlatformSpec;
+  grantId: string;
+  initialSecretsRaw: string;
+  repoConfig: RepositoryProvisionConfig | null;
+  buildContext: string;
+}
+
+function draftStorageKey(envSlug: string, blueprintName: string) {
+  return `idp:blueprint-draft:${envSlug}:${blueprintName}`;
+}
+
+function loadDraft(envSlug: string, blueprintName: string): WizardDraft | null {
+  try {
+    const raw = localStorage.getItem(draftStorageKey(envSlug, blueprintName));
+    return raw ? (JSON.parse(raw) as WizardDraft) : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveDraft(envSlug: string, blueprintName: string, draft: WizardDraft) {
+  try {
+    localStorage.setItem(draftStorageKey(envSlug, blueprintName), JSON.stringify(draft));
+  } catch {
+    // localStorage quota exceeded or unavailable
+  }
+}
+
+function clearDraft(envSlug: string, blueprintName: string) {
+  try {
+    localStorage.removeItem(draftStorageKey(envSlug, blueprintName));
+  } catch {
+    // ignore
+  }
+}
+
+function hasDraft(envSlug: string, blueprintName: string): boolean {
+  try {
+    return localStorage.getItem(draftStorageKey(envSlug, blueprintName)) !== null;
+  } catch {
+    return false;
+  }
 }
 
 // Step 1 — confirm blueprint + choose runtime
@@ -1637,6 +1693,7 @@ function ProvisionWizard({
   const [initialSecretsRaw, setInitialSecretsRaw] = useState("");
   const [repoConfig, setRepoConfig] = useState<RepositoryProvisionConfig | null>(null);
   const [buildContext, setBuildContext] = useState("");
+  const [isDraftLoaded, setIsDraftLoaded] = useState(false);
 
   const previewMutation = usePreviewApp(workspaceSlug, envSlug);
   const provisionMutation = useProvisionApp(workspaceSlug, envSlug);
@@ -1657,9 +1714,25 @@ function ProvisionWizard({
     setSpec((prev) => (prev ? { ...prev, ...patch } : prev));
 
   const handleOpen = (bp: Blueprint) => {
-    const defaultRuntime = bp.supported_runtimes[0] ?? "nomad";
-    setSpec(buildDefaultSpec(bp, defaultRuntime));
-    setStep(0);
+    const draft = loadDraft(envSlug, bp.name);
+    if (draft) {
+      setSpec(draft.spec);
+      setStep(draft.step);
+      setGrantId(draft.grantId);
+      setInitialSecretsRaw(draft.initialSecretsRaw);
+      setRepoConfig(draft.repoConfig);
+      setBuildContext(draft.buildContext);
+      setIsDraftLoaded(true);
+    } else {
+      const defaultRuntime = bp.supported_runtimes[0] ?? "nomad";
+      setSpec(buildDefaultSpec(bp, defaultRuntime));
+      setStep(0);
+      setGrantId("");
+      setInitialSecretsRaw("");
+      setRepoConfig(null);
+      setBuildContext("");
+      setIsDraftLoaded(false);
+    }
     setPreview(null);
     setPreviewError(null);
   };
@@ -1731,14 +1804,16 @@ function ProvisionWizard({
         toast.warning("Repository commit failed", { description: result.repo_error });
       }
 
-      handleClose();
+      clearDraft(envSlug, blueprint.name);
+      resetWizard();
+      onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Provision failed";
       toast.error(msg);
     }
   };
 
-  const handleClose = () => {
+  const resetWizard = () => {
     setStep(0);
     setSpec(null);
     setPreview(null);
@@ -1749,7 +1824,35 @@ function ProvisionWizard({
     setInitialSecretsRaw("");
     setRepoConfig(null);
     setBuildContext("");
+    setIsDraftLoaded(false);
+  };
+
+  const handleClose = () => {
+    if (spec && blueprint && (step > 0 || spec.service.name.trim() !== "")) {
+      saveDraft(envSlug, blueprint.name, {
+        step,
+        spec,
+        grantId,
+        initialSecretsRaw,
+        repoConfig,
+        buildContext,
+      });
+    }
+    resetWizard();
     onClose();
+  };
+
+  const handleDiscardDraft = () => {
+    if (!blueprint) return;
+    clearDraft(envSlug, blueprint.name);
+    const defaultRuntime = blueprint.supported_runtimes[0] ?? "nomad";
+    setSpec(buildDefaultSpec(blueprint, defaultRuntime));
+    setStep(0);
+    setGrantId("");
+    setInitialSecretsRaw("");
+    setRepoConfig(null);
+    setBuildContext("");
+    setIsDraftLoaded(false);
   };
 
   if (!blueprint) return null;
@@ -1771,6 +1874,20 @@ function ProvisionWizard({
           <DialogTitle className="flex items-center gap-2">
             <BlueprintIcon icon={blueprint.icon} className="size-4 text-muted-foreground" />
             Provision {blueprint.display_name}
+            {isDraftLoaded && (
+              <span className="ml-auto flex items-center gap-2">
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 font-medium">
+                  draft restored
+                </span>
+                <button
+                  type="button"
+                  onClick={handleDiscardDraft}
+                  className="text-[11px] text-muted-foreground hover:text-destructive transition underline underline-offset-2"
+                >
+                  Discard
+                </button>
+              </span>
+            )}
           </DialogTitle>
         </DialogHeader>
 
@@ -1934,6 +2051,16 @@ function BlueprintsPage() {
 
   const { data: blueprints, isLoading, error } = useBlueprints();
   const [provisioning, setProvisioning] = useState<Blueprint | null>(null);
+  const [draftVersion, setDraftVersion] = useState(0);
+
+  const blueprintDrafts = useMemo(() => {
+    const map = new Map<string, boolean>();
+    (blueprints ?? []).forEach((bp) => {
+      map.set(bp.name, hasDraft(envId, bp.name));
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [blueprints, draftVersion, envId]);
 
   const { data: capabilities } = useCapabilities(workspaceSlug, envId);
   const hasNomad = (capabilities ?? []).some(
@@ -1978,11 +2105,16 @@ function BlueprintsPage() {
             <section>
               <h2 className="text-base font-semibold mb-1">Application blueprints</h2>
               <p className="text-sm text-muted-foreground mb-4">
-                Standardized templates for deploying application workloads across any runtime.
+                Reusable automation templates for application provisioning and deployment.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                 {appBluprints.map((bp) => (
-                  <BlueprintCard key={bp.id} bp={bp} onProvision={setProvisioning} />
+                  <BlueprintCard
+                    key={bp.id}
+                    bp={bp}
+                    onProvision={setProvisioning}
+                    hasDraft={blueprintDrafts.get(bp.name)}
+                  />
                 ))}
               </div>
             </section>
@@ -1995,7 +2127,12 @@ function BlueprintsPage() {
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {infraBlueprints.map((bp) => (
-                    <BlueprintCard key={bp.id} bp={bp} onProvision={setProvisioning} />
+                    <BlueprintCard
+                      key={bp.id}
+                      bp={bp}
+                      onProvision={setProvisioning}
+                      hasDraft={blueprintDrafts.get(bp.name)}
+                    />
                   ))}
                 </div>
               </section>
@@ -2007,7 +2144,10 @@ function BlueprintsPage() {
       <ProvisionWizard
         open={!!provisioning}
         blueprint={provisioning}
-        onClose={() => setProvisioning(null)}
+        onClose={() => {
+          setProvisioning(null);
+          setDraftVersion((v) => v + 1);
+        }}
         workspaceSlug={workspaceSlug}
         envSlug={envId}
       />
