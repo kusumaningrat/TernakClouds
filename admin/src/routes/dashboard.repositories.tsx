@@ -95,7 +95,10 @@ function CreateProviderDialog({
   };
 
   const parseAllowedRepos = (raw: string) =>
-    raw.split("\n").map((s) => s.trim()).filter(Boolean);
+    raw
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,12 +120,22 @@ function CreateProviderDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add repository provider</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4 mt-2">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="space-y-4 mt-2"
+        >
           <div>
             <label className="text-xs font-medium text-muted-foreground">Name *</label>
             <input
@@ -141,7 +154,9 @@ function CreateProviderDialog({
               className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
             >
               {PROVIDER_OPTIONS.map((p) => (
-                <option key={p} value={p}>{PROVIDER_LABELS[p]}</option>
+                <option key={p} value={p}>
+                  {PROVIDER_LABELS[p]}
+                </option>
               ))}
             </select>
           </div>
@@ -241,13 +256,14 @@ function EditProviderDialog({
   const [baseURL, setBaseURL] = useState(provider.base_url ?? "");
   const [description, setDescription] = useState(provider.description ?? "");
   const [token, setToken] = useState("");
-  const [allowedReposRaw, setAllowedReposRaw] = useState(
-    (provider.allowed_repos ?? []).join("\n"),
-  );
+  const [allowedReposRaw, setAllowedReposRaw] = useState((provider.allowed_repos ?? []).join("\n"));
   const update = useUpdateRepoProvider(workspaceSlug);
 
   const parseAllowedRepos = (raw: string) =>
-    raw.split("\n").map((s) => s.trim()).filter(Boolean);
+    raw
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -271,12 +287,22 @@ function EditProviderDialog({
   };
 
   return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Edit repository provider</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4 mt-2">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="space-y-4 mt-2"
+        >
           <div>
             <label className="text-xs font-medium text-muted-foreground">Name</label>
             <input
@@ -376,18 +402,21 @@ function RepoBrowserPanel({
   onSelectRepo: (r: SCMRepo | null) => void;
   workspaceSlug: string;
 }) {
-  const { data: repos, isLoading: reposLoading, error: reposError } = useRepoProviderRepos(
+  const {
+    data: repos,
+    isLoading: reposLoading,
+    error: reposError,
+  } = useRepoProviderRepos(workspaceSlug, provider?.id ?? "", !!provider);
+  const {
+    data: branches,
+    isLoading: branchesLoading,
+    error: branchesError,
+  } = useRepoProviderBranches(
     workspaceSlug,
     provider?.id ?? "",
-    !!provider,
+    selectedRepo?.full_name ?? "",
+    !!provider && !!selectedRepo,
   );
-  const { data: branches, isLoading: branchesLoading, error: branchesError } =
-    useRepoProviderBranches(
-      workspaceSlug,
-      provider?.id ?? "",
-      selectedRepo?.full_name ?? "",
-      !!provider && !!selectedRepo,
-    );
 
   const [page, setPage] = useState(1);
 
@@ -396,8 +425,8 @@ function RepoBrowserPanel({
       <div className="rounded-xl border border-dashed border-border bg-card/50 flex flex-col items-center justify-center py-16 text-center">
         <FolderOpen className="size-8 text-muted-foreground/40 mb-3" />
         <p className="text-sm text-muted-foreground">
-          Click <span className="font-medium text-foreground">Browse repos</span> on a provider
-          card to explore its repositories.
+          Click <span className="font-medium text-foreground">Browse repos</span> on a provider card
+          to explore its repositories.
         </p>
       </div>
     );
@@ -435,16 +464,24 @@ function RepoBrowserPanel({
             <Loader2 className="size-4 animate-spin" /> Loading branches…
           </div>
         ) : branchesError ? (
-          <div className="py-4 px-2"><QueryError error={branchesError} /></div>
+          <div className="py-4 px-2">
+            <QueryError error={branchesError} />
+          </div>
         ) : !branches || branches.length === 0 ? (
           <div className="text-sm text-muted-foreground py-10 text-center">No branches found.</div>
         ) : (
           <table className="w-full text-sm">
             <thead className="bg-secondary/60">
               <tr className="border-b border-border">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Branch</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">SHA</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Protected</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Branch
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  SHA
+                </th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Protected
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -461,7 +498,9 @@ function RepoBrowserPanel({
                   </td>
                   <td className="px-4 py-3 text-xs">
                     {br.protected ? (
-                      <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 font-medium text-[11px]">Protected</span>
+                      <span className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-600 font-medium text-[11px]">
+                        Protected
+                      </span>
                     ) : (
                       <span className="text-muted-foreground">—</span>
                     )}
@@ -476,7 +515,9 @@ function RepoBrowserPanel({
           <Loader2 className="size-4 animate-spin" /> Loading repositories…
         </div>
       ) : reposError ? (
-        <div className="py-4 px-2"><QueryError error={reposError} /></div>
+        <div className="py-4 px-2">
+          <QueryError error={reposError} />
+        </div>
       ) : !repos || repos.length === 0 ? (
         <div className="text-sm text-muted-foreground py-10 text-center">
           No repositories found.
@@ -490,9 +531,15 @@ function RepoBrowserPanel({
               <table className="w-full text-sm">
                 <thead className="bg-secondary/60">
                   <tr className="border-b border-border">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Repository</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Visibility</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">Default Branch</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Repository
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Visibility
+                    </th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Default Branch
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -509,11 +556,13 @@ function RepoBrowserPanel({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
-                          repo.visibility === "private"
-                            ? "bg-secondary text-muted-foreground"
-                            : "bg-emerald-500/10 text-emerald-600"
-                        }`}>
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[11px] font-medium ${
+                            repo.visibility === "private"
+                              ? "bg-secondary text-muted-foreground"
+                              : "bg-emerald-500/10 text-emerald-600"
+                          }`}
+                        >
                           {repo.visibility ?? "—"}
                         </span>
                       </td>
@@ -597,7 +646,9 @@ function ProviderCard({
       <div className={`h-1.5 bg-gradient-to-r ${gradient}`} />
       <div className="p-5">
         <div className="flex items-start gap-3">
-          <div className={`size-10 rounded-lg bg-gradient-to-br ${gradient} grid place-items-center shrink-0`}>
+          <div
+            className={`size-10 rounded-lg bg-gradient-to-br ${gradient} grid place-items-center shrink-0`}
+          >
             <GitFork className="size-5 text-white" />
           </div>
           <div className="flex-1 min-w-0">
@@ -619,15 +670,21 @@ function ProviderCard({
         </div>
 
         {validateResult && (
-          <div className={`mt-3 flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md ${
-            validateResult === "ok"
-              ? "bg-emerald-500/10 text-emerald-600"
-              : "bg-destructive/10 text-destructive"
-          }`}>
+          <div
+            className={`mt-3 flex items-center gap-2 text-xs px-2.5 py-1.5 rounded-md ${
+              validateResult === "ok"
+                ? "bg-emerald-500/10 text-emerald-600"
+                : "bg-destructive/10 text-destructive"
+            }`}
+          >
             {validateResult === "ok" ? (
-              <><CheckCircle2 className="size-3.5" /> Connected</>
+              <>
+                <CheckCircle2 className="size-3.5" /> Connected
+              </>
             ) : (
-              <><XCircle className="size-3.5" /> Connection failed</>
+              <>
+                <XCircle className="size-3.5" /> Connection failed
+              </>
             )}
           </div>
         )}
@@ -645,7 +702,9 @@ function ProviderCard({
             Browse repos
           </button>
           <button
-            onClick={() => { void handleValidate(); }}
+            onClick={() => {
+              void handleValidate();
+            }}
             disabled={validate.isPending}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-secondary hover:bg-accent text-xs transition disabled:opacity-60"
           >
@@ -734,7 +793,8 @@ function RepositoriesPage() {
               <div>
                 <h2 className="text-lg font-semibold">Repository Providers</h2>
                 <p className="text-sm text-muted-foreground mt-0.5">
-                  Connect GitHub or GitLab to store generated manifests and automate GitOps workflows.
+                  Connect GitHub or GitLab to store generated manifests and automate GitOps
+                  workflows.
                 </p>
               </div>
               <button
@@ -808,7 +868,9 @@ function RepositoriesPage() {
 
       <AlertDialog
         open={!!deleting}
-        onOpenChange={(v) => { if (!v) setDeleting(null); }}
+        onOpenChange={(v) => {
+          if (!v) setDeleting(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -821,7 +883,9 @@ function RepositoriesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { void handleDelete(); }}
+              onClick={() => {
+                void handleDelete();
+              }}
               disabled={deleteProvider.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

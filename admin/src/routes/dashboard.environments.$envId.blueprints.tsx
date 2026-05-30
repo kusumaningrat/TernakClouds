@@ -568,7 +568,11 @@ function Step3Container({
     : selectedBinding?.registry_endpoint;
 
   const PROVIDER_LABELS_SMALL: Record<RegistryProviderType, string> = {
-    harbor: "Harbor", dockerhub: "Docker Hub", ghcr: "GHCR", ecr: "AWS ECR", gcr: "Google GCR",
+    harbor: "Harbor",
+    dockerhub: "Docker Hub",
+    ghcr: "GHCR",
+    ecr: "AWS ECR",
+    gcr: "Google GCR",
   };
 
   const buildImage = (endpoint: string, repo: string) => {

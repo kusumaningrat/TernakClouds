@@ -485,7 +485,10 @@ function EnvOverviewPage() {
           {(repoProviders ?? []).length === 0 ? (
             <p className="text-xs text-muted-foreground py-1">
               No repository providers registered in this workspace.{" "}
-              <Link to="/dashboard/repositories" className="underline underline-offset-2 hover:text-foreground transition">
+              <Link
+                to="/dashboard/repositories"
+                className="underline underline-offset-2 hover:text-foreground transition"
+              >
                 Add one
               </Link>
             </p>

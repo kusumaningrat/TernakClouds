@@ -1176,8 +1176,7 @@ export function useDeleteRepoProvider(slug: string) {
 
 export function useValidateRepoProvider(slug: string) {
   return useMutation<{ status: string }, ApiError, string>({
-    mutationFn: (id) =>
-      api.post(`/api/v1/workspaces/${slug}/repo-providers/${id}/validate`, {}),
+    mutationFn: (id) => api.post(`/api/v1/workspaces/${slug}/repo-providers/${id}/validate`, {}),
   });
 }
 
@@ -1222,8 +1221,7 @@ export function useCreatePullRequest(slug: string) {
 export function useRepoProviderCapabilities(slug: string, id: string, enabled = true) {
   return useQuery<ProviderCapabilities, ApiError>({
     queryKey: repoProviderKeys.capabilities(slug, id),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/repo-providers/${id}/capabilities`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/repo-providers/${id}/capabilities`),
     enabled: !!slug && !!id && enabled,
   });
 }

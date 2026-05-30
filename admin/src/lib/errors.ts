@@ -52,7 +52,9 @@ export function friendlyError(error: ApiError | Error | null | undefined): Frien
     case 502:
       return {
         title: "Provider error",
-        description: error.message || "The external provider returned an error. Check your credentials and permissions.",
+        description:
+          error.message ||
+          "The external provider returned an error. Check your credentials and permissions.",
       };
     default:
       if (!status) {
