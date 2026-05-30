@@ -18,6 +18,9 @@ import {
   useCreateSecretGrant,
   usePreviewApp,
   useProvisionApp,
+  usePlatformApps,
+  useDeletePlatformApp,
+  useAppDeployments,
 } from "@/lib/queries";
 import { isAdminGrant } from "@/lib/types";
 import type {
@@ -28,6 +31,9 @@ import type {
   RegistryProvider,
   RegistryProviderType,
   RepositoryProvisionConfig,
+  PlatformApp,
+  DeploymentRecord,
+  PlatformAppPage,
 } from "@/lib/types";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -49,7 +55,17 @@ import {
   Eye,
   X,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Rocket,
+  GitBranch,
+  GitCommit,
+  ExternalLink,
+  History,
+  Trash2,
+  Circle,
+  XCircle,
+  Clock as ClockIcon,
 } from "lucide-react";
 import type { ApiError } from "@/lib/api";
 import {
@@ -1925,6 +1941,437 @@ function ProvisionWizard({
   );
 }
 
+// ─── Deployment history helpers ────────────────────────────────────────────────
+
+function shortSHA(sha?: string) {
+  return sha ? sha.slice(0, 7) : null;
+}
+
+function relativeTime(iso: string) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
+
+function cicdPipelineUrl(rec: DeploymentRecord): string | null {
+  if (rec.pr_url) return rec.pr_url;
+  if (!rec.repo_name) return null;
+  if (rec.cicd_provider === "github-actions")
+    return `https://github.com/${rec.repo_name}/actions`;
+  if (rec.cicd_provider === "gitlab-ci")
+    return `https://gitlab.com/${rec.repo_name}/-/pipelines`;
+  return null;
+}
+
+function commitUrl(rec: DeploymentRecord): string | null {
+  if (!rec.commit_sha || !rec.repo_name) return null;
+  if (rec.cicd_provider === "gitlab-ci")
+    return `https://gitlab.com/${rec.repo_name}/-/commit/${rec.commit_sha}`;
+  return `https://github.com/${rec.repo_name}/commit/${rec.commit_sha}`;
+}
+
+const STATUS_STYLES: Record<string, { dot: string; text: string; label: string }> = {
+  provisioned: { dot: "bg-emerald-500", text: "text-emerald-600", label: "provisioned" },
+  pending:     { dot: "bg-amber-400",   text: "text-amber-600",   label: "pending"     },
+  failed:      { dot: "bg-red-500",     text: "text-red-600",     label: "failed"      },
+  stopped:     { dot: "bg-slate-400",   text: "text-slate-500",   label: "stopped"     },
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const s = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${s.text}`}>
+      <span className={`size-1.5 rounded-full ${s.dot}`} />
+      {s.label}
+    </span>
+  );
+}
+
+// ─── Deployment history row ────────────────────────────────────────────────────
+
+function DeploymentHistoryRow({ rec }: { rec: DeploymentRecord }) {
+  const sha = shortSHA(rec.commit_sha);
+  const pipeline = cicdPipelineUrl(rec);
+  const commit = commitUrl(rec);
+
+  return (
+    <div className="flex items-center gap-3 py-2 px-3 rounded-md hover:bg-muted/40 transition text-xs">
+      <StatusBadge status={rec.status} />
+
+      <div className="flex items-center gap-1.5 text-muted-foreground min-w-0 flex-1">
+        {rec.repo_branch && (
+          <span className="flex items-center gap-1 font-mono">
+            <GitBranch className="size-3 shrink-0" />
+            {rec.repo_branch}
+          </span>
+        )}
+        {sha && (
+          <>
+            <span className="text-muted-foreground/40">@</span>
+            {commit ? (
+              <a
+                href={commit}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 font-mono hover:text-primary transition"
+              >
+                <GitCommit className="size-3 shrink-0" />
+                {sha}
+              </a>
+            ) : (
+              <span className="flex items-center gap-1 font-mono">
+                <GitCommit className="size-3 shrink-0" />
+                {sha}
+              </span>
+            )}
+          </>
+        )}
+        {(rec.pr_number ?? 0) > 0 && (
+          <span className="text-muted-foreground/60">· PR #{rec.pr_number}</span>
+        )}
+        {rec.cicd_provider && (
+          <span className="px-1 py-0.5 rounded bg-secondary text-[10px] font-mono">
+            {rec.cicd_provider}
+          </span>
+        )}
+      </div>
+
+      <span className="text-muted-foreground shrink-0">{relativeTime(rec.created_at)}</span>
+
+      {pipeline && (
+        <a
+          href={pipeline}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-primary hover:underline shrink-0"
+        >
+          <ExternalLink className="size-3" />
+          {rec.pr_url ? "PR" : "Pipeline"}
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ─── Provisioned app card ──────────────────────────────────────────────────────
+
+// ─── Shared page-bar component ────────────────────────────────────────────────
+
+function PageBar({
+  page,
+  totalPages,
+  total,
+  limit,
+  isLoading,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  limit: number;
+  isLoading?: boolean;
+  onPageChange: (p: number) => void;
+}) {
+  const from = total === 0 ? 0 : (page - 1) * limit + 1;
+  const to = Math.min(page * limit, total);
+
+  return (
+    <div className="flex items-center justify-between pt-2 border-t border-border/40">
+      <span className="text-[11px] text-muted-foreground tabular-nums">
+        {total === 0 ? "No items" : `Showing ${from}–${to} of ${total}`}
+      </span>
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => onPageChange(Math.max(1, page - 1))}
+          disabled={page === 1 || isLoading}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-secondary hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          <ChevronRight className="size-3 rotate-180" />
+          Prev
+        </button>
+        <span className="px-2 text-[11px] text-muted-foreground tabular-nums select-none">
+          {page} / {totalPages}
+        </span>
+        <button
+          onClick={() => onPageChange(Math.min(totalPages, page + 1))}
+          disabled={page === totalPages || isLoading}
+          className="flex items-center gap-1 px-2 py-1 rounded text-[11px] font-medium bg-secondary hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition"
+        >
+          Next
+          <ChevronRight className="size-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+const HIST_LIMIT = 5;
+
+function ProvisionedAppCard({
+  app,
+  workspaceSlug,
+  envSlug,
+  onDelete,
+}: {
+  app: PlatformApp;
+  workspaceSlug: string;
+  envSlug: string;
+  onDelete: (id: string, name: string) => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const [histPage, setHistPage] = useState(1);
+  const { data: histData, isLoading: histLoading } = useAppDeployments(
+    workspaceSlug,
+    envSlug,
+    expanded ? app.id : "",
+    histPage,
+    HIST_LIMIT,
+  );
+
+  const sha = shortSHA(app.commit_sha);
+  const deployments = histData?.items ?? [];
+  const totalPages = histData ? Math.max(1, Math.ceil(histData.total / HIST_LIMIT)) : 1;
+  const latest = deployments[0];
+
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden">
+      {/* App summary row */}
+      <div className="px-4 py-3 flex items-center gap-3">
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-semibold text-sm">{app.name}</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+              {app.blueprint_name}
+            </span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+              {app.runtime_provider}
+            </span>
+            <StatusBadge status={app.status} />
+          </div>
+
+          <div className="flex items-center gap-2 text-[11px] text-muted-foreground flex-wrap">
+            {app.repo_branch && (
+              <span className="flex items-center gap-1 font-mono">
+                <GitBranch className="size-3" />
+                {app.repo_branch}
+              </span>
+            )}
+            {sha && (
+              <span className="flex items-center gap-1 font-mono">
+                <GitCommit className="size-3" />
+                {sha}
+              </span>
+            )}
+            {(app.pr_number ?? 0) > 0 && (
+              <span>
+                PR{" "}
+                {app.pr_url ? (
+                  <a
+                    href={app.pr_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    #{app.pr_number}
+                  </a>
+                ) : (
+                  `#${app.pr_number}`
+                )}
+              </span>
+            )}
+            {app.spec?.cicd?.provider && (
+              <span className="px-1 py-0.5 rounded bg-secondary text-[10px] font-mono">
+                {app.spec.cicd.provider}
+              </span>
+            )}
+            <span className="text-muted-foreground/60">· {relativeTime(app.created_at)}</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => { setExpanded((e) => !e); setHistPage(1); }}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium bg-secondary hover:bg-accent text-muted-foreground transition"
+          >
+            <History className="size-3.5" />
+            History
+            {expanded ? (
+              <ChevronUp className="size-3" />
+            ) : (
+              <ChevronDown className="size-3" />
+            )}
+          </button>
+          <button
+            onClick={() => onDelete(app.id, app.name)}
+            className="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
+            title="Delete application"
+          >
+            <Trash2 className="size-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Deployment history panel */}
+      {expanded && (
+        <div className="border-t border-border bg-muted/20 px-4 py-3 space-y-0">
+          {/* Header */}
+          <div className="flex items-center gap-2 pb-2">
+            <History className="size-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium text-muted-foreground">Deployment history</span>
+            {histData && (
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground tabular-nums">
+                {histData.total} total
+              </span>
+            )}
+          </div>
+
+          {/* Rows */}
+          {histLoading ? (
+            <div className="flex items-center gap-2 py-4 text-xs text-muted-foreground">
+              <Loader2 className="size-3.5 animate-spin" /> Loading…
+            </div>
+          ) : deployments.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-4">No deployment records yet.</p>
+          ) : (
+            <div className="divide-y divide-border/50 mb-3">
+              {deployments.map((rec) => (
+                <DeploymentHistoryRow key={rec.id} rec={rec} />
+              ))}
+            </div>
+          )}
+
+          {/* Pagination footer — always visible once data loads */}
+          {histData && (
+            <PageBar
+              page={histPage}
+              totalPages={totalPages}
+              total={histData.total}
+              limit={HIST_LIMIT}
+              isLoading={histLoading}
+              onPageChange={setHistPage}
+            />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Provisioned applications section ─────────────────────────────────────────
+
+const APPS_LIMIT = 5;
+
+function ProvisionedApplications({
+  workspaceSlug,
+  envSlug,
+}: {
+  workspaceSlug: string;
+  envSlug: string;
+}) {
+  const [appsPage, setAppsPage] = useState(1);
+  const { data: appsData, isLoading } = usePlatformApps(workspaceSlug, envSlug, appsPage, APPS_LIMIT);
+  const deleteMutation = useDeletePlatformApp(workspaceSlug, envSlug);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const apps = appsData?.items ?? [];
+  const totalAppPages = appsData ? Math.max(1, Math.ceil(appsData.total / APPS_LIMIT)) : 1;
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteMutation.mutateAsync(id);
+      toast.success("Application deleted");
+      setConfirmDelete(null);
+      // Step back if the deleted item was the only one on this page
+      if (apps.length === 1 && appsPage > 1) setAppsPage((p) => p - 1);
+    } catch {
+      toast.error("Failed to delete application");
+    }
+  };
+
+  if (!appsData && isLoading)
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground py-2">
+        <Loader2 className="size-4 animate-spin" /> Loading applications…
+      </div>
+    );
+
+  if (!appsData || appsData.total === 0) return null;
+
+  return (
+    <section>
+      <div className="flex items-center gap-2 mb-1">
+        <h2 className="text-base font-semibold">Provisioned Applications</h2>
+        <span className="text-xs px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground tabular-nums">
+          {appsData.total}
+        </span>
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Running application instances provisioned from blueprints. Expand each entry to view its
+        full deployment history and CI/CD pipeline traceability.
+      </p>
+
+      <div className="space-y-3 mb-3">
+        {apps.map((app) => (
+          <ProvisionedAppCard
+            key={app.id}
+            app={app}
+            workspaceSlug={workspaceSlug}
+            envSlug={envSlug}
+            onDelete={(id, name) => setConfirmDelete({ id, name })}
+          />
+        ))}
+      </div>
+
+      <PageBar
+        page={appsPage}
+        totalPages={totalAppPages}
+        total={appsData.total}
+        limit={APPS_LIMIT}
+        isLoading={isLoading}
+        onPageChange={setAppsPage}
+      />
+
+      {/* Delete confirmation dialog */}
+      {confirmDelete && (
+        <Dialog open onOpenChange={(v) => { if (!v) setConfirmDelete(null); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete {confirmDelete.name}?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              This will stop and remove the application. This action cannot be undone.
+            </p>
+            <DialogFooter className="pt-2">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 rounded-md bg-secondary hover:bg-accent text-sm transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void handleDelete(confirmDelete.id)}
+                disabled={deleteMutation.isPending}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-destructive text-destructive-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-60"
+              >
+                {deleteMutation.isPending ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="size-3.5" />
+                )}
+                Delete
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </section>
+  );
+}
+
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 function BlueprintsPage() {
@@ -2000,6 +2447,8 @@ function BlueprintsPage() {
                 </div>
               </section>
             )}
+
+            <ProvisionedApplications workspaceSlug={workspaceSlug} envSlug={envId} />
           </>
         )}
       </div>

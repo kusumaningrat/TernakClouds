@@ -18,6 +18,7 @@ func RegisterRoutes(envGroup *gin.RouterGroup, h *Handler, writeMiddleware ...gi
 	// List + Get are available to any workspace member.
 	g.GET("", h.List)
 	g.GET("/:id", h.Get)
+	g.GET("/:id/deployments", h.ListDeployments)
 
 	// Provision + Delete require write permission (e.g. deployments:exec).
 	write := g.Group("")

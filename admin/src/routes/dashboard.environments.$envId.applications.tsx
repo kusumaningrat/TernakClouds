@@ -20,9 +20,12 @@ import {
   CheckCircle,
   Timer,
   OctagonX,
+  ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { PlatformApp } from "@/lib/types";
+
+const APPS_LIMIT = 5;
 import {
   AlertDialog,
   AlertDialogAction,
@@ -188,8 +191,12 @@ function ApplicationsPage() {
   const workspaceSlug = selectedWorkspace?.slug ?? "";
   const navigate = useNavigate();
 
-  const { data: apps, isLoading, error } = usePlatformApps(workspaceSlug, envId);
+  const [appsPage, setAppsPage] = useState(1);
+  const { data: appsData, isLoading, error } = usePlatformApps(workspaceSlug, envId, appsPage, APPS_LIMIT);
   const deleteApp = useDeletePlatformApp(workspaceSlug, envId);
+
+  const apps = appsData?.items ?? [];
+  const totalAppPages = appsData ? Math.max(1, Math.ceil(appsData.total / APPS_LIMIT)) : 1;
 
   const [deleting, setDeleting] = useState<PlatformApp | null>(null);
   const [viewingManifest, setViewingManifest] = useState<PlatformApp | null>(null);
@@ -231,7 +238,7 @@ function ApplicationsPage() {
           <div className="flex items-center gap-2 text-sm text-destructive">
             <AlertCircle className="size-4" /> {error.message}
           </div>
-        ) : !apps || apps.length === 0 ? (
+        ) : !appsData || appsData.total === 0 ? (
           <div className="rounded-xl border border-border bg-card p-12 flex flex-col items-center text-center max-w-lg mx-auto">
             <div className="size-14 rounded-xl bg-secondary grid place-items-center mb-4">
               <Layers className="size-7 text-muted-foreground" />
@@ -252,7 +259,7 @@ function ApplicationsPage() {
           </div>
         ) : (
           <div className="rounded-xl border border-border overflow-hidden">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm border-b border-border">
               <thead>
                 <tr className="border-b border-border bg-muted/50">
                   <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
@@ -285,6 +292,36 @@ function ApplicationsPage() {
                 ))}
               </tbody>
             </table>
+
+            {/* Pagination row attached to the bottom of the table card */}
+            <div className="flex items-center justify-between px-4 py-2.5 bg-muted/30 text-[11px] text-muted-foreground">
+              <span className="tabular-nums">
+                {appsData
+                  ? `Showing ${Math.min((appsPage - 1) * APPS_LIMIT + 1, appsData.total)}–${Math.min(appsPage * APPS_LIMIT, appsData.total)} of ${appsData.total}`
+                  : ""}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setAppsPage((p) => Math.max(1, p - 1))}
+                  disabled={appsPage === 1 || isLoading}
+                  className="flex items-center gap-1 px-2 py-1 rounded font-medium bg-secondary hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  <ChevronRight className="size-3 rotate-180" />
+                  Prev
+                </button>
+                <span className="px-2 tabular-nums select-none">
+                  {appsPage} / {totalAppPages}
+                </span>
+                <button
+                  onClick={() => setAppsPage((p) => Math.min(totalAppPages, p + 1))}
+                  disabled={appsPage === totalAppPages || isLoading}
+                  className="flex items-center gap-1 px-2 py-1 rounded font-medium bg-secondary hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed transition"
+                >
+                  Next
+                  <ChevronRight className="size-3" />
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>

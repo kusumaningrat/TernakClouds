@@ -173,22 +173,98 @@ func (s *Service) Provision(
 		resp.RepoError = repoErr
 	}
 
+	// ── Record deployment event ───────────────────────────────────────────────
+	drec := &DeploymentRecord{
+		PlatformAppID: app.ID,
+		TriggeredBy:   callerID,
+		Status:        app.Status,
+		RuntimeJobID:  app.RuntimeJobID,
+		RepoName:      app.RepoName,
+		RepoBranch:    app.RepoBranch,
+		CommitSHA:     app.CommitSHA,
+		PRNumber:      app.PRNumber,
+		PRURL:         app.PRURL,
+		CICDProvider:  spec.CICD.Provider,
+	}
+	_ = s.repo.CreateDeployment(drec) // best-effort — don't fail provision on history error
+
 	return resp, nil
 }
 
-// List returns all platform apps for an environment.
-func (s *Service) List(envID uuid.UUID) ([]PlatformAppResponse, error) {
-	apps, err := s.repo.List(envID)
+const defaultDeploymentLimit = 5
+
+// ListDeployments returns a page of deployment records for a platform app, newest first.
+func (s *Service) ListDeployments(appID uuid.UUID, page, limit int) (*DeploymentHistoryPage, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 50 {
+		limit = defaultDeploymentLimit
+	}
+	offset := (page - 1) * limit
+
+	records, total, err := s.repo.ListDeployments(appID, offset, limit)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]PlatformAppResponse, 0, len(apps))
+
+	items := make([]DeploymentRecordResponse, 0, len(records))
+	for _, r := range records {
+		items = append(items, DeploymentRecordResponse{
+			ID:            r.ID.String(),
+			PlatformAppID: r.PlatformAppID.String(),
+			TriggeredBy:   r.TriggeredBy.String(),
+			Status:        r.Status,
+			RuntimeJobID:  r.RuntimeJobID,
+			RepoName:      r.RepoName,
+			RepoBranch:    r.RepoBranch,
+			CommitSHA:     r.CommitSHA,
+			PRNumber:      r.PRNumber,
+			PRURL:         r.PRURL,
+			CICDProvider:  r.CICDProvider,
+			Message:       r.Message,
+			CreatedAt:     r.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		})
+	}
+
+	return &DeploymentHistoryPage{
+		Items: items,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}, nil
+}
+
+const defaultAppLimit = 5
+
+// List returns a page of platform apps for an environment.
+func (s *Service) List(envID uuid.UUID, page, limit int) (*PlatformAppPage, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = defaultAppLimit
+	}
+	offset := (page - 1) * limit
+
+	apps, total, err := s.repo.List(envID, offset, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	items := make([]PlatformAppResponse, 0, len(apps))
 	for i := range apps {
 		var spec generator.PlatformSpec
 		_ = json.Unmarshal([]byte(apps[i].SpecJSON), &spec)
-		out = append(out, *toResponse(&apps[i], spec))
+		items = append(items, *toResponse(&apps[i], spec))
 	}
-	return out, nil
+
+	return &PlatformAppPage{
+		Items: items,
+		Total: total,
+		Page:  page,
+		Limit: limit,
+	}, nil
 }
 
 // Get returns a single platform app.

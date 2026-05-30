@@ -1180,3 +1180,35 @@ export interface PreviewAppInput {
   blueprint_name: string;
   spec: PlatformSpec;
 }
+
+// ─── Deployment Records ────────────────────────────────────────────────────────
+
+export interface DeploymentRecord {
+  id: string;
+  platform_app_id: string;
+  triggered_by: string;
+  status: "pending" | "provisioned" | "failed" | "stopped";
+  runtime_job_id?: string;
+  repo_name?: string;
+  repo_branch?: string;
+  commit_sha?: string;
+  pr_number?: number;
+  pr_url?: string;
+  cicd_provider?: string;
+  message?: string;
+  created_at: string;
+}
+
+export interface PlatformAppPage {
+  items: PlatformApp[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface DeploymentHistoryPage {
+  items: DeploymentRecord[];
+  total: number;
+  page: number;
+  limit: number;
+}

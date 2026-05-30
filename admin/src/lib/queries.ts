@@ -74,6 +74,8 @@ import type {
   RuntimeWorkload,
   Blueprint,
   PlatformApp,
+  PlatformAppPage,
+  DeploymentHistoryPage,
   GeneratedResources,
   ProvisionAppInput,
   PreviewAppInput,
@@ -1715,13 +1717,18 @@ export const platformAppKeys = {
     ["workspaces", slug, "environments", envSlug, "platform-apps"] as const,
   detail: (slug: string, envSlug: string, id: string) =>
     ["workspaces", slug, "environments", envSlug, "platform-apps", id] as const,
+  deployments: (slug: string, envSlug: string, id: string) =>
+    ["workspaces", slug, "environments", envSlug, "platform-apps", id, "deployments"] as const,
 };
 
-// GET /api/v1/workspaces/:slug/environments/:envSlug/platform-apps
-export function usePlatformApps(slug: string, envSlug: string) {
-  return useQuery<PlatformApp[], ApiError>({
-    queryKey: platformAppKeys.list(slug, envSlug),
-    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps`),
+// GET /api/v1/workspaces/:slug/environments/:envSlug/platform-apps?page=&limit=
+export function usePlatformApps(slug: string, envSlug: string, page = 1, limit = 5) {
+  return useQuery<PlatformAppPage, ApiError>({
+    queryKey: [...platformAppKeys.list(slug, envSlug), page, limit],
+    queryFn: () =>
+      api.get(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps?page=${page}&limit=${limit}`,
+      ),
     enabled: !!slug && !!envSlug,
     staleTime: 15_000,
     retry: false,
@@ -1775,5 +1782,26 @@ export function useDeletePlatformApp(slug: string, envSlug: string) {
         queryKey: platformAppKeys.list(slug, envSlug),
       });
     },
+  });
+}
+
+// GET /api/v1/workspaces/:slug/environments/:envSlug/platform-apps/:id/deployments?page=&limit=
+export function useAppDeployments(
+  slug: string,
+  envSlug: string,
+  appId: string,
+  page = 1,
+  limit = 5,
+) {
+  return useQuery<DeploymentHistoryPage, ApiError>({
+    queryKey: [...platformAppKeys.deployments(slug, envSlug, appId), page, limit],
+    queryFn: () =>
+      api.get(
+        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/${appId}/deployments?page=${page}&limit=${limit}`,
+      ),
+    enabled: !!slug && !!envSlug && !!appId,
+    staleTime: 30_000,
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 }

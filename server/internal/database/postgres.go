@@ -73,6 +73,7 @@ func Migrate(db *gorm.DB) error {
 		&servicecatalog.ServiceDeployment{},
 		&blueprint.Blueprint{},
 		&platformapp.PlatformApp{},
+		&platformapp.DeploymentRecord{},
 		&repository.RepoProvider{},
 	)
 }
