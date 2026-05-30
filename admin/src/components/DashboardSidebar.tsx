@@ -35,6 +35,7 @@ import { tokenTTLSeconds } from "@/lib/auth";
 import {
   useAccessRequestsPending,
   useCapabilities,
+  useEnvironmentRegistries,
   useLogout,
   useMe,
   useWorkspaces,
@@ -230,6 +231,11 @@ const PROVIDER_DISPLAY: Record<string, string> = {
   loki: "Loki",
   opensearch: "OpenSearch",
   elasticsearch: "Elasticsearch",
+  harbor: "Harbor",
+  dockerhub: "Docker Hub",
+  ghcr: "GHCR",
+  ecr: "ECR",
+  gcr: "GCR",
 };
 
 // ─── Sidebar ─────────────────────────────────────────────────────────────────
@@ -281,6 +287,7 @@ export function DashboardSidebar() {
 
   // Capability data for provider badges
   const { data: capabilities } = useCapabilities(workspaceSlug ?? "", activeEnvId ?? "");
+  const { data: envRegistries } = useEnvironmentRegistries(workspaceSlug ?? "", activeEnvId ?? "");
 
   const capMap = Object.fromEntries((capabilities ?? []).map((c) => [c.capability_name, c]));
   const runtimeProviders = capMap["runtime"]?.providers ?? [];
@@ -485,6 +492,13 @@ export function DashboardSidebar() {
                   label="Registries"
                   icon={Container}
                   active={envActive("registries")}
+                  badge={
+                    envRegistries && envRegistries.length > 0
+                      ? envRegistries.length === 1
+                        ? (PROVIDER_DISPLAY[envRegistries[0].registry_type ?? ""] ?? envRegistries[0].registry_type)
+                        : `${envRegistries.length} providers`
+                      : undefined
+                  }
                 />
               </nav>
             </div>
