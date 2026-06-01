@@ -123,7 +123,13 @@ function NomadLiveStatus({
 
 // ─── Catalog card ──────────────────────────────────────────────────────────────
 
-function CatalogCard({ item, onDeploy }: { item: CatalogItem; onDeploy: (item: CatalogItem) => void }) {
+function CatalogCard({
+  item,
+  onDeploy,
+}: {
+  item: CatalogItem;
+  onDeploy: (item: CatalogItem) => void;
+}) {
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col">
       <div className="h-1.5 w-full bg-[image:var(--gradient-primary)]" />
@@ -327,7 +333,9 @@ function DeployDialog({
   const addEnvMapping = () => setEnvMappings((prev) => [...prev, ["", ""]]);
   const updateEnvMapping = (i: number, field: 0 | 1, value: string) =>
     setEnvMappings((prev) =>
-      prev.map((pair, idx) => (idx === i ? (field === 0 ? [value, pair[1]] : [pair[0], value]) : pair)),
+      prev.map((pair, idx) =>
+        idx === i ? (field === 0 ? [value, pair[1]] : [pair[0], value]) : pair,
+      ),
     );
   const removeEnvMapping = (i: number) =>
     setEnvMappings((prev) => prev.filter((_, idx) => idx !== i));
@@ -387,13 +395,22 @@ function DeployDialog({
   if (!item) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Deploy {item.display_name}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4 mt-2">
-
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="space-y-4 mt-2"
+        >
           {/* Runtime selector */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">Runtime *</label>
@@ -443,12 +460,17 @@ function DeployDialog({
                   <select
                     required
                     value={datacenter}
-                    onChange={(e) => { setDatacenter(e.target.value); setWorkerName(""); }}
+                    onChange={(e) => {
+                      setDatacenter(e.target.value);
+                      setWorkerName("");
+                    }}
                     className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
                   >
                     <option value="">Select datacenter…</option>
                     {datacenters.map((dc) => (
-                      <option key={dc} value={dc}>{dc}</option>
+                      <option key={dc} value={dc}>
+                        {dc}
+                      </option>
                     ))}
                   </select>
                 ) : (
@@ -473,7 +495,9 @@ function DeployDialog({
                   >
                     <option value="">Select worker…</option>
                     {workers.map((n) => (
-                      <option key={n.ID} value={n.Name}>{n.Name} ({n.Address})</option>
+                      <option key={n.ID} value={n.Name}>
+                        {n.Name} ({n.Address})
+                      </option>
                     ))}
                   </select>
                 ) : (
@@ -497,7 +521,9 @@ function DeployDialog({
                 >
                   {nomadNamespaces && nomadNamespaces.length > 0 ? (
                     nomadNamespaces.map((ns) => (
-                      <option key={ns.Name} value={ns.Name}>{ns.Name}</option>
+                      <option key={ns.Name} value={ns.Name}>
+                        {ns.Name}
+                      </option>
                     ))
                   ) : (
                     <option value="default">default</option>
@@ -521,7 +547,9 @@ function DeployDialog({
                   >
                     {k8sNamespaces && k8sNamespaces.length > 0 ? (
                       k8sNamespaces.map((ns) => (
-                        <option key={ns.name} value={ns.name}>{ns.name}</option>
+                        <option key={ns.name} value={ns.name}>
+                          {ns.name}
+                        </option>
                       ))
                     ) : (
                       <option value="default">default</option>
@@ -542,7 +570,10 @@ function DeployDialog({
               </div>
               <div>
                 <label className="text-xs font-medium text-muted-foreground">
-                  Worker node <span className="font-normal text-muted-foreground/60">optional — leave blank to let K8s schedule freely</span>
+                  Worker node{" "}
+                  <span className="font-normal text-muted-foreground/60">
+                    optional — leave blank to let K8s schedule freely
+                  </span>
                 </label>
                 {k8sNodes && k8sNodes.length > 0 ? (
                   <select
@@ -551,11 +582,13 @@ function DeployDialog({
                     className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
                   >
                     <option value="">Any node (scheduler decides)</option>
-                    {k8sNodes.filter((n) => n.status === "Ready").map((n) => (
-                      <option key={n.name} value={n.name}>
-                        {n.name} — {n.roles.join("/")}
-                      </option>
-                    ))}
+                    {k8sNodes
+                      .filter((n) => n.status === "Ready")
+                      .map((n) => (
+                        <option key={n.name} value={n.name}>
+                          {n.name} — {n.roles.join("/")}
+                        </option>
+                      ))}
                   </select>
                 ) : (
                   <input
@@ -587,7 +620,11 @@ function DeployDialog({
               max={runtimeProvider === "kubernetes" ? 32767 : 65535}
               value={exposedPort}
               onChange={(e) => setExposedPort(e.target.value)}
-              placeholder={runtimeProvider === "kubernetes" ? "e.g. 30080" : String(item.default_container_port)}
+              placeholder={
+                runtimeProvider === "kubernetes"
+                  ? "e.g. 30080"
+                  : String(item.default_container_port)
+              }
               className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
             />
           </div>
@@ -703,7 +740,9 @@ function DeployDialog({
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-medium text-muted-foreground">
                     Env mappings{" "}
-                    <span className="font-normal text-muted-foreground/60">(ENV_VAR → secret value)</span>
+                    <span className="font-normal text-muted-foreground/60">
+                      (ENV_VAR → secret value)
+                    </span>
                   </label>
                   <button
                     type="button"
@@ -762,7 +801,12 @@ function DeployDialog({
 
 function DefinitionDialog({ definition, onClose }: { definition: string; onClose: () => void }) {
   return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Job definition</DialogTitle>
@@ -876,11 +920,15 @@ function ServiceCatalogPage() {
   const hasNomadProvider =
     !capLoading &&
     capList.some(
-      (c) => c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
+      (c) =>
+        c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
     );
 
   const { data: catalog, isLoading: catalogLoading, error: catalogError } = useCatalog();
-  const { data: deployments, isLoading: deploymentsLoading } = useServiceDeployments(workspaceSlug, envId);
+  const { data: deployments, isLoading: deploymentsLoading } = useServiceDeployments(
+    workspaceSlug,
+    envId,
+  );
   const stopDeployment = useStopDeployment(workspaceSlug, envId);
 
   const [deployingItem, setDeployingItem] = useState<CatalogItem | null>(null);
@@ -956,13 +1004,27 @@ function ServiceCatalogPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Job</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Runtime</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Location</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Port</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Image</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Resources</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Job
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Runtime
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Status
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Location
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Port
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Image
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Resources
+                    </th>
                     <th className="px-4 py-2.5" />
                   </tr>
                 </thead>
@@ -1005,7 +1067,12 @@ function ServiceCatalogPage() {
       )}
 
       {/* Stop confirmation */}
-      <AlertDialog open={!!stopping} onOpenChange={(v) => { if (!v) setStopping(null); }}>
+      <AlertDialog
+        open={!!stopping}
+        onOpenChange={(v) => {
+          if (!v) setStopping(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Stop deployment?</AlertDialogTitle>
@@ -1018,7 +1085,9 @@ function ServiceCatalogPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { void handleStop(); }}
+              onClick={() => {
+                void handleStop();
+              }}
               disabled={stopDeployment.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
