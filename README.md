@@ -90,7 +90,7 @@ See [`docs/architecture/overview.md`](./docs/architecture/overview.md) for a ful
 
 ```
 idp/
-├── server/          Go/Gin REST API backend
+├── backend/          Go/Gin REST API backend
 ├── admin/           Admin dashboard (TanStack Start + React)
 ├── src/             Public website (Vite + React)
 ├── docs/            Platform documentation
@@ -109,7 +109,7 @@ idp/
 git clone <repo-url> idp && cd idp
 
 # 2. Configure
-cp server/.env.example server/.env   # edit DB credentials + JWT_SECRET
+cp backend/.env.example backend/.env   # edit DB credentials + JWT_SECRET
 cp admin/.env.example admin/.env
 
 # 3. Start infrastructure
@@ -119,7 +119,7 @@ make docker-up
 make prepare && make dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and log in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` you set in `server/.env`.
+Open [http://localhost:3000](http://localhost:3000) and log in with the `ADMIN_EMAIL` / `ADMIN_PASSWORD` you set in `backend/.env`.
 
 Full setup guide: [`docs/getting-started/installation.md`](./docs/getting-started/installation.md)
 
@@ -146,7 +146,7 @@ Full setup guide: [`docs/getting-started/installation.md`](./docs/getting-starte
 | Backend  | Go 1.22, Gin, GORM, PostgreSQL 16                   |
 | Frontend | React, TanStack Start, TanStack Query, Tailwind CSS |
 | Secrets  | HashiCorp Vault (KV v2, AppRole auth)               |
-| Runtimes | Kubernetes (via API server), Nomad (via HTTP API)   |
+| Runtimes | Kubernetes (via API backend), Nomad (via HTTP API)  |
 | Logs     | Loki (provider-backed streaming)                    |
 
 ---

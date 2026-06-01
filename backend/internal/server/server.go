@@ -84,7 +84,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	secretService := secret.NewService(secret.NewRepository(db), capRepo, vc)
 	registryService := registry.NewService(registryRepo, vc)
 	repoService := repository.NewService(repoRepo, vc)
-	catalogService := servicecatalog.NewService(catalogRepo, nomadService, registryRepo, capRepo, vc)
+	catalogService := servicecatalog.NewService(catalogRepo, nomadService, k8sService, dockerService, registryRepo, capRepo, vc)
 	blueprintService := blueprint.NewService(blueprintRepo)
 	platformAppService := platformapp.NewService(platformAppRepo, blueprintService, nomadService, repoService, secretService)
 

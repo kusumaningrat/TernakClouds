@@ -39,10 +39,16 @@ type ServiceDeployment struct {
 	Memory        int        `gorm:"not null"                    json:"memory"`
 	Image         string     `gorm:"not null"                    json:"image"`
 	// RegistryID is nil for public images.
-	RegistryID    *uuid.UUID `gorm:"type:uuid"                   json:"registry_id,omitempty"`
-	NomadJobID    string     `gorm:"not null"                    json:"nomad_job_id"`
-	Status        string     `gorm:"not null;default:'running'"  json:"status"`
-	DeployedBy    uuid.UUID  `gorm:"type:uuid;not null"          json:"deployed_by"`
-	// JobDefinition stores the exact HCL that was rendered and submitted to Nomad.
-	JobDefinition string `gorm:"type:text"                   json:"job_definition"`
+	RegistryID *uuid.UUID `gorm:"type:uuid"                    json:"registry_id,omitempty"`
+	// NomadJobID is kept for backward compatibility.
+	NomadJobID string `gorm:"not null;default:''"           json:"nomad_job_id"`
+	// RuntimeProvider is "nomad", "kubernetes", or "docker".
+	RuntimeProvider string `gorm:"not null;default:'nomad'"      json:"runtime_provider"`
+	// RuntimeJobID holds the runtime-specific job identifier.
+	// Nomad: "{jobname}-App"; Kubernetes: "{namespace}/{name}"; Docker: container short ID.
+	RuntimeJobID  string    `gorm:"not null;default:''"           json:"runtime_job_id"`
+	Status        string    `gorm:"not null;default:'running'"    json:"status"`
+	DeployedBy    uuid.UUID `gorm:"type:uuid;not null"            json:"deployed_by"`
+	// JobDefinition stores the exact manifest rendered and submitted to the runtime.
+	JobDefinition string `gorm:"type:text"                    json:"job_definition"`
 }

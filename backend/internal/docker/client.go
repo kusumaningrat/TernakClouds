@@ -54,6 +54,92 @@ func (c *Client) get(ctx context.Context, path string, out any) error {
 	return json.NewDecoder(resp.Body).Decode(out)
 }
 
+// postJSON sends a POST with a JSON body and optionally decodes the response into out.
+func (c *Client) postJSON(ctx context.Context, path string, body any, out any) error {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.address+path, bytes.NewReader(b))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("docker: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		b2, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("docker: %s %d: %s", path, resp.StatusCode, b2)
+	}
+	if out != nil {
+		return json.NewDecoder(resp.Body).Decode(out)
+	}
+	return nil
+}
+
+// ContainerRunConfig describes the desired state for a new managed container.
+type ContainerRunConfig struct {
+	Image         string
+	Name          string
+	ContainerPort int
+	HostPort      int
+	CPU           int               // millicores
+	MemoryMB      int               // megabytes
+	Env           []string          // "KEY=VALUE"
+	Labels        map[string]string
+}
+
+// CreateContainer creates a container and returns its full ID (not started yet).
+func (c *Client) CreateContainer(ctx context.Context, cfg ContainerRunConfig) (string, error) {
+	labels := make(map[string]string, len(cfg.Labels)+1)
+	for k, v := range cfg.Labels {
+		labels[k] = v
+	}
+	labels["managed-by"] = "ternak-idp"
+
+	env := cfg.Env
+	if env == nil {
+		env = []string{}
+	}
+
+	body := map[string]any{
+		"Image":  cfg.Image,
+		"Env":    env,
+		"Labels": labels,
+		"ExposedPorts": map[string]any{
+			fmt.Sprintf("%d/tcp", cfg.ContainerPort): struct{}{},
+		},
+		"HostConfig": map[string]any{
+			"PortBindings": map[string]any{
+				fmt.Sprintf("%d/tcp", cfg.ContainerPort): []map[string]string{
+					{"HostPort": fmt.Sprintf("%d", cfg.HostPort)},
+				},
+			},
+			"NanoCpus": int64(cfg.CPU) * 1_000_000,
+			"Memory":   int64(cfg.MemoryMB) * 1024 * 1024,
+			"RestartPolicy": map[string]any{"Name": "unless-stopped"},
+		},
+	}
+
+	path := "/containers/create"
+	if cfg.Name != "" {
+		path += "?name=" + cfg.Name
+	}
+	var result struct {
+		ID string `json:"Id"`
+	}
+	if err := c.postJSON(ctx, path, body, &result); err != nil {
+		return "", err
+	}
+	return result.ID, nil
+}
+
 // post sends a POST with no body. Docker action endpoints return 204 on success
 // or 304 Not Modified when the container is already in the desired state.
 func (c *Client) post(ctx context.Context, path string) error {

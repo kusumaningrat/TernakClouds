@@ -2,10 +2,12 @@ package servicecatalog
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kusumaningrat/ternakclouds/internal/kubernetes"
 	"github.com/kusumaningrat/ternakclouds/internal/middleware"
 	"github.com/kusumaningrat/ternakclouds/internal/nomad"
 	"github.com/kusumaningrat/ternakclouds/pkg"
@@ -37,12 +39,15 @@ func (h *Handler) Deploy(c *gin.Context) {
 
 	var input DeployInput
 	if err := c.ShouldBindJSON(&input); err != nil {
-		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
+		slog.Error("servicecatalog: bind error", "err", err)
+		pkg.RespondErr(c, http.StatusBadRequest, err.Error())
 		return
 	}
+	slog.Info("servicecatalog: deploy request", "catalog", input.CatalogName, "runtime", input.RuntimeProvider, "job", input.JobName)
 
 	deployment, err := h.svc.Deploy(c.Request.Context(), workspaceID, envID, callerID, input)
 	if err != nil {
+		slog.Error("servicecatalog: deploy failed", "err", err)
 		switch {
 		case errors.Is(err, ErrCatalogNotFound):
 			pkg.RespondErr(c, http.StatusNotFound, err.Error())
@@ -50,10 +55,13 @@ func (h *Handler) Deploy(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
 		case errors.Is(err, ErrNoVaultCapability):
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
-		case errors.Is(err, nomad.ErrNoNomadProvider):
+		case errors.Is(err, ErrUnsupportedRuntime):
+			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		case errors.Is(err, nomad.ErrNoNomadProvider),
+			errors.Is(err, kubernetes.ErrNoK8sProvider):
 			pkg.RespondErr(c, http.StatusServiceUnavailable, err.Error())
 		default:
-			pkg.RespondErr(c, http.StatusInternalServerError, "Deployment failed. Please try again.")
+			pkg.RespondErr(c, http.StatusInternalServerError, err.Error())
 		}
 		return
 	}

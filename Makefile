@@ -1,6 +1,6 @@
 # Structure:
 #   /           Public website (docs + platform intro) — Vite + React
-#   server/    Go/Gin REST API
+#   backend/    Go/Gin REST API
 #   admin/   Admin dashboard — TanStack Start + React
 #
 # Usage:
@@ -23,7 +23,7 @@
 # ── Dependencies ─────────────────────────────────────────────────────────────
 
 prepare:
-	cd server && go mod tidy
+	cd backend && go mod tidy
 	npm install
 	cd admin && npm install
 
@@ -37,7 +37,7 @@ dev:
 	  wait
 
 dev-backend:
-	cd server && go run ./cmd/api
+	cd backend && go run ./cmd/api
 
 dev-admin:
 	cd admin && npm run dev
@@ -50,7 +50,7 @@ dev-site:
 build: build-backend build-admin build-site
 
 build-backend:
-	cd server && go build -o bin/api ./cmd/api
+	cd backend && go build -o bin/api ./cmd/api
 
 build-admin:
 	cd admin && npm run build
@@ -61,7 +61,7 @@ build-site:
 # ── Tests ────────────────────────────────────────────────────────────────────
 
 test:
-	cd server && go test ./...
+	cd backend && go test ./...
 
 # ── Docker infrastructure ────────────────────────────────────────────────────
 
@@ -74,13 +74,13 @@ docker-down:
 # ── Formatting ───────────────────────────────────────────────────────────────
 
 fmt:
-	cd server && go fmt ./...
+	cd backend && go fmt ./...
 	cd admin && npm run format
 
 # ── Clean ────────────────────────────────────────────────────────────────────
 
 clean:
-	rm -rf server/bin
+	rm -rf backend/bin
 	rm -rf admin/dist admin/.tanstack admin/.wrangler
 	rm -rf dist
 
