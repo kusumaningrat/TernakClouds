@@ -556,6 +556,8 @@ export interface ServiceDeployment {
   image: string;
   registry_id?: string;
   nomad_job_id: string;
+  runtime_provider: string;
+  runtime_job_id: string;
   status: string;
   deployed_by: string;
   job_definition?: string;
@@ -564,15 +566,23 @@ export interface ServiceDeployment {
 export interface DeployServiceInput {
   catalog_name: string;
   job_name: string;
-  datacenter: string;
-  namespace: string;
-  worker_name: string;
+  runtime_provider: string;
   exposed_port: number;
   cpu?: number;
   memory?: number;
+  // Nomad-specific
+  datacenter?: string;
+  namespace?: string;
+  worker_name?: string;
+  // Kubernetes-specific
+  k8s_namespace?: string;
+  replicas?: number;
+  k8s_node_name?: string;
+  // Registry
   registry_id?: string;
   image_path?: string;
   image_tag?: string;
+  // Vault (Nomad only)
   vault_role?: string;
   vault_path?: string;
   env_mappings?: Record<string, string>;

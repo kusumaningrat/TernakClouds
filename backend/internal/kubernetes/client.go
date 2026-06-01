@@ -253,6 +253,68 @@ func (c *Client) GetService(ctx context.Context, namespace, name string) (*Servi
 	}, nil
 }
 
+// apply performs a server-side apply (equivalent to kubectl apply --server-side).
+func (c *Client) apply(ctx context.Context, path, body string) error {
+	url := c.address + path + "?fieldManager=idp&force=true"
+	req, err := http.NewRequestWithContext(ctx, http.MethodPatch, url, strings.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/apply-patch+yaml")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("kubernetes: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		b, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusForbidden {
+			return fmt.Errorf("kubernetes: permission denied applying %s — the service account token does not have write access. Grant patch/create/delete on deployments and services to the bound service account", path)
+		}
+		return fmt.Errorf("kubernetes: apply %s: %d: %s", path, resp.StatusCode, b)
+	}
+	return nil
+}
+
+// deleteResource sends DELETE for a resource path; 404 is treated as success.
+func (c *Client) deleteResource(ctx context.Context, path string) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.address+path, nil)
+	if err != nil {
+		return err
+	}
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return fmt.Errorf("kubernetes: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 && resp.StatusCode != http.StatusNotFound {
+		b, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("kubernetes: delete %s: %d: %s", path, resp.StatusCode, b)
+	}
+	return nil
+}
+
+// ApplyResource performs server-side apply for a resource at the given API path.
+func (c *Client) ApplyResource(ctx context.Context, path, body string) error {
+	return c.apply(ctx, path, body)
+}
+
+// DeleteDeployment deletes a Deployment. Returns nil if not found.
+func (c *Client) DeleteDeployment(ctx context.Context, namespace, name string) error {
+	return c.deleteResource(ctx, "/apis/apps/v1/namespaces/"+namespace+"/deployments/"+name)
+}
+
+// DeleteService deletes a Service. Returns nil if not found.
+func (c *Client) DeleteService(ctx context.Context, namespace, name string) error {
+	return c.deleteResource(ctx, "/api/v1/namespaces/"+namespace+"/services/"+name)
+}
+
 // ScaleDeployment sets the replica count for a deployment.
 func (c *Client) ScaleDeployment(ctx context.Context, namespace, name string, replicas int) error {
 	body := fmt.Sprintf(`{"spec":{"replicas":%d}}`, replicas)

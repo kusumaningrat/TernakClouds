@@ -8,6 +8,8 @@ import {
   useStopDeployment,
   useNomadNodes,
   useNomadNamespaces,
+  useK8sNamespaces,
+  useK8sNodes,
   useEnvironmentRegistries,
   useNomadJob,
   useCapabilities,
@@ -27,6 +29,7 @@ import {
   X,
   Eye,
   EyeOff,
+  Server,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { CatalogItem, ServiceDeployment } from "@/lib/types";
@@ -54,9 +57,26 @@ export const Route = createFileRoute("/dashboard/environments/$envId/service-cat
   component: ServiceCatalogPage,
 });
 
+// ─── Runtime badge ─────────────────────────────────────────────────────────────
+
+const RUNTIME_COLORS: Record<string, string> = {
+  nomad: "bg-purple-500/15 text-purple-600",
+  kubernetes: "bg-blue-500/15 text-blue-600",
+  docker: "bg-sky-500/15 text-sky-600",
+};
+
+function RuntimeBadge({ provider }: { provider: string }) {
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${RUNTIME_COLORS[provider] ?? "bg-muted text-muted-foreground"}`}
+    >
+      {provider}
+    </span>
+  );
+}
+
 // ─── Status badge ──────────────────────────────────────────────────────────────
 
-// Nomad job statuses: "pending" | "running" | "dead"
 const STATUS_COLORS: Record<string, string> = {
   running: "bg-emerald-500/15 text-emerald-600",
   pending: "bg-amber-500/15 text-amber-600",
@@ -74,8 +94,8 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-// Fetches the real-time Nomad job status for a single deployment row.
-function LiveStatus({
+// Fetches live Nomad status — only rendered for Nomad deployments.
+function NomadLiveStatus({
   workspaceSlug,
   envSlug,
   nomadJobId,
@@ -95,16 +115,9 @@ function LiveStatus({
     namespace,
     enabled,
   );
-
-  if (!enabled) {
-    return <span className="text-[11px] text-muted-foreground">no provider</span>;
-  }
-  if (isLoading) {
-    return <Loader2 className="size-3 animate-spin text-muted-foreground" />;
-  }
-  if (error) {
-    return <StatusBadge status="unknown" />;
-  }
+  if (!enabled) return <span className="text-[11px] text-muted-foreground">no provider</span>;
+  if (isLoading) return <Loader2 className="size-3 animate-spin text-muted-foreground" />;
+  if (error) return <StatusBadge status="unknown" />;
   return <StatusBadge status={data?.Status?.toLowerCase() ?? "unknown"} />;
 }
 
@@ -148,7 +161,7 @@ function CatalogCard({
 
         <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-4">
           <span className="flex items-center gap-1">
-            <Cpu className="size-3" /> {item.default_cpu} MHz
+            <Cpu className="size-3" /> {item.default_cpu}m
           </span>
           <span className="flex items-center gap-1">
             <MemoryStick className="size-3" /> {item.default_memory} MB
@@ -234,48 +247,77 @@ function DeployDialog({
   onClose,
   workspaceSlug,
   envSlug,
-  hasNomadProvider,
+  capabilities,
 }: {
   open: boolean;
   item: CatalogItem | null;
   onClose: () => void;
   workspaceSlug: string;
   envSlug: string;
-  hasNomadProvider: boolean;
+  capabilities: { capability_name: string; providers: { provider_name: string }[] }[];
 }) {
-  const { data: nodes } = useNomadNodes(workspaceSlug, envSlug, hasNomadProvider);
-  const { data: nomadNamespaces, isLoading: nomadNsLoading } = useNomadNamespaces(
-    workspaceSlug,
-    envSlug,
-    hasNomadProvider,
+  const hasNomad = capabilities.some(
+    (c) => c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
   );
+  const hasKubernetes = capabilities.some(
+    (c) =>
+      c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "kubernetes"),
+  );
+  const hasDocker = capabilities.some(
+    (c) => c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "docker"),
+  );
+
+  const { data: nodes } = useNomadNodes(workspaceSlug, envSlug, hasNomad);
+  const { data: nomadNamespaces } = useNomadNamespaces(workspaceSlug, envSlug, hasNomad);
+  const { data: k8sNamespaces } = useK8sNamespaces(workspaceSlug, envSlug, hasKubernetes);
+  const { data: k8sNodes } = useK8sNodes(workspaceSlug, envSlug, hasKubernetes);
   const { data: bindings } = useEnvironmentRegistries(workspaceSlug, envSlug);
   const deploy = useDeployService(workspaceSlug, envSlug);
 
+  // Determine available runtimes from capabilities
+  const availableRuntimes = [
+    ...(hasNomad ? [{ value: "nomad", label: "Nomad" }] : []),
+    ...(hasKubernetes ? [{ value: "kubernetes", label: "Kubernetes" }] : []),
+    ...(hasDocker ? [{ value: "docker", label: "Docker" }] : []),
+  ];
+
+  const defaultRuntime = availableRuntimes[0]?.value ?? "nomad";
+
+  const [runtimeProvider, setRuntimeProvider] = useState(defaultRuntime);
   const [jobName, setJobName] = useState("");
+  // Nomad fields
   const [datacenter, setDatacenter] = useState("");
   const [namespace, setNamespace] = useState("default");
   const [workerName, setWorkerName] = useState("");
+  // Kubernetes fields
+  const [k8sNamespace, setK8sNamespace] = useState("default");
+  const [replicas, setReplicas] = useState("1");
+  const [k8sNodeName, setK8sNodeName] = useState("");
+  // Shared
   const [exposedPort, setExposedPort] = useState("");
   const [cpu, setCpu] = useState("");
   const [memory, setMemory] = useState("");
+  // Registry
   const [registryId, setRegistryId] = useState("");
   const [imagePath, setImagePath] = useState("");
   const [imageTag, setImageTag] = useState("");
-  // Vault fields
+  // Vault (Nomad only)
   const [vaultRole, setVaultRole] = useState("");
   const [vaultPath, setVaultPath] = useState("");
-  // env_mappings: array of [envVar, vaultKey] pairs for editing
   const [envMappings, setEnvMappings] = useState<[string, string][]>([]);
 
   const datacenters = [...new Set((nodes ?? []).map((n) => n.Datacenter))];
   const workers = (nodes ?? []).filter((n) => !datacenter || n.Datacenter === datacenter);
 
   const handleClose = () => {
+    setRuntimeProvider(defaultRuntime);
     setJobName("");
     setDatacenter("");
     setNamespace("default");
     setWorkerName("");
+    setK8sNamespace("default");
+    setReplicas("1");
+    setK8sNodeName("");
     setExposedPort("");
     setCpu("");
     setMemory("");
@@ -289,18 +331,14 @@ function DeployDialog({
   };
 
   const addEnvMapping = () => setEnvMappings((prev) => [...prev, ["", ""]]);
-
-  const updateEnvMapping = (i: number, field: 0 | 1, value: string) => {
+  const updateEnvMapping = (i: number, field: 0 | 1, value: string) =>
     setEnvMappings((prev) =>
       prev.map((pair, idx) =>
         idx === i ? (field === 0 ? [value, pair[1]] : [pair[0], value]) : pair,
       ),
     );
-  };
-
-  const removeEnvMapping = (i: number) => {
+  const removeEnvMapping = (i: number) =>
     setEnvMappings((prev) => prev.filter((_, idx) => idx !== i));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -315,20 +353,29 @@ function DeployDialog({
       await deploy.mutateAsync({
         catalog_name: item.name,
         job_name: jobName,
-        datacenter,
-        namespace,
-        worker_name: workerName,
+        runtime_provider: runtimeProvider,
         exposed_port: parseInt(exposedPort, 10),
         cpu: cpu ? parseInt(cpu, 10) : undefined,
         memory: memory ? parseInt(memory, 10) : undefined,
+        // Nomad
+        datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
+        namespace: runtimeProvider === "nomad" ? namespace : undefined,
+        worker_name: runtimeProvider === "nomad" ? workerName : undefined,
+        // Kubernetes
+        k8s_namespace: runtimeProvider === "kubernetes" ? k8sNamespace : undefined,
+        replicas: runtimeProvider === "kubernetes" && replicas ? parseInt(replicas, 10) : undefined,
+        k8s_node_name: runtimeProvider === "kubernetes" && k8sNodeName ? k8sNodeName : undefined,
+        // Registry
         registry_id: registryId || undefined,
         image_path: imagePath || undefined,
         image_tag: imageTag || undefined,
-        vault_role: vaultRole || undefined,
-        vault_path: vaultPath || undefined,
-        env_mappings: Object.keys(mappings).length > 0 ? mappings : undefined,
+        // Vault
+        vault_role: runtimeProvider === "nomad" ? vaultRole || undefined : undefined,
+        vault_path: runtimeProvider === "nomad" ? vaultPath || undefined : undefined,
+        env_mappings:
+          runtimeProvider === "nomad" && Object.keys(mappings).length > 0 ? mappings : undefined,
       });
-      toast.success(`${item.display_name} deployed`);
+      toast.success(`${item.display_name} deployed via ${runtimeProvider}`);
       handleClose();
     } catch (err: unknown) {
       if ((err as ApiError)?.status === 503) {
@@ -338,7 +385,6 @@ function DeployDialog({
         return;
       }
       const raw = err instanceof Error ? err.message : "Deploy failed";
-      // Extract the innermost meaningful message from nested error chain.
       const parts = raw.split(": ");
       const last = parts[parts.length - 1] ?? raw;
       const clean = last.startsWith("{") ? (parts[parts.length - 2] ?? raw) : last;
@@ -365,6 +411,34 @@ function DeployDialog({
           }}
           className="space-y-4 mt-2"
         >
+          {/* Runtime selector */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Runtime *</label>
+            {availableRuntimes.length > 0 ? (
+              <div className="mt-1.5 flex gap-2">
+                {availableRuntimes.map((rt) => (
+                  <button
+                    key={rt.value}
+                    type="button"
+                    onClick={() => setRuntimeProvider(rt.value)}
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border text-xs font-medium transition ${
+                      runtimeProvider === rt.value
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-secondary text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    <Server className="size-3.5" />
+                    {rt.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-xs text-destructive">
+                No runtime providers configured. Bind a runtime in Platform → Capabilities.
+              </p>
+            )}
+          </div>
+
           {/* Job name */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">Job name *</label>
@@ -377,107 +451,189 @@ function DeployDialog({
             />
           </div>
 
-          {/* Datacenter */}
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Datacenter *</label>
-            {datacenters.length > 0 ? (
-              <select
-                required
-                value={datacenter}
-                onChange={(e) => {
-                  setDatacenter(e.target.value);
-                  setWorkerName("");
-                }}
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-              >
-                <option value="">Select datacenter…</option>
-                {datacenters.map((dc) => (
-                  <option key={dc} value={dc}>
-                    {dc}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                required
-                value={datacenter}
-                onChange={(e) => setDatacenter(e.target.value)}
-                placeholder="dc1"
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-              />
-            )}
-          </div>
-
-          {/* Worker */}
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">Worker node *</label>
-            {workers.length > 0 ? (
-              <select
-                required
-                value={workerName}
-                onChange={(e) => setWorkerName(e.target.value)}
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-              >
-                <option value="">Select worker…</option>
-                {workers.map((n) => (
-                  <option key={n.ID} value={n.Name}>
-                    {n.Name} ({n.Address})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <input
-                required
-                value={workerName}
-                onChange={(e) => setWorkerName(e.target.value)}
-                placeholder="worker-1"
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-              />
-            )}
-          </div>
-
-          {/* Namespace + Port */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Namespace *</label>
-              <select
-                required
-                value={namespace}
-                onChange={(e) => setNamespace(e.target.value)}
-                disabled={nomadNsLoading}
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm disabled:opacity-60"
-              >
-                {nomadNamespaces && nomadNamespaces.length > 0 ? (
-                  nomadNamespaces.map((ns) => (
-                    <option key={ns.Name} value={ns.Name}>
-                      {ns.Name}
-                    </option>
-                  ))
+          {/* ── Nomad-specific fields ── */}
+          {runtimeProvider === "nomad" && (
+            <>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Datacenter *</label>
+                {datacenters.length > 0 ? (
+                  <select
+                    required
+                    value={datacenter}
+                    onChange={(e) => {
+                      setDatacenter(e.target.value);
+                      setWorkerName("");
+                    }}
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  >
+                    <option value="">Select datacenter…</option>
+                    {datacenters.map((dc) => (
+                      <option key={dc} value={dc}>
+                        {dc}
+                      </option>
+                    ))}
+                  </select>
                 ) : (
-                  <option value="default">default</option>
+                  <input
+                    required
+                    value={datacenter}
+                    onChange={(e) => setDatacenter(e.target.value)}
+                    placeholder="dc1"
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  />
                 )}
-              </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Worker node *</label>
+                {workers.length > 0 ? (
+                  <select
+                    required
+                    value={workerName}
+                    onChange={(e) => setWorkerName(e.target.value)}
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  >
+                    <option value="">Select worker…</option>
+                    {workers.map((n) => (
+                      <option key={n.ID} value={n.Name}>
+                        {n.Name} ({n.Address})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    required
+                    value={workerName}
+                    onChange={(e) => setWorkerName(e.target.value)}
+                    placeholder="worker-1"
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Namespace *</label>
+                <select
+                  required
+                  value={namespace}
+                  onChange={(e) => setNamespace(e.target.value)}
+                  className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                >
+                  {nomadNamespaces && nomadNamespaces.length > 0 ? (
+                    nomadNamespaces.map((ns) => (
+                      <option key={ns.Name} value={ns.Name}>
+                        {ns.Name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="default">default</option>
+                  )}
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* ── Kubernetes-specific fields ── */}
+          {runtimeProvider === "kubernetes" && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Namespace *</label>
+                  <select
+                    required
+                    value={k8sNamespace}
+                    onChange={(e) => setK8sNamespace(e.target.value)}
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  >
+                    {k8sNamespaces && k8sNamespaces.length > 0 ? (
+                      k8sNamespaces.map((ns) => (
+                        <option key={ns.name} value={ns.name}>
+                          {ns.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="default">default</option>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Replicas</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={replicas}
+                    onChange={(e) => setReplicas(e.target.value)}
+                    placeholder="1"
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Worker node{" "}
+                  <span className="font-normal text-muted-foreground/60">
+                    optional — leave blank to let K8s schedule freely
+                  </span>
+                </label>
+                {k8sNodes && k8sNodes.length > 0 ? (
+                  <select
+                    value={k8sNodeName}
+                    onChange={(e) => setK8sNodeName(e.target.value)}
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  >
+                    <option value="">Any node (scheduler decides)</option>
+                    {k8sNodes
+                      .filter((n) => n.status === "Ready")
+                      .map((n) => (
+                        <option key={n.name} value={n.name}>
+                          {n.name} — {n.roles.join("/")}
+                        </option>
+                      ))}
+                  </select>
+                ) : (
+                  <input
+                    value={k8sNodeName}
+                    onChange={(e) => setK8sNodeName(e.target.value)}
+                    placeholder="e.g. worker-node-1 (optional)"
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  />
+                )}
+              </div>
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Exposed port *</label>
-              <input
-                required
-                type="number"
-                min={1}
-                max={65535}
-                value={exposedPort}
-                onChange={(e) => setExposedPort(e.target.value)}
-                placeholder={String(item.default_container_port)}
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-              />
-            </div>
+          )}
+
+          {/* Exposed port */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">
+              {runtimeProvider === "kubernetes" ? "Exposed port (NodePort) *" : "Exposed port *"}
+            </label>
+            {runtimeProvider === "kubernetes" && (
+              <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
+                Port exposed on every node (30000–32767). The container listens on{" "}
+                <span className="font-mono">{item.default_container_port}</span> internally.
+              </p>
+            )}
+            <input
+              required
+              type="number"
+              min={runtimeProvider === "kubernetes" ? 30000 : 1}
+              max={runtimeProvider === "kubernetes" ? 32767 : 65535}
+              value={exposedPort}
+              onChange={(e) => setExposedPort(e.target.value)}
+              placeholder={
+                runtimeProvider === "kubernetes"
+                  ? "e.g. 30080"
+                  : String(item.default_container_port)
+              }
+              className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+            />
           </div>
 
-          {/* CPU + Memory overrides */}
+          {/* CPU + Memory */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground">
-                CPU (MHz){" "}
+                CPU (millicores){" "}
                 <span className="text-muted-foreground/60">default: {item.default_cpu}</span>
               </label>
               <input
@@ -553,80 +709,70 @@ function DeployDialog({
             />
           </div>
 
-          {/* Vault section */}
-          <div className="border-t border-border pt-4 space-y-3">
-            <p className="text-xs font-medium text-muted-foreground">
-              Vault integration{" "}
-              <span className="font-normal text-muted-foreground/60">optional</span>
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Vault role</label>
-                <input
-                  value={vaultRole}
-                  onChange={(e) => setVaultRole(e.target.value)}
-                  placeholder="my-app-role"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Vault path</label>
-                <input
-                  value={vaultPath}
-                  onChange={(e) => setVaultPath(e.target.value)}
-                  placeholder="myapp/credentials"
-                  className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
-                />
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  Path relative to the KV mount configured in{" "}
-                  <span className="font-medium">Platform → Secrets</span>. Do not include the mount
-                  prefix (e.g. enter <span className="font-mono">myapp/env</span>, not{" "}
-                  <span className="font-mono">secrets/myapp/env</span>).
-                </p>
-              </div>
-            </div>
-
-            {/* Env mappings */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-medium text-muted-foreground">
-                  Env mappings{" "}
-                  <span className="font-normal text-muted-foreground/60">
-                    (ENV_VAR → secret value)
-                  </span>
-                </label>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Values are written to Vault at the path above and injected into the container at
-                  runtime.
-                </p>
-                <button
-                  type="button"
-                  onClick={addEnvMapping}
-                  className="text-[11px] text-primary hover:underline"
-                >
-                  + Add
-                </button>
-              </div>
-              {envMappings.length === 0 ? (
-                <p className="text-[11px] text-muted-foreground">
-                  No mappings. Add one to inject Vault secrets as environment variables.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {envMappings.map(([envVar, secretValue], i) => (
-                    <EnvMappingRow
-                      key={i}
-                      envVar={envVar}
-                      secretValue={secretValue}
-                      onChangeEnvVar={(v) => updateEnvMapping(i, 0, v)}
-                      onChangeSecretValue={(v) => updateEnvMapping(i, 1, v)}
-                      onRemove={() => removeEnvMapping(i)}
-                    />
-                  ))}
+          {/* Vault section — Nomad only */}
+          {runtimeProvider === "nomad" && (
+            <div className="border-t border-border pt-4 space-y-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                Vault integration{" "}
+                <span className="font-normal text-muted-foreground/60">optional</span>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Vault role</label>
+                  <input
+                    value={vaultRole}
+                    onChange={(e) => setVaultRole(e.target.value)}
+                    placeholder="my-app-role"
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                  />
                 </div>
-              )}
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground">Vault path</label>
+                  <input
+                    value={vaultPath}
+                    onChange={(e) => setVaultPath(e.target.value)}
+                    placeholder="myapp/credentials"
+                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm font-mono"
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-muted-foreground">
+                    Env mappings{" "}
+                    <span className="font-normal text-muted-foreground/60">
+                      (ENV_VAR → secret value)
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addEnvMapping}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    + Add
+                  </button>
+                </div>
+                {envMappings.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    No mappings. Add one to inject Vault secrets as environment variables.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {envMappings.map(([envVar, secretValue], i) => (
+                      <EnvMappingRow
+                        key={i}
+                        envVar={envVar}
+                        secretValue={secretValue}
+                        onChangeEnvVar={(v) => updateEnvMapping(i, 0, v)}
+                        onChangeSecretValue={(v) => updateEnvMapping(i, 1, v)}
+                        onRemove={() => removeEnvMapping(i)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <DialogFooter>
             <button
@@ -638,7 +784,7 @@ function DeployDialog({
             </button>
             <button
               type="submit"
-              disabled={deploy.isPending}
+              disabled={deploy.isPending || availableRuntimes.length === 0}
               className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-60 inline-flex items-center gap-2"
             >
               {deploy.isPending && <Loader2 className="size-3.5 animate-spin" />}
@@ -651,9 +797,9 @@ function DeployDialog({
   );
 }
 
-// ─── HCL viewer dialog ─────────────────────────────────────────────────────────
+// ─── Job definition viewer ─────────────────────────────────────────────────────
 
-function HclDialog({ hcl, onClose }: { hcl: string; onClose: () => void }) {
+function DefinitionDialog({ definition, onClose }: { definition: string; onClose: () => void }) {
   return (
     <Dialog
       open
@@ -666,7 +812,7 @@ function HclDialog({ hcl, onClose }: { hcl: string; onClose: () => void }) {
           <DialogTitle>Job definition</DialogTitle>
         </DialogHeader>
         <div className="flex-1 overflow-auto mt-2 rounded-md bg-secondary border border-border p-4">
-          <pre className="text-xs font-mono whitespace-pre-wrap break-all">{hcl}</pre>
+          <pre className="text-xs font-mono whitespace-pre-wrap break-all">{definition}</pre>
         </div>
         <DialogFooter className="mt-4">
           <button
@@ -690,7 +836,7 @@ function DeploymentRow({
   hasNomadProvider,
   onStop,
   stopping,
-  onViewHcl,
+  onViewDefinition,
 }: {
   d: ServiceDeployment;
   workspaceSlug: string;
@@ -698,8 +844,10 @@ function DeploymentRow({
   hasNomadProvider: boolean;
   onStop: (d: ServiceDeployment) => void;
   stopping: boolean;
-  onViewHcl: (d: ServiceDeployment) => void;
+  onViewDefinition: (d: ServiceDeployment) => void;
 }) {
+  const isNomad = d.runtime_provider === "nomad" || d.runtime_provider === "";
+
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/40 transition">
       <td className="px-4 py-3">
@@ -707,16 +855,23 @@ function DeploymentRow({
         <div className="text-[11px] text-muted-foreground">{d.catalog_name}</div>
       </td>
       <td className="px-4 py-3">
-        <LiveStatus
-          workspaceSlug={workspaceSlug}
-          envSlug={envSlug}
-          nomadJobId={d.nomad_job_id}
-          namespace={d.namespace}
-          enabled={hasNomadProvider}
-        />
+        <RuntimeBadge provider={d.runtime_provider || "nomad"} />
+      </td>
+      <td className="px-4 py-3">
+        {isNomad ? (
+          <NomadLiveStatus
+            workspaceSlug={workspaceSlug}
+            envSlug={envSlug}
+            nomadJobId={d.nomad_job_id}
+            namespace={d.namespace}
+            enabled={hasNomadProvider}
+          />
+        ) : (
+          <StatusBadge status={d.status} />
+        )}
       </td>
       <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
-        {d.datacenter} / {d.namespace}
+        {isNomad ? `${d.datacenter} / ${d.namespace}` : d.namespace || "—"}
       </td>
       <td className="px-4 py-3 text-xs text-muted-foreground font-mono">:{d.exposed_port}</td>
       <td
@@ -726,13 +881,13 @@ function DeploymentRow({
         {d.image}
       </td>
       <td className="px-4 py-3 text-xs text-muted-foreground">
-        {d.cpu} MHz / {d.memory} MB
+        {d.cpu}m / {d.memory} MB
       </td>
       <td className="px-4 py-3 text-right">
         <div className="flex items-center gap-1.5 justify-end">
           {d.job_definition && (
             <button
-              onClick={() => onViewHcl(d)}
+              onClick={() => onViewDefinition(d)}
               className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-secondary hover:bg-accent text-xs text-muted-foreground transition"
               title="View job definition"
             >
@@ -760,9 +915,11 @@ function ServiceCatalogPage() {
   const workspaceSlug = selectedWorkspace?.slug ?? "";
 
   const { data: capabilities, isLoading: capLoading } = useCapabilities(workspaceSlug, envId);
+  const capList = capabilities ?? [];
+
   const hasNomadProvider =
     !capLoading &&
-    (capabilities ?? []).some(
+    capList.some(
       (c) =>
         c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
     );
@@ -776,7 +933,7 @@ function ServiceCatalogPage() {
 
   const [deployingItem, setDeployingItem] = useState<CatalogItem | null>(null);
   const [stopping, setStopping] = useState<ServiceDeployment | null>(null);
-  const [viewingHcl, setViewingHcl] = useState<ServiceDeployment | null>(null);
+  const [viewingDefinition, setViewingDefinition] = useState<ServiceDeployment | null>(null);
 
   const handleStop = async () => {
     if (!stopping) return;
@@ -851,10 +1008,13 @@ function ServiceCatalogPage() {
                       Job
                     </th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                      Runtime
+                    </th>
+                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                       Status
                     </th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Datacenter / NS
+                      Location
                     </th>
                     <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
                       Port
@@ -878,7 +1038,7 @@ function ServiceCatalogPage() {
                       hasNomadProvider={hasNomadProvider}
                       onStop={setStopping}
                       stopping={stopDeployment.isPending && stopping?.id === d.id}
-                      onViewHcl={setViewingHcl}
+                      onViewDefinition={setViewingDefinition}
                     />
                   ))}
                 </tbody>
@@ -895,12 +1055,15 @@ function ServiceCatalogPage() {
         onClose={() => setDeployingItem(null)}
         workspaceSlug={workspaceSlug}
         envSlug={envId}
-        hasNomadProvider={hasNomadProvider}
+        capabilities={capList}
       />
 
-      {/* HCL viewer */}
-      {viewingHcl?.job_definition && (
-        <HclDialog hcl={viewingHcl.job_definition} onClose={() => setViewingHcl(null)} />
+      {/* Definition viewer */}
+      {viewingDefinition?.job_definition && (
+        <DefinitionDialog
+          definition={viewingDefinition.job_definition}
+          onClose={() => setViewingDefinition(null)}
+        />
       )}
 
       {/* Stop confirmation */}
@@ -914,7 +1077,8 @@ function ServiceCatalogPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Stop deployment?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{stopping?.job_name}</strong> will be stopped in Nomad and removed from this
+              <strong>{stopping?.job_name}</strong> will be stopped on{" "}
+              <strong>{stopping?.runtime_provider || "nomad"}</strong> and removed from this
               environment. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>

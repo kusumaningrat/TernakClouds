@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 
@@ -135,4 +136,33 @@ func (s *Service) ListVolumes(ctx context.Context, envID uuid.UUID) ([]VolumeStu
 		return nil, err
 	}
 	return client.ListVolumes(ctx)
+}
+
+// RunContainer creates and immediately starts a container. Returns the short container ID.
+func (s *Service) RunContainer(ctx context.Context, envID uuid.UUID, cfg ContainerRunConfig) (string, error) {
+	client, err := s.clientForEnv(ctx, envID)
+	if err != nil {
+		return "", err
+	}
+	id, err := client.CreateContainer(ctx, cfg)
+	if err != nil {
+		return "", fmt.Errorf("create container: %w", err)
+	}
+	if err := client.StartContainer(ctx, id); err != nil {
+		return "", fmt.Errorf("start container: %w", err)
+	}
+	if len(id) > 12 {
+		id = id[:12]
+	}
+	return id, nil
+}
+
+// StopAndRemoveContainer stops then removes a container. Missing container is not an error.
+func (s *Service) StopAndRemoveContainer(ctx context.Context, envID uuid.UUID, id string) error {
+	client, err := s.clientForEnv(ctx, envID)
+	if err != nil {
+		return err
+	}
+	_ = client.StopContainer(ctx, id)
+	return client.RemoveContainer(ctx, id)
 }
