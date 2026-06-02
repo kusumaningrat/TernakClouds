@@ -24,19 +24,20 @@
 │               Permission + workspace resolvers              │
 └──────────────┬──────────────────────────────────────────────┘
                │
-   ┌───────────┼───────────────────────────┐
-   ▼           ▼                           ▼
-┌──────┐  ┌─────────┐       ┌─────────────────────────────┐
-│  PG  │  │  Vault  │       │       Runtime Clusters       │
-│:5432 │  │  :8200  │       │                             │
-└──────┘  └─────────┘       │  ┌─────────┐  ┌─────────┐  │
-                             │  │   K8s   │  │  Nomad  │  │
-Platform state               │  │ API Srvr│  │  :4646  │  │
-(users, workspaces,          │  └─────────┘  └─────────┘  │
- environments,               └─────────────────────────────┘
+   ┌───────────┼────────────────────────────────┐
+   ▼           ▼                                ▼
+┌──────┐  ┌─────────┐       ┌──────────────────────────────────┐
+│  PG  │  │  Vault  │       │         Runtime Clusters          │
+│:5432 │  │  :8200  │       │                                  │
+└──────┘  └─────────┘       │  ┌───────┐ ┌───────┐ ┌────────┐ │
+                             │  │  K8s  │ │ Nomad │ │ Docker │ │
+Platform state               │  │  API  │ │ :4646 │ │ daemon │ │
+(users, workspaces,          │  └───────┘ └───────┘ └────────┘ │
+ environments,               └──────────────────────────────────┘
  capabilities,
- bindings)       Credentials only               Proxied through
-                 (never in PG)                  backend — never
+ bindings,
+ blueprints,     Credentials only               Proxied through
+ deployments)    (never in PG)                  backend — never
                                                 exposed to client
 ```
 
@@ -50,12 +51,12 @@ idp/
 │   ├── cmd/
 │   │   ├── api/            Main entrypoint
 │   │   └── reset-db/       Dev utility (drop + re-migrate + seed)
-│   ├── internal/           21 domain packages
+│   ├── internal/           Domain packages
 │   └── pkg/                Shared utilities (JWT, responses, pagination)
 │
 ├── admin/                  Admin dashboard
 │   └── src/
-│       ├── routes/         52 route files (TanStack file-based routing)
+│       ├── routes/         TanStack file-based routing
 │       ├── components/     Shared UI components
 │       └── lib/            API queries, types, auth helpers
 │
@@ -75,19 +76,25 @@ The Go backend is organized around domain packages under `internal/`. Each packa
 internal/
 ├── accessrequest/    Self-service workspace access request workflow
 ├── auth/             JWT login/logout/refresh, /me endpoint
+├── blueprint/        Reusable deployment templates (system + custom)
 ├── bootstrap/        Startup sequencing: migrate → seed → serve
 ├── capability/       Capability catalogue + per-environment provider bindings
 ├── config/           Environment variable loading (godotenv)
 ├── database/         GORM setup, AutoMigrate, seed data
 ├── department/       Organizational department CRUD
+├── docker/           Docker daemon proxy (containers, images, networks, volumes)
 ├── environment/      Workspace-scoped environment CRUD
+├── generator/        Multi-runtime manifest generators (K8s YAML, Nomad HCL, CI/CD)
 ├── kubernetes/       Kubernetes cluster proxy (pods, deployments, namespaces)
 ├── middleware/       JWT auth, RBAC checks, workspace/environment resolvers
 ├── models/           Shared Base (UUID PK, soft delete, timestamps)
 ├── nomad/            Nomad cluster proxy (jobs, allocations, nodes, logs)
+├── platformapp/      Blueprint-based application provisioning + lifecycle
 ├── providers/        Provider catalogue metadata (seeded at startup)
-├── registry/         Container registry management
+├── registry/         Container registry management (workspace + environment binding)
+├── repository/       SCM provider management (GitHub, GitLab) + repo browser
 ├── role/             Platform RBAC — role definitions and permission checks
+├── runtime/          Runtime abstraction and log streaming coordination
 ├── secret/           Vault-backed secret grants and environment access
 ├── server/           Gin router wiring and middleware composition
 ├── servicecatalog/   Service deployment templates + execution
@@ -146,6 +153,28 @@ capability.Service.BindProvider
 Returns updated capability status (no token in response)
 ```
 
+### Blueprint deployment (Platform Application provisioning)
+
+```
+Client
+  │  POST /platform-apps
+  │  {blueprint_id, runtime, workspace_id, environment_id, ...}
+  ▼
+platformapp.Handler.Provision
+  │
+platformapp.Service.Provision
+  │  1. Loads blueprint spec
+  │  2. Calls generator.Generate(spec, runtime)
+  │     → renders Nomad HCL or Kubernetes YAML
+  │  3. Stores manifest + PlatformApp row (status: pending)
+  │  4. If repo provider configured:
+  │     a. Commits manifest to repository
+  │     b. Opens pull request
+  │  5. Updates status: provisioned
+  ▼
+Returns PlatformApp with generated manifest
+```
+
 ### Runtime log streaming
 
 ```
@@ -180,13 +209,25 @@ User ──────────────────── RefreshToken (
  │
  └── WorkspaceMember (M:N) ── Workspace
                                  │
+                                 ├── RegistryProvider (1:N)
+                                 │     └── RegistryBinding (per Environment)
+                                 │
+                                 ├── RepoProvider (1:N)
+                                 │
+                                 ├── Blueprint (1:N, custom)
+                                 │
                                  └── Environment (1:N)
                                        │
-                                       └── CapabilityBinding (1:N per capability)
-                                             │
-                                             └── ProviderConfig (1:N)
-                                                   │
-                                                   └── (VaultPath → Vault KV)
+                                       ├── CapabilityBinding (1:N per capability)
+                                       │     └── ProviderConfig (1:N)
+                                       │           └── (VaultPath → Vault KV)
+                                       │
+                                       ├── SecretGrant (1:N)
+                                       │
+                                       ├── ServiceDeployment (1:N)
+                                       │
+                                       └── PlatformApp (1:N)
+                                             └── Blueprint (ref)
 ```
 
 **Key invariants:**
@@ -194,6 +235,7 @@ User ──────────────────── RefreshToken (
 - One `CapabilityBinding` per `(environment_id, capability_name)` pair (unique index)
 - One `ProviderConfig` per `(capability_binding_id, provider_name)` pair (unique index)
 - `ProviderConfig.VaultPath` is never returned in API responses
+- `RepoProvider` tokens stored in Vault; DB stores only path
 - Soft deletes on all entities (GORM `DeletedAt`)
 
 ---
@@ -232,7 +274,7 @@ Browser
   ▼
 Backend SSE handler
   │  sets Content-Type: text/event-stream
-  │  opens streaming connection to runtime (K8s or Nomad)
+  │  opens streaming connection to runtime (K8s, Nomad, or Docker)
   │  reads frames/lines and re-emits as SSE events
   │
   │  event: connected
@@ -255,19 +297,19 @@ The abort signal from the browser propagates as context cancellation in Go, clos
 ## Vault Integration
 
 ```
-BindProvider (write path)
+BindProvider / StoreRepoToken (write path)
   │
   vault.StoreToken(ctx, path, token)
   │  PUT {vault}/v1/{mount}/data/{path}
   │  {"data": {"token": "<value>"}}
 
-VerifyProvider / StreamLogs (read path)
+VerifyProvider / StreamLogs / RepoAccess (read path)
   │
   vault.RetrieveToken(ctx, path)
   │  GET {vault}/v1/{mount}/data/{path}
   │  → credentials["token"]
 
-UnbindProvider (delete path)
+UnbindProvider / RemoveRepo (delete path)
   │
   vault.DeleteToken(ctx, path)
   │  DELETE {vault}/v1/{mount}/metadata/{path}
