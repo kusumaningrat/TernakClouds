@@ -1456,6 +1456,11 @@ export function useServiceDeployments(slug: string, envSlug: string) {
       api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/service-deployments`),
     enabled: !!slug && !!envSlug,
     staleTime: 15_000,
+    // Poll deployments periodically so the UI reflects provider-side changes
+    // (e.g. jobs removed externally). This keeps the active deployments table
+    // in sync without requiring a full page reload.
+    refetchInterval: 10_000,
+    refetchIntervalInBackground: true,
   });
 }
 
