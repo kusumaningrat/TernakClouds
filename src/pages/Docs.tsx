@@ -31,6 +31,7 @@ const DIR_ORDER = [
   "runtimes",
   "logs",
   "deployments",
+  "secrets",
   "registry",
   "repositories",
   "authentication",
@@ -74,7 +75,7 @@ const sidebar = [
   },
   {
     title: "Integrations",
-    items: ["registry/overview", "repositories/overview"],
+    items: ["secrets/overview", "registry/overview", "repositories/overview"],
   },
   { title: "Contributing", items: ["contributing/guide"] },
 ];

@@ -29,5 +29,6 @@
 
 | Guide | Description |
 |---|---|
+| [Secrets](./secrets/overview.md) | Vault-backed secret grants, connecting external Vault, reading and writing secret values |
 | [Container Registries](./registry/overview.md) | Workspace and environment-scoped registry configuration, Vault-backed credentials |
 | [Repository Providers](./repositories/overview.md) | GitHub and GitLab integration, PAT storage, repo browser, manifest commit and PR |
