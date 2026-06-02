@@ -1,6 +1,6 @@
 # Platform Overview
 
-TernakClouds is a self-hosted Internal Developer Platform built for engineering organizations that run workloads on multiple runtimes (Kubernetes, Nomad) and need a centralized, permission-controlled interface for their developers.
+TernakClouds is a self-hosted Internal Developer Platform built for engineering organizations that run workloads on multiple runtimes (Kubernetes, Nomad, Docker) and need a centralized, permission-controlled interface for their developers.
 
 ---
 
@@ -19,7 +19,7 @@ TernakClouds resolves this by sitting between developers and infrastructure. It 
 
 ## Design Philosophy
 
-**Runtime agnosticism.** The platform treats Kubernetes and Nomad as interchangeable runtime providers behind the same abstraction. Adding a new runtime means implementing a provider interface, not rewriting the UI or the API.
+**Runtime agnosticism.** The platform treats Kubernetes, Nomad, and Docker as interchangeable runtime providers behind the same abstraction. Adding a new runtime means implementing a provider interface, not rewriting the UI or the API.
 
 **Capability-based configuration.** Instead of hardcoding infrastructure connections, TernakClouds uses a capability system. Each environment declares what it needs (`runtime`, `logs`, `secrets`) and binds the appropriate provider. This makes environments self-describing and portable.
 
@@ -28,6 +28,8 @@ TernakClouds resolves this by sitting between developers and infrastructure. It 
 **Two-layer authorization.** Platform-level roles control what a user can do globally. Workspace membership controls what they can do within a specific tenant. Both layers must be satisfied for sensitive operations.
 
 **Developer-first UX.** The admin dashboard is designed so a developer can deploy a service, read logs, and request secret access without knowing what runtime, namespace, or Vault path is involved.
+
+**Blueprint-driven deployments.** Reusable deployment templates (blueprints) allow platform teams to encode best practices once and let developers self-service from a curated catalogue. Blueprints generate runtime-specific manifests and can commit them to a repository automatically.
 
 ---
 
@@ -41,6 +43,7 @@ A workspace is an isolated organizational tenant. It has its own:
 - member roster (owner + members)
 - capability bindings
 - registries
+- repository providers
 
 Multiple teams can use the same TernakClouds instance, each with their own workspace, without seeing or affecting each other.
 
@@ -59,8 +62,9 @@ A capability is a platform service type:
 | `runtime` | Workload scheduling and orchestration |
 | `secrets` | Encrypted secret storage and injection |
 | `logs` | Centralized log aggregation and streaming |
-| `networking` | Service mesh and ingress (in progress) |
-| `storage` | Object storage (in progress) |
+| `networking` | Service mesh and ingress |
+| `storage` | Object storage |
+| `observability` | Metrics and monitoring |
 
 Each capability can have one or more providers bound to it per environment.
 
@@ -68,12 +72,35 @@ Each capability can have one or more providers bound to it per environment.
 
 A provider is a concrete implementation of a capability. Examples:
 
-- `kubernetes` — Kubernetes runtime provider
-- `nomad` — Nomad runtime provider
-- `loki` — Loki logs backend
-- `vault` — HashiCorp Vault secrets backend
+| Provider | Capability | Description |
+|---|---|---|
+| `kubernetes` | runtime | Kubernetes cluster |
+| `nomad` | runtime | HashiCorp Nomad cluster |
+| `docker` | runtime | Docker daemon |
+| `loki` | logs | Loki log aggregation |
+| `vault` | secrets | HashiCorp Vault KV v2 |
+| `consul` | networking | Consul service mesh |
+| `prometheus` | observability | Prometheus metrics |
+| `minio` | storage | MinIO object storage |
 
 Providers are configured with an endpoint, optional credentials, and optional metadata (region, namespace). Credentials are stored in Vault.
+
+### Blueprint
+
+A blueprint is a reusable deployment template. Platform teams author blueprints once; developers self-service from them.
+
+- **System blueprints** — seeded by the platform, available to all workspaces
+- **Custom blueprints** — created per workspace for team-specific workloads
+- Blueprints support semantic versioning, multiple runtimes, and can be public or private
+- Deploying a blueprint produces a [Platform Application](#platform-application)
+
+### Platform Application
+
+A Platform Application is a deployed instance of a blueprint. The platform generates a runtime-specific manifest (Nomad HCL or Kubernetes YAML) from the blueprint spec and optionally commits it to a repository and opens a PR.
+
+### Service Catalog
+
+The service catalog is a collection of ready-to-deploy service templates. Unlike blueprints (which are configuration-heavy), catalog items are simple container deployments with sensible defaults for common workloads (databases, message queues, web servers). Developers can deploy catalog items directly without writing any configuration.
 
 ### Platform Role
 
@@ -99,9 +126,9 @@ A membership-scoped role within a specific workspace:
 
 ## What TernakClouds Is Not
 
-- **Not a runtime.** TernakClouds does not schedule workloads. It orchestrates operations against existing runtimes (Kubernetes, Nomad).
+- **Not a runtime.** TernakClouds does not schedule workloads. It orchestrates operations against existing runtimes (Kubernetes, Nomad, Docker).
 - **Not a secret store.** TernakClouds delegates secret storage to Vault. It manages access grants, not the secrets themselves.
-- **Not a CI/CD system.** TernakClouds manages running deployments, not the pipeline that produces them. It can be integrated with CI/CD pipelines via its API.
+- **Not a CI/CD system.** TernakClouds manages running deployments and can generate CI/CD manifests, but does not run pipelines itself.
 - **Not a monitoring system.** TernakClouds provides log streaming. Full metrics and alerting belong in your observability stack (Prometheus, Grafana).
 
 ---
@@ -110,9 +137,10 @@ A membership-scoped role within a specific workspace:
 
 | Category | Supported |
 |---|---|
-| Runtime | Kubernetes, Nomad |
+| Runtime | Kubernetes, Nomad, Docker |
 | Secrets | HashiCorp Vault (KV v2, AppRole) |
-| Logs backend | Loki, OpenSearch, Elasticsearch |
-| Metrics | Prometheus (future) |
-| Storage | MinIO (future) |
-| Container registry | Any OCI-compatible registry |
+| Logs backend | Loki |
+| Metrics | Prometheus |
+| Storage | MinIO |
+| Container registry | Any OCI-compatible registry (Docker Hub, ECR, GCR, self-hosted) |
+| Source control | GitHub, GitLab (cloud and self-hosted) |

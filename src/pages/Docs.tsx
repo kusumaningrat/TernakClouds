@@ -17,14 +17,22 @@ function extractTitle(content: string): string {
   return match ? match[1].trim() : "Untitled";
 }
 
-type DocArticle = { id: string; title: string; content: string };
+type DocArticle = { id: string; title: string; content: string; dir: string };
 
-const ORDER = [
+// "../../docs/runtimes/overview.md" → "runtimes/overview"
+function pathToId(path: string): string {
+  return path.replace("../../docs/", "").replace(".md", "");
+}
+
+const DIR_ORDER = [
   "introduction",
   "getting-started",
   "architecture",
   "runtimes",
   "logs",
+  "deployments",
+  "registry",
+  "repositories",
   "authentication",
   "contributing",
 ];
@@ -32,155 +40,222 @@ const ORDER = [
 const articles: DocArticle[] = Object.entries(rawFiles)
   .filter(([path]) => !path.endsWith("README.md"))
   .map(([path, content]) => {
-    const dir = path.replace("../../docs/", "").split("/")[0];
-    return { id: dir, title: extractTitle(content), content };
+    const id = pathToId(path);
+    const dir = id.split("/")[0];
+    return { id, title: extractTitle(content), content, dir };
   })
-  .sort((a, b) => ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
+  .sort((a, b) => {
+    const dirDiff = DIR_ORDER.indexOf(a.dir) - DIR_ORDER.indexOf(b.dir);
+    return dirDiff !== 0 ? dirDiff : a.id.localeCompare(b.id);
+  });
 
 const articleMap = Object.fromEntries(articles.map((a) => [a.id, a]));
 
 const sidebar = [
-  { title: "Getting Started", items: ["introduction", "getting-started"] },
-  { title: "Platform", items: ["architecture", "runtimes"] },
-  { title: "Observability", items: ["logs"] },
-  { title: "Access Control", items: ["authentication"] },
-  { title: "Contributing", items: ["contributing"] },
+  {
+    title: "Getting Started",
+    items: ["introduction/overview", "getting-started/installation"],
+  },
+  {
+    title: "Platform",
+    items: ["architecture/overview", "authentication/rbac"],
+  },
+  {
+    title: "Runtimes & Observability",
+    items: ["runtimes/overview", "logs/overview"],
+  },
+  {
+    title: "Deployments",
+    items: [
+      "deployments/service-catalog",
+      "deployments/blueprints",
+      "deployments/platform-apps",
+    ],
+  },
+  {
+    title: "Integrations",
+    items: ["registry/overview", "repositories/overview"],
+  },
+  { title: "Contributing", items: ["contributing/guide"] },
 ];
 
-const mdComponents: Components = {
-  h1: ({ children }) => (
-    <h1 className="text-3xl font-bold tracking-tight mb-2">{children}</h1>
-  ),
-  h2: ({ children }) => (
-    <h2
-      className="text-xl font-semibold mt-8 mb-3"
-      style={{ color: "var(--color-foreground)" }}
-    >
-      {children}
-    </h2>
-  ),
-  h3: ({ children }) => (
-    <h3
-      className="text-lg font-semibold mt-6 mb-2"
-      style={{ color: "var(--color-foreground)" }}
-    >
-      {children}
-    </h3>
-  ),
-  p: ({ children }) => (
-    <p
-      className="text-sm leading-7 my-3"
-      style={{ color: "var(--muted-foreground)" }}
-    >
-      {children}
-    </p>
-  ),
-  pre: ({ children }) => (
-    <pre
-      className="glass rounded-lg p-4 text-xs font-mono leading-relaxed overflow-x-auto my-4"
-      style={{ color: "var(--color-foreground)" }}
-    >
-      {children}
-    </pre>
-  ),
-  code: ({ children, className }) =>
-    className ? (
-      <code className={className}>{children}</code>
-    ) : (
-      <code
-        className="font-mono text-xs rounded px-1 py-0.5"
-        style={{
-          background:
-            "color-mix(in oklab, var(--color-primary) 10%, transparent)",
-          color: "var(--color-foreground)",
-        }}
+// Resolve an internal .md href to an article ID relative to the current article.
+function resolveDocLink(href: string, activeId: string): string | null {
+  if (!href || !href.endsWith(".md")) return null;
+  const activeDir = activeId.split("/")[0];
+  if (href.startsWith("../")) {
+    return href.replace("../", "").replace(".md", "");
+  }
+  if (href.startsWith("./")) {
+    return `${activeDir}/${href.replace("./", "").replace(".md", "")}`;
+  }
+  if (!href.startsWith("http")) {
+    return `${activeDir}/${href.replace(".md", "")}`;
+  }
+  return null;
+}
+
+function makeMdComponents(
+  activeId: string,
+  setActiveId: (id: string) => void
+): Components {
+  return {
+    h1: ({ children }) => (
+      <h1 className="text-3xl font-bold tracking-tight mb-2">{children}</h1>
+    ),
+    h2: ({ children }) => (
+      <h2
+        className="text-xl font-semibold mt-8 mb-3"
+        style={{ color: "var(--color-foreground)" }}
       >
         {children}
-      </code>
+      </h2>
     ),
-  ul: ({ children }) => (
-    <ul
-      className="my-3 text-sm space-y-1.5 pl-4 list-disc"
-      style={{ color: "var(--muted-foreground)" }}
-    >
-      {children}
-    </ul>
-  ),
-  ol: ({ children }) => (
-    <ol
-      className="my-3 text-sm space-y-1.5 pl-4 list-decimal"
-      style={{ color: "var(--muted-foreground)" }}
-    >
-      {children}
-    </ol>
-  ),
-  li: ({ children }) => <li className="leading-7">{children}</li>,
-  a: ({ href, children }) => (
-    <a
-      href={href}
-      className="underline underline-offset-2 transition opacity-90 hover:opacity-100"
-      style={{ color: "var(--color-primary)" }}
-    >
-      {children}
-    </a>
-  ),
-  strong: ({ children }) => (
-    <strong className="font-semibold" style={{ color: "var(--color-foreground)" }}>
-      {children}
-    </strong>
-  ),
-  blockquote: ({ children }) => (
-    <div
-      className="glass rounded-lg p-4 my-4 border-l-2"
-      style={{ borderLeftColor: "var(--color-primary)" }}
-    >
-      <p
-        className="text-xs font-semibold uppercase tracking-widest mb-1"
-        style={{ color: "var(--color-primary)" }}
+    h3: ({ children }) => (
+      <h3
+        className="text-lg font-semibold mt-6 mb-2"
+        style={{ color: "var(--color-foreground)" }}
       >
-        Note
-      </p>
-      <div
-        className="text-sm leading-6"
+        {children}
+      </h3>
+    ),
+    p: ({ children }) => (
+      <p
+        className="text-sm leading-7 my-3"
         style={{ color: "var(--muted-foreground)" }}
       >
         {children}
+      </p>
+    ),
+    pre: ({ children }) => (
+      <pre
+        className="glass rounded-lg p-4 text-xs font-mono leading-relaxed overflow-x-auto my-4"
+        style={{ color: "var(--color-foreground)" }}
+      >
+        {children}
+      </pre>
+    ),
+    code: ({ children, className }) =>
+      className ? (
+        <code className={className}>{children}</code>
+      ) : (
+        <code
+          className="font-mono text-xs rounded px-1 py-0.5"
+          style={{
+            background:
+              "color-mix(in oklab, var(--color-primary) 10%, transparent)",
+            color: "var(--color-foreground)",
+          }}
+        >
+          {children}
+        </code>
+      ),
+    ul: ({ children }) => (
+      <ul
+        className="my-3 text-sm space-y-1.5 pl-4 list-disc"
+        style={{ color: "var(--muted-foreground)" }}
+      >
+        {children}
+      </ul>
+    ),
+    ol: ({ children }) => (
+      <ol
+        className="my-3 text-sm space-y-1.5 pl-4 list-decimal"
+        style={{ color: "var(--muted-foreground)" }}
+      >
+        {children}
+      </ol>
+    ),
+    li: ({ children }) => <li className="leading-7">{children}</li>,
+    a: ({ href, children }) => {
+      const docId = resolveDocLink(href ?? "", activeId);
+      if (docId && articleMap[docId]) {
+        return (
+          <button
+            onClick={() => setActiveId(docId)}
+            className="underline underline-offset-2 transition opacity-90 hover:opacity-100 cursor-pointer"
+            style={{ color: "var(--color-primary)" }}
+          >
+            {children}
+          </button>
+        );
+      }
+      return (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 transition opacity-90 hover:opacity-100"
+          style={{ color: "var(--color-primary)" }}
+        >
+          {children}
+        </a>
+      );
+    },
+    strong: ({ children }) => (
+      <strong
+        className="font-semibold"
+        style={{ color: "var(--color-foreground)" }}
+      >
+        {children}
+      </strong>
+    ),
+    blockquote: ({ children }) => (
+      <div
+        className="glass rounded-lg p-4 my-4 border-l-2"
+        style={{ borderLeftColor: "var(--color-primary)" }}
+      >
+        <p
+          className="text-xs font-semibold uppercase tracking-widest mb-1"
+          style={{ color: "var(--color-primary)" }}
+        >
+          Note
+        </p>
+        <div
+          className="text-sm leading-6"
+          style={{ color: "var(--muted-foreground)" }}
+        >
+          {children}
+        </div>
       </div>
-    </div>
-  ),
-  table: ({ children }) => (
-    <div className="overflow-x-auto my-4">
-      <table className="w-full text-sm border-collapse">{children}</table>
-    </div>
-  ),
-  th: ({ children }) => (
-    <th
-      className="text-left px-3 py-2 font-semibold text-xs uppercase tracking-widest"
-      style={{
-        color: "var(--color-primary)",
-        borderBottom: "1px solid var(--border)",
-      }}
-    >
-      {children}
-    </th>
-  ),
-  td: ({ children }) => (
-    <td
-      className="px-3 py-2 text-sm"
-      style={{
-        color: "var(--muted-foreground)",
-        borderBottom: "1px solid var(--border)",
-      }}
-    >
-      {children}
-    </td>
-  ),
-  hr: () => <hr className="my-8" style={{ borderColor: "var(--border)" }} />,
-};
+    ),
+    table: ({ children }) => (
+      <div className="overflow-x-auto my-4">
+        <table className="w-full text-sm border-collapse">{children}</table>
+      </div>
+    ),
+    th: ({ children }) => (
+      <th
+        className="text-left px-3 py-2 font-semibold text-xs uppercase tracking-widest"
+        style={{
+          color: "var(--color-primary)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        {children}
+      </th>
+    ),
+    td: ({ children }) => (
+      <td
+        className="px-3 py-2 text-sm"
+        style={{
+          color: "var(--muted-foreground)",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        {children}
+      </td>
+    ),
+    hr: () => <hr className="my-8" style={{ borderColor: "var(--border)" }} />,
+  };
+}
 
 export function Docs() {
-  const [activeId, setActiveId] = useState(articles[0]?.id ?? "introduction");
+  const [activeId, setActiveId] = useState(
+    articles[0]?.id ?? "introduction/overview"
+  );
   const active = articleMap[activeId];
+  const mdComponents = makeMdComponents(activeId, setActiveId);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -260,7 +335,10 @@ export function Docs() {
             value={activeId}
             onChange={(e) => setActiveId(e.target.value)}
             className="w-full glass rounded-lg px-3 py-2 text-sm"
-            style={{ color: "var(--color-foreground)", background: "var(--card)" }}
+            style={{
+              color: "var(--color-foreground)",
+              background: "var(--card)",
+            }}
           >
             {sidebar.map((section) => (
               <optgroup key={section.title} label={section.title}>
@@ -282,7 +360,10 @@ export function Docs() {
         <main className="flex-1 min-w-0">
           {active && (
             <article>
-              <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={mdComponents}
+              >
                 {active.content}
               </ReactMarkdown>
             </article>

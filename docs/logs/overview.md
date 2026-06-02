@@ -7,7 +7,7 @@ TernakClouds provides centralized, runtime-agnostic log streaming. Developers ca
 ## Architecture
 
 ```
-Runtime Workloads (pods / allocations)
+Runtime Workloads (pods / allocations / containers)
             │
             │  Runtime native log API
             ▼
@@ -19,7 +19,7 @@ Runtime Workloads (pods / allocations)
    live tail · search · filter · highlight
 ```
 
-The backend proxies directly to runtime log APIs (Kubernetes pod logs, Nomad client allocation logs) and re-emits them as SSE events. Loki (or another logs backend) is available as an optional storage layer for historical log querying.
+The backend proxies directly to runtime log APIs (Kubernetes pod logs, Nomad client allocation logs, Docker container logs) and re-emits them as SSE events. Loki is available as an optional storage layer for historical log querying.
 
 ---
 
@@ -31,12 +31,13 @@ The primary mode. The platform opens a streaming connection to the runtime API a
 
 - **Kubernetes:** proxies `kubectl logs --follow` via the Kubernetes API server
 - **Nomad:** proxies allocation log streaming via the Nomad client HTTP API
+- **Docker:** proxies `docker logs --follow` via the Docker daemon API
 
 This works without any logs backend configuration. As long as a runtime provider is bound to the environment, live log streaming is available.
 
 ### 2. Historical / Aggregated (Logs Backend)
 
-When a logs backend provider (Loki, OpenSearch, Elasticsearch) is bound in **Platform → Logs Backend**, historical log queries become available. The backend provider stores logs forwarded by a collector (Promtail, Fluent Bit, Vector).
+When a logs backend provider (Loki) is bound in **Platform → Logs Backend**, historical log queries become available. The backend provider stores logs forwarded by a collector (Promtail, Fluent Bit, Vector).
 
 > The frontend never communicates directly with Loki. All queries go through the TernakClouds API, which translates generic queries into LogQL or the appropriate backend query language.
 
@@ -75,11 +76,11 @@ Navigate to any environment → **Logs** in the sidebar.
 
 | Control | Description |
 |---|---|
-| **Runtime** | Select the runtime provider (Kubernetes or Nomad) |
-| **Namespace** | Filter workloads by namespace (dropdown, populated from the cluster) |
-| **Workload** | Select a pod (Kubernetes) or job (Nomad) |
-| **Container** | Select a container within the pod (Kubernetes; dropdown auto-populated) |
-| **Task** | Select a task within the job (Nomad; dropdown auto-populated from job definition) |
+| **Runtime** | Select the runtime provider (Kubernetes, Nomad, or Docker) |
+| **Namespace** | Filter workloads by namespace (Kubernetes/Nomad; dropdown populated from the cluster) |
+| **Workload** | Select a pod (Kubernetes), job (Nomad), or container (Docker) |
+| **Container** | Select a container within the pod (Kubernetes; auto-populated) |
+| **Task** | Select a task within the job (Nomad; auto-populated from job definition) |
 | **Source** | `stdout` or `stderr` |
 | **Stream** | Start live tailing |
 | **Stop** | Stop the stream |
@@ -105,11 +106,7 @@ Use the **Search** bar in the terminal toolbar to filter displayed log lines:
 - The line counter shows `N / Total` when a filter is active
 - Press `Escape` or click `✕` to clear the filter
 
-Search is purely client-side — it filters the lines already received in the browser. It does not affect the streaming connection.
-
-### Namespace Dropdown
-
-The namespace field is a dropdown populated from the runtime cluster. Changing the namespace clears the workload selection and re-fetches the workload list for the new namespace.
+Search is purely client-side — it filters the lines already received in the browser.
 
 ---
 
@@ -130,8 +127,6 @@ data: 2026-05-26T10:00:01Z INFO request path=/health status=200
 event: error
 data: connection refused
 ```
-
-The client reads the response body as a byte stream, parses SSE blocks split by double newlines, and dispatches events to React state.
 
 ---
 
@@ -172,25 +167,40 @@ The backend:
 
 ---
 
-## Logs Backend Verify
+## Docker Log Streaming Detail
 
-Each bound logs backend provider has a **Verify** button that tests connectivity:
-
-- Makes a `GET {endpoint}/ready` request (standard Loki health path)
-- Attaches the stored bearer token from Vault if present
-- 5-second timeout
-- Reports `reachable` (green badge) or `unreachable` (red badge)
-
-The verify endpoint is:
 ```
-POST /capabilities/logs/provider/{providerID}/verify
+GET /docker/containers/{id}/logs?follow=true&timestamps=true&tail=100
+Authorization: Bearer <platform-token>
 ```
+
+The backend:
+1. Retrieves the Docker daemon connection config from Vault (if token is set)
+2. Opens: `GET {docker}/containers/{id}/logs?follow=true&timestamps=true`
+3. Strips Docker's 8-byte stream-multiplexing header from each frame
+4. Emits each line as `event: log`
+
+Docker muxes stdout and stderr into a single stream with a 4-byte header (stream type + length). The backend demuxes this transparently, so log lines arrive as plain text in the SSE stream.
+
+---
+
+## Log Provider API
+
+The logs platform exposes a provider-level API for listing available log sources per environment:
+
+```
+GET /logs/providers          → list bound log providers for the environment
+GET /logs/workloads          → list workloads from all runtime providers
+GET /logs/stream             → SSE stream (runtime-resolved)
+```
+
+This API is what the Logs page uses to build the runtime selector, workload list, and streaming connection in a single unified interface.
 
 ---
 
 ## Structured Log Recommendations
 
-For the best experience with the search and filter features, applications should emit structured JSON logs:
+For the best experience with search and filter features, applications should emit structured JSON logs:
 
 ```json
 {
@@ -208,15 +218,4 @@ Recommended fields:
 - `level` — `debug`, `info`, `warn`, `error`
 - `service` — service name
 - `message` — human-readable description
-- `traceId` — for correlation (high cardinality — put in payload, not Loki labels)
-
----
-
-## Future: Loki-Backed Historical Search
-
-The current implementation streams directly from runtime APIs. Planned enhancements:
-
-- Historical log queries via Loki (time-range search, not just live tail)
-- LogQL translation layer (backend translates generic queries → LogQL)
-- Multi-workload log correlation
-- Deployment-correlated log views (show logs since deployment X)
+- `traceId` — for correlation

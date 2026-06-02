@@ -1,12 +1,12 @@
 # Runtime Providers
 
-TernakClouds abstracts workload orchestration behind a runtime provider model. The platform ships with Kubernetes and Nomad providers. The UI and API remain identical regardless of which runtime is in use.
+TernakClouds abstracts workload orchestration behind a runtime provider model. The platform ships with Kubernetes, Nomad, and Docker providers. The UI and API remain identical regardless of which runtime is in use.
 
 ---
 
 ## Runtime Abstraction
 
-The frontend and API never communicate directly with Kubernetes or Nomad. All runtime operations are proxied through the TernakClouds backend, which:
+The frontend and API never communicate directly with Kubernetes, Nomad, or Docker. All runtime operations are proxied through the TernakClouds backend, which:
 
 1. Resolves the correct provider endpoint from the environment's capability binding
 2. Retrieves authentication credentials from Vault
@@ -17,13 +17,13 @@ The frontend and API never communicate directly with Kubernetes or Nomad. All ru
 Developer requests workload list
            │
            ▼
- TernakClouds API (/kubernetes/pods or /nomad/jobs)
+ TernakClouds API (/kubernetes/pods, /nomad/jobs, /docker/containers)
            │
            │  1. Resolve provider from CapabilityBinding
            │  2. Retrieve token from Vault
            │  3. Forward to runtime API
            ▼
-  Kubernetes API server  /  Nomad HTTP API
+  Kubernetes API server / Nomad HTTP API / Docker daemon
            │
            ▼
   Normalized response → developer
@@ -47,14 +47,14 @@ Requirements:
 Steps:
 1. Navigate to your environment → **Platform → Runtime**
 2. Click **Add provider**
-3. Select the provider (`Kubernetes` or `Nomad`)
+3. Select the provider (`Kubernetes`, `Nomad`, or `Docker`)
 4. Enter the API endpoint
 5. Enter the authentication token (stored in Vault)
 6. Optionally enter a namespace and region
 7. Click **Add provider**
 8. Click **Verify** to confirm the endpoint is reachable
 
-Multiple providers can be bound to the same environment's runtime capability (e.g. one Kubernetes cluster and one Nomad cluster in the same environment).
+Multiple providers can be bound to the same environment's runtime capability.
 
 ---
 
@@ -92,11 +92,10 @@ rules:
 | List deployments | `GET /kubernetes/deployments?namespace=<ns>` | Deployments in a namespace |
 | Deployment detail | `GET /kubernetes/deployments/:ns/:name` | Deployment spec, replicas |
 | Scale deployment | `PATCH /kubernetes/deployments/:ns/:name/scale` | Set replica count |
+| List services | `GET /kubernetes/services?namespace=<ns>` | Services in a namespace |
 | Stream pod logs | `GET /kubernetes/pods/:ns/:name/logs` | SSE log stream |
 
 ### Log Streaming
-
-Kubernetes log streaming proxies the native `kubectl logs --follow` behavior:
 
 ```
 GET /kubernetes/pods/{namespace}/{name}/logs?container={container}&follow=true
@@ -139,13 +138,13 @@ node {
 | Job detail | `GET /nomad/jobs/:jobID?namespace=<ns>` | Full job spec and status |
 | List allocations | `GET /nomad/jobs/:jobID/allocations` | Job allocations |
 | Allocation detail | `GET /nomad/allocations/:allocID` | Allocation state and task events |
+| List evaluations | `GET /nomad/evaluations` | Scheduling evaluations |
+| List deployments | `GET /nomad/deployments` | Job rollout deployments |
 | Stream logs | `GET /nomad/allocations/:allocID/logs` | SSE log stream |
 | Stop job | `POST /nomad/jobs/:jobID/stop` | Deregister job |
 | Start job | `POST /nomad/jobs/:jobID/start` | Re-register job |
 
 ### Log Streaming
-
-Nomad log streaming uses the Nomad client API:
 
 ```
 GET /nomad/allocations/{allocID}/logs?task={task}&type={stdout|stderr}&follow=true&origin=start
@@ -161,26 +160,66 @@ The platform automatically resolves the latest running allocation from a job ID 
 
 ---
 
+## Docker Provider
+
+### Configuration
+
+| Field | Example | Description |
+|---|---|---|
+| Endpoint | `tcp://docker.internal:2375` | Docker daemon TCP socket |
+| Token | — | Optional TLS certificate or bearer token |
+
+For local Docker, the daemon can also be reached over a Unix socket by setting the endpoint to `unix:///var/run/docker.sock`. Ensure the backend process has read access to the socket.
+
+### Operations
+
+| Operation | API Path | Description |
+|---|---|---|
+| List containers | `GET /docker/containers` | All containers (running and stopped) |
+| Container detail | `GET /docker/containers/:id` | Full container inspect output |
+| Start container | `POST /docker/containers/:id/start` | Start a stopped container |
+| Stop container | `POST /docker/containers/:id/stop` | Stop a running container |
+| Restart container | `POST /docker/containers/:id/restart` | Restart a container |
+| Remove container | `DELETE /docker/containers/:id` | Remove a container |
+| List images | `GET /docker/images` | All local images |
+| List networks | `GET /docker/networks` | All Docker networks |
+| List volumes | `GET /docker/volumes` | All Docker volumes |
+| Stream logs | `GET /docker/containers/:id/logs` | SSE log stream |
+
+### Log Streaming
+
+```
+GET /docker/containers/{id}/logs?follow=true&timestamps=true
+```
+
+Parameters:
+- `follow` — `true` for live tail, `false` for dump (default: `true`)
+- `timestamps` — prefix each line with timestamp (default: `true`)
+- `tail` — number of lines to show from end before following (default: `100`)
+
+---
+
 ## Workload Model
 
 All runtimes normalize their workloads into a shared model for the frontend:
 
 ```typescript
 interface RuntimeWorkload {
-  id: string;          // Kubernetes: pod name | Nomad: job ID
-  runtime: string;     // "kubernetes" | "nomad"
-  type: string;        // "service" | "job" | "cron" | "task"
+  id: string;          // K8s: pod name | Nomad: job ID | Docker: container ID
+  runtime: string;     // "kubernetes" | "nomad" | "docker"
+  type: string;        // "service" | "job" | "container" | ...
   name: string;        // Display name
   namespace?: string;  // Kubernetes namespace | Nomad namespace
-  status?: string;     // "running" | "pending" | "dead" | ...
+  status?: string;     // "running" | "pending" | "dead" | "exited" | ...
   metadata?: {
     containers?: string[];   // Kubernetes: container names
     job_type?: string;       // Nomad: "service" | "batch" | "system"
+    image?: string;          // Docker: image name:tag
   };
 }
 ```
 
-The frontend works with `RuntimeWorkload` objects and never needs to handle Kubernetes or Nomad specifics.
+The frontend works with `RuntimeWorkload` objects and never needs to handle runtime specifics.
 
 ---
 
