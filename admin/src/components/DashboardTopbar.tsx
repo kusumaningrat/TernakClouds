@@ -27,10 +27,10 @@ export function DashboardTopbar({
             ⌘K
           </kbd>
         </div>
-        <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary text-xs">
+        {/* <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-secondary text-xs">
           <ShieldCheck className="size-3.5 text-success" />
           <span className="font-mono">JWT · session 23m</span>
-        </div>
+        </div> */}
         <button className="p-2 rounded-md hover:bg-secondary relative">
           <Bell className="size-4" />
           <span className="absolute top-1.5 right-1.5 size-1.5 rounded-full bg-primary" />

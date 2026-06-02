@@ -126,7 +126,7 @@ function NomadLiveStatus({
     void queryClient.invalidateQueries({
       queryKey: catalogKeys.deployments(workspaceSlug, envSlug),
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!error]);
 
   if (!enabled) return <span className="text-[11px] text-muted-foreground">no provider</span>;
@@ -460,7 +460,7 @@ function DeployDialog({
               required
               value={jobName}
               onChange={(e) => setJobName(e.target.value)}
-              placeholder="{jobName}"
+              placeholder={item?.display_name ?? item?.name ?? ""}
               className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
             />
           </div>

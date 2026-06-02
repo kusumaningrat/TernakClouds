@@ -88,3 +88,6 @@ clean:
 
 lint-admin:
 	cd admin && npm run lint
+
+lint-autofix:
+	cd admin && npm run lint -- --fix
