@@ -13,8 +13,10 @@ import {
   useEnvironmentRegistries,
   useNomadJob,
   useCapabilities,
+  catalogKeys,
 } from "@/lib/queries";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   Package,
   Plus,
@@ -108,6 +110,7 @@ function NomadLiveStatus({
   namespace: string;
   enabled: boolean;
 }) {
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useNomadJob(
     workspaceSlug,
     envSlug,
@@ -115,6 +118,17 @@ function NomadLiveStatus({
     namespace,
     enabled,
   );
+
+  // When the Nomad job can't be reached, invalidate the deployments list so
+  // the backend sync can detect and remove jobs that no longer exist on the provider.
+  useEffect(() => {
+    if (!error) return;
+    void queryClient.invalidateQueries({
+      queryKey: catalogKeys.deployments(workspaceSlug, envSlug),
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!error]);
+
   if (!enabled) return <span className="text-[11px] text-muted-foreground">no provider</span>;
   if (isLoading) return <Loader2 className="size-3 animate-spin text-muted-foreground" />;
   if (error) return <StatusBadge status="unknown" />;
@@ -446,7 +460,7 @@ function DeployDialog({
               required
               value={jobName}
               onChange={(e) => setJobName(e.target.value)}
-              placeholder="my-redis"
+              placeholder="{jobName}"
               className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
             />
           </div>

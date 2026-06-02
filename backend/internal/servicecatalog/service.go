@@ -261,8 +261,43 @@ func (s *Service) ListCatalog() ([]CatalogItem, error) {
 	return s.repo.ListCatalog()
 }
 
-func (s *Service) ListDeployments(envID uuid.UUID) ([]ServiceDeployment, error) {
-	return s.repo.ListDeployments(envID)
+func (s *Service) ListDeployments(ctx context.Context, envID uuid.UUID) ([]ServiceDeployment, error) {
+	// Fetch recorded deployments from DB
+	deployments, err := s.repo.ListDeployments(envID)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []ServiceDeployment
+
+	// Reconcile with provider state for runtime-specific cleanup/status
+	for _, d := range deployments {
+		// Only reconcile Nomad deployments for now
+		if d.RuntimeProvider == "nomad" {
+			// RuntimeJobID for Nomad is expected to be the Nomad job ID
+			job, err := s.nomadSvc.GetJob(ctx, envID, d.RuntimeJobID, d.Namespace)
+			if err != nil {
+				// If the job is not found on the provider, remove the DB record so
+				// the UI stays in sync with provider state. We detect this by
+				// looking for a 404 in the Nomad client error message.
+				if strings.Contains(err.Error(), " 404") || strings.Contains(err.Error(), "404:") {
+					_ = s.repo.DeleteDeployment(d.ID)
+					continue
+				}
+				// For other errors, surface unknown status in the listing
+				d.Status = "unknown"
+			} else {
+				// If job exists, try to derive a sensible status from the job payload
+				if statusRaw, ok := job["Status"].(string); ok {
+					d.Status = strings.ToLower(statusRaw)
+				}
+			}
+		}
+
+		out = append(out, d)
+	}
+
+	return out, nil
 }
 
 func (s *Service) GetDeployment(id uuid.UUID) (*ServiceDeployment, error) {

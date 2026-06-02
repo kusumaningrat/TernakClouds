@@ -73,7 +73,7 @@ func (h *Handler) Deploy(c *gin.Context) {
 func (h *Handler) ListDeployments(c *gin.Context) {
 	envID := contextEnvironmentID(c)
 
-	deployments, err := h.svc.ListDeployments(envID)
+	deployments, err := h.svc.ListDeployments(c.Request.Context(), envID)
 	if err != nil {
 		pkg.RespondErr(c, http.StatusInternalServerError, "failed to list deployments")
 		return
