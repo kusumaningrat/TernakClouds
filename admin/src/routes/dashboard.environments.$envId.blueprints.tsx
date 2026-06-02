@@ -2520,6 +2520,10 @@ function BlueprintsPage() {
   const hasNomad = (capabilities ?? []).some(
     (c) => c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
   );
+  const hasK8s = (capabilities ?? []).some(
+    (c) =>
+      c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "kubernetes"),
+  );
 
   const appBluprints = (blueprints ?? []).filter((b) => b.category === "application");
   const infraBlueprints = (blueprints ?? []).filter((b) => b.category === "infrastructure");
@@ -2532,7 +2536,7 @@ function BlueprintsPage() {
       />
 
       <div className="flex-1 overflow-auto p-6 space-y-8">
-        {!hasNomad && (
+        {!hasNomad && !hasK8s && (
           <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3">
             <AlertCircle className="size-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
