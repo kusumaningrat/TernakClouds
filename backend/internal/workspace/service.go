@@ -7,11 +7,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// EnvironmentSeeder is satisfied by environment.Service to avoid an import cycle.
-type EnvironmentSeeder interface {
-	SeedDefaults(workspaceID uuid.UUID) error
-}
-
 // PermissionChecker is satisfied by role.RoleService.
 type PermissionChecker interface {
 	HasPermission(userID uuid.UUID, permission string) (bool, error)
@@ -20,11 +15,10 @@ type PermissionChecker interface {
 type Service struct {
 	repo    *Repository
 	roleSvc PermissionChecker
-	envSeed EnvironmentSeeder
 }
 
-func NewService(repo *Repository, roleSvc PermissionChecker, envSeed EnvironmentSeeder) *Service {
-	return &Service{repo: repo, roleSvc: roleSvc, envSeed: envSeed}
+func NewService(repo *Repository, roleSvc PermissionChecker) *Service {
+	return &Service{repo: repo, roleSvc: roleSvc}
 }
 
 func (s *Service) Create(ownerID uuid.UUID, input CreateWorkspaceInput) (*Workspace, error) {
@@ -52,11 +46,6 @@ func (s *Service) Create(ownerID uuid.UUID, input CreateWorkspaceInput) (*Worksp
 	}
 	if err := s.repo.AddMember(member); err != nil {
 		return nil, err
-	}
-
-	// Seed default environments (best-effort).
-	if s.envSeed != nil {
-		_ = s.envSeed.SeedDefaults(w.ID)
 	}
 
 	return w, nil

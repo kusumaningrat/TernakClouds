@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -18,19 +19,25 @@ import { Route as EnvironmentsEnvIdRouteImport } from './routes/environments.$en
 import { Route as DashboardWorkspacesRouteImport } from './routes/dashboard.workspaces'
 import { Route as DashboardUsersRouteImport } from './routes/dashboard.users'
 import { Route as DashboardTeamsRouteImport } from './routes/dashboard.teams'
+import { Route as DashboardSettingsRouteImport } from './routes/dashboard.settings'
 import { Route as DashboardServicesRouteImport } from './routes/dashboard.services'
 import { Route as DashboardRolesRouteImport } from './routes/dashboard.roles'
 import { Route as DashboardRepositoriesRouteImport } from './routes/dashboard.repositories'
 import { Route as DashboardRegistriesRouteImport } from './routes/dashboard.registries'
 import { Route as DashboardProfileRouteImport } from './routes/dashboard.profile'
+import { Route as DashboardPlatformRouteImport } from './routes/dashboard.platform'
 import { Route as DashboardNoAccessRouteImport } from './routes/dashboard.no-access'
+import { Route as DashboardLogsRouteImport } from './routes/dashboard.logs'
+import { Route as DashboardInsightsRouteImport } from './routes/dashboard.insights'
 import { Route as DashboardEnvironmentsRouteImport } from './routes/dashboard.environments'
 import { Route as DashboardDeploymentsRouteImport } from './routes/dashboard.deployments'
 import { Route as DashboardDeploymentControlsRouteImport } from './routes/dashboard.deployment-controls'
 import { Route as DashboardDepartmentsRouteImport } from './routes/dashboard.departments'
 import { Route as DashboardAccessRequestsRouteImport } from './routes/dashboard.access-requests'
+import { Route as DashboardAccessRouteImport } from './routes/dashboard.access'
 import { Route as DashboardEnvironmentsIndexRouteImport } from './routes/dashboard.environments.index'
 import { Route as EnvironmentsEnvIdIntegrationsRouteImport } from './routes/environments.$envId.integrations'
+import { Route as DashboardServicesServiceNameRouteImport } from './routes/dashboard.services.$serviceName'
 import { Route as DashboardEnvironmentsEnvIdRouteImport } from './routes/dashboard.environments.$envId'
 import { Route as DashboardEnvironmentsEnvIdIndexRouteImport } from './routes/dashboard.environments.$envId.index'
 import { Route as DashboardEnvironmentsEnvIdSettingsRouteImport } from './routes/dashboard.environments.$envId.settings'
@@ -62,6 +69,11 @@ import { Route as DashboardEnvironmentsEnvIdPodsNamespaceNameRouteImport } from 
 import { Route as DashboardEnvironmentsEnvIdServicesK8sNamespaceNameRouteImport } from './routes/dashboard.environments.$envId.services.k8s.$namespace.$name'
 import { Route as DashboardEnvironmentsEnvIdDeploymentsK8sNamespaceNameRouteImport } from './routes/dashboard.environments.$envId.deployments.k8s.$namespace.$name'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -107,6 +119,11 @@ const DashboardTeamsRoute = DashboardTeamsRouteImport.update({
   path: '/teams',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardSettingsRoute = DashboardSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardServicesRoute = DashboardServicesRouteImport.update({
   id: '/services',
   path: '/services',
@@ -132,9 +149,24 @@ const DashboardProfileRoute = DashboardProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardPlatformRoute = DashboardPlatformRouteImport.update({
+  id: '/platform',
+  path: '/platform',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardNoAccessRoute = DashboardNoAccessRouteImport.update({
   id: '/no-access',
   path: '/no-access',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardLogsRoute = DashboardLogsRouteImport.update({
+  id: '/logs',
+  path: '/logs',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardInsightsRoute = DashboardInsightsRouteImport.update({
+  id: '/insights',
+  path: '/insights',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardEnvironmentsRoute = DashboardEnvironmentsRouteImport.update({
@@ -163,6 +195,11 @@ const DashboardAccessRequestsRoute = DashboardAccessRequestsRouteImport.update({
   path: '/access-requests',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardAccessRoute = DashboardAccessRouteImport.update({
+  id: '/access',
+  path: '/access',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardEnvironmentsIndexRoute =
   DashboardEnvironmentsIndexRouteImport.update({
     id: '/',
@@ -174,6 +211,12 @@ const EnvironmentsEnvIdIntegrationsRoute =
     id: '/integrations',
     path: '/integrations',
     getParentRoute: () => EnvironmentsEnvIdRoute,
+  } as any)
+const DashboardServicesServiceNameRoute =
+  DashboardServicesServiceNameRouteImport.update({
+    id: '/$serviceName',
+    path: '/$serviceName',
+    getParentRoute: () => DashboardServicesRoute,
   } as any)
 const DashboardEnvironmentsEnvIdRoute =
   DashboardEnvironmentsEnvIdRouteImport.update({
@@ -361,23 +404,30 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
+  '/dashboard/access': typeof DashboardAccessRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/environments': typeof DashboardEnvironmentsRouteWithChildren
+  '/dashboard/insights': typeof DashboardInsightsRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/no-access': typeof DashboardNoAccessRoute
+  '/dashboard/platform': typeof DashboardPlatformRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/registries': typeof DashboardRegistriesRoute
   '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
-  '/dashboard/services': typeof DashboardServicesRoute
+  '/dashboard/services': typeof DashboardServicesRouteWithChildren
+  '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/workspaces': typeof DashboardWorkspacesRoute
   '/environments/$envId': typeof EnvironmentsEnvIdRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/environments/$envId': typeof DashboardEnvironmentsEnvIdRouteWithChildren
+  '/dashboard/services/$serviceName': typeof DashboardServicesServiceNameRoute
   '/environments/$envId/integrations': typeof EnvironmentsEnvIdIntegrationsRoute
   '/dashboard/environments/': typeof DashboardEnvironmentsIndexRoute
   '/dashboard/environments/$envId/applications': typeof DashboardEnvironmentsEnvIdApplicationsRoute
@@ -414,21 +464,28 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
+  '/dashboard/access': typeof DashboardAccessRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
+  '/dashboard/insights': typeof DashboardInsightsRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/no-access': typeof DashboardNoAccessRoute
+  '/dashboard/platform': typeof DashboardPlatformRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/registries': typeof DashboardRegistriesRoute
   '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
-  '/dashboard/services': typeof DashboardServicesRoute
+  '/dashboard/services': typeof DashboardServicesRouteWithChildren
+  '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/workspaces': typeof DashboardWorkspacesRoute
   '/environments/$envId': typeof EnvironmentsEnvIdRouteWithChildren
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/services/$serviceName': typeof DashboardServicesServiceNameRoute
   '/environments/$envId/integrations': typeof EnvironmentsEnvIdIntegrationsRoute
   '/dashboard/environments': typeof DashboardEnvironmentsIndexRoute
   '/dashboard/environments/$envId/applications': typeof DashboardEnvironmentsEnvIdApplicationsRoute
@@ -464,23 +521,30 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
+  '/dashboard/access': typeof DashboardAccessRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/environments': typeof DashboardEnvironmentsRouteWithChildren
+  '/dashboard/insights': typeof DashboardInsightsRoute
+  '/dashboard/logs': typeof DashboardLogsRoute
   '/dashboard/no-access': typeof DashboardNoAccessRoute
+  '/dashboard/platform': typeof DashboardPlatformRoute
   '/dashboard/profile': typeof DashboardProfileRoute
   '/dashboard/registries': typeof DashboardRegistriesRoute
   '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
-  '/dashboard/services': typeof DashboardServicesRoute
+  '/dashboard/services': typeof DashboardServicesRouteWithChildren
+  '/dashboard/settings': typeof DashboardSettingsRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
   '/dashboard/users': typeof DashboardUsersRoute
   '/dashboard/workspaces': typeof DashboardWorkspacesRoute
   '/environments/$envId': typeof EnvironmentsEnvIdRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/environments/$envId': typeof DashboardEnvironmentsEnvIdRouteWithChildren
+  '/dashboard/services/$serviceName': typeof DashboardServicesServiceNameRoute
   '/environments/$envId/integrations': typeof EnvironmentsEnvIdIntegrationsRoute
   '/dashboard/environments/': typeof DashboardEnvironmentsIndexRoute
   '/dashboard/environments/$envId/applications': typeof DashboardEnvironmentsEnvIdApplicationsRoute
@@ -520,23 +584,30 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/register'
+    | '/setup'
+    | '/dashboard/access'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
     | '/dashboard/environments'
+    | '/dashboard/insights'
+    | '/dashboard/logs'
     | '/dashboard/no-access'
+    | '/dashboard/platform'
     | '/dashboard/profile'
     | '/dashboard/registries'
     | '/dashboard/repositories'
     | '/dashboard/roles'
     | '/dashboard/services'
+    | '/dashboard/settings'
     | '/dashboard/teams'
     | '/dashboard/users'
     | '/dashboard/workspaces'
     | '/environments/$envId'
     | '/dashboard/'
     | '/dashboard/environments/$envId'
+    | '/dashboard/services/$serviceName'
     | '/environments/$envId/integrations'
     | '/dashboard/environments/'
     | '/dashboard/environments/$envId/applications'
@@ -573,21 +644,28 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/setup'
+    | '/dashboard/access'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
+    | '/dashboard/insights'
+    | '/dashboard/logs'
     | '/dashboard/no-access'
+    | '/dashboard/platform'
     | '/dashboard/profile'
     | '/dashboard/registries'
     | '/dashboard/repositories'
     | '/dashboard/roles'
     | '/dashboard/services'
+    | '/dashboard/settings'
     | '/dashboard/teams'
     | '/dashboard/users'
     | '/dashboard/workspaces'
     | '/environments/$envId'
     | '/dashboard'
+    | '/dashboard/services/$serviceName'
     | '/environments/$envId/integrations'
     | '/dashboard/environments'
     | '/dashboard/environments/$envId/applications'
@@ -622,23 +700,30 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/register'
+    | '/setup'
+    | '/dashboard/access'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
     | '/dashboard/environments'
+    | '/dashboard/insights'
+    | '/dashboard/logs'
     | '/dashboard/no-access'
+    | '/dashboard/platform'
     | '/dashboard/profile'
     | '/dashboard/registries'
     | '/dashboard/repositories'
     | '/dashboard/roles'
     | '/dashboard/services'
+    | '/dashboard/settings'
     | '/dashboard/teams'
     | '/dashboard/users'
     | '/dashboard/workspaces'
     | '/environments/$envId'
     | '/dashboard/'
     | '/dashboard/environments/$envId'
+    | '/dashboard/services/$serviceName'
     | '/environments/$envId/integrations'
     | '/dashboard/environments/'
     | '/dashboard/environments/$envId/applications'
@@ -677,11 +762,19 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  SetupRoute: typeof SetupRoute
   EnvironmentsEnvIdRoute: typeof EnvironmentsEnvIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -745,6 +838,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardTeamsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/settings': {
+      id: '/dashboard/settings'
+      path: '/settings'
+      fullPath: '/dashboard/settings'
+      preLoaderRoute: typeof DashboardSettingsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/services': {
       id: '/dashboard/services'
       path: '/services'
@@ -780,11 +880,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardProfileRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/platform': {
+      id: '/dashboard/platform'
+      path: '/platform'
+      fullPath: '/dashboard/platform'
+      preLoaderRoute: typeof DashboardPlatformRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/no-access': {
       id: '/dashboard/no-access'
       path: '/no-access'
       fullPath: '/dashboard/no-access'
       preLoaderRoute: typeof DashboardNoAccessRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/logs': {
+      id: '/dashboard/logs'
+      path: '/logs'
+      fullPath: '/dashboard/logs'
+      preLoaderRoute: typeof DashboardLogsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
+    '/dashboard/insights': {
+      id: '/dashboard/insights'
+      path: '/insights'
+      fullPath: '/dashboard/insights'
+      preLoaderRoute: typeof DashboardInsightsRouteImport
       parentRoute: typeof DashboardRoute
     }
     '/dashboard/environments': {
@@ -822,6 +943,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAccessRequestsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/access': {
+      id: '/dashboard/access'
+      path: '/access'
+      fullPath: '/dashboard/access'
+      preLoaderRoute: typeof DashboardAccessRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/environments/': {
       id: '/dashboard/environments/'
       path: '/'
@@ -835,6 +963,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/environments/$envId/integrations'
       preLoaderRoute: typeof EnvironmentsEnvIdIntegrationsRouteImport
       parentRoute: typeof EnvironmentsEnvIdRoute
+    }
+    '/dashboard/services/$serviceName': {
+      id: '/dashboard/services/$serviceName'
+      path: '/$serviceName'
+      fullPath: '/dashboard/services/$serviceName'
+      preLoaderRoute: typeof DashboardServicesServiceNameRouteImport
+      parentRoute: typeof DashboardServicesRoute
     }
     '/dashboard/environments/$envId': {
       id: '/dashboard/environments/$envId'
@@ -1209,18 +1344,34 @@ const DashboardEnvironmentsRouteWithChildren =
     DashboardEnvironmentsRouteChildren,
   )
 
+interface DashboardServicesRouteChildren {
+  DashboardServicesServiceNameRoute: typeof DashboardServicesServiceNameRoute
+}
+
+const DashboardServicesRouteChildren: DashboardServicesRouteChildren = {
+  DashboardServicesServiceNameRoute: DashboardServicesServiceNameRoute,
+}
+
+const DashboardServicesRouteWithChildren =
+  DashboardServicesRoute._addFileChildren(DashboardServicesRouteChildren)
+
 interface DashboardRouteChildren {
+  DashboardAccessRoute: typeof DashboardAccessRoute
   DashboardAccessRequestsRoute: typeof DashboardAccessRequestsRoute
   DashboardDepartmentsRoute: typeof DashboardDepartmentsRoute
   DashboardDeploymentControlsRoute: typeof DashboardDeploymentControlsRoute
   DashboardDeploymentsRoute: typeof DashboardDeploymentsRoute
   DashboardEnvironmentsRoute: typeof DashboardEnvironmentsRouteWithChildren
+  DashboardInsightsRoute: typeof DashboardInsightsRoute
+  DashboardLogsRoute: typeof DashboardLogsRoute
   DashboardNoAccessRoute: typeof DashboardNoAccessRoute
+  DashboardPlatformRoute: typeof DashboardPlatformRoute
   DashboardProfileRoute: typeof DashboardProfileRoute
   DashboardRegistriesRoute: typeof DashboardRegistriesRoute
   DashboardRepositoriesRoute: typeof DashboardRepositoriesRoute
   DashboardRolesRoute: typeof DashboardRolesRoute
-  DashboardServicesRoute: typeof DashboardServicesRoute
+  DashboardServicesRoute: typeof DashboardServicesRouteWithChildren
+  DashboardSettingsRoute: typeof DashboardSettingsRoute
   DashboardTeamsRoute: typeof DashboardTeamsRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
   DashboardWorkspacesRoute: typeof DashboardWorkspacesRoute
@@ -1228,17 +1379,22 @@ interface DashboardRouteChildren {
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
+  DashboardAccessRoute: DashboardAccessRoute,
   DashboardAccessRequestsRoute: DashboardAccessRequestsRoute,
   DashboardDepartmentsRoute: DashboardDepartmentsRoute,
   DashboardDeploymentControlsRoute: DashboardDeploymentControlsRoute,
   DashboardDeploymentsRoute: DashboardDeploymentsRoute,
   DashboardEnvironmentsRoute: DashboardEnvironmentsRouteWithChildren,
+  DashboardInsightsRoute: DashboardInsightsRoute,
+  DashboardLogsRoute: DashboardLogsRoute,
   DashboardNoAccessRoute: DashboardNoAccessRoute,
+  DashboardPlatformRoute: DashboardPlatformRoute,
   DashboardProfileRoute: DashboardProfileRoute,
   DashboardRegistriesRoute: DashboardRegistriesRoute,
   DashboardRepositoriesRoute: DashboardRepositoriesRoute,
   DashboardRolesRoute: DashboardRolesRoute,
-  DashboardServicesRoute: DashboardServicesRoute,
+  DashboardServicesRoute: DashboardServicesRouteWithChildren,
+  DashboardSettingsRoute: DashboardSettingsRoute,
   DashboardTeamsRoute: DashboardTeamsRoute,
   DashboardUsersRoute: DashboardUsersRoute,
   DashboardWorkspacesRoute: DashboardWorkspacesRoute,
@@ -1265,6 +1421,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  SetupRoute: SetupRoute,
   EnvironmentsEnvIdRoute: EnvironmentsEnvIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport

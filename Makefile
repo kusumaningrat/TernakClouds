@@ -40,7 +40,7 @@ dev-backend:
 	cd backend && go run ./cmd/api
 
 dev-admin:
-	cd admin && npm run dev
+	cd ui && npm run dev
 
 dev-site:
 	npm run dev

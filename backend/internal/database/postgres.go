@@ -96,58 +96,7 @@ func Seed(db *gorm.DB, cfg *config.Config) error {
 	if err := seedBlueprints(db); err != nil {
 		return err
 	}
-	if err := seedDefaultWorkspace(db, cfg.Admin.Email); err != nil {
-		return err
-	}
 	log.Println("database seeded successfully")
-	return nil
-}
-
-func seedDefaultWorkspace(db *gorm.DB, adminEmail string) error {
-	var adminUser user.User
-	if err := db.Where("email = ?", adminEmail).First(&adminUser).Error; err != nil {
-		return err
-	}
-
-	ws := workspace.Workspace{
-		Name:        "Platform",
-		Slug:        "platform",
-		Description: "Default platform workspace",
-		OwnerID:     adminUser.ID,
-	}
-	if err := db.Where("slug = ?", ws.Slug).FirstOrCreate(&ws).Error; err != nil {
-		return err
-	}
-
-	member := workspace.WorkspaceMember{
-		WorkspaceID: ws.ID,
-		UserID:      adminUser.ID,
-		Role:        workspace.MemberRoleOwner,
-	}
-	if err := db.Where("workspace_id = ? AND user_id = ?", member.WorkspaceID, member.UserID).
-		FirstOrCreate(&member).Error; err != nil {
-		return err
-	}
-
-	defaults := []struct {
-		name  string
-		slug  string
-		order int
-	}{
-		{"dev", "dev", 1},
-		{"staging", "staging", 2},
-		{"production", "production", 3},
-	}
-	for _, d := range defaults {
-		env := environment.Environment{
-			WorkspaceID: ws.ID,
-			Name:        d.name,
-			Slug:        d.slug,
-			Order:       d.order,
-		}
-		_ = db.Where("workspace_id = ? AND slug = ?", ws.ID, d.slug).FirstOrCreate(&env).Error
-	}
-
 	return nil
 }
 
