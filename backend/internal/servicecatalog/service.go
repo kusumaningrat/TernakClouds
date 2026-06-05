@@ -3,6 +3,7 @@ package servicecatalog
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"text/template"
@@ -31,24 +32,28 @@ const hclTemplate = `job "[[.JobName]]-App" {
 
   group "[[.JobName]]" {
     count = 1
-    [[- if .HasPort]]
+    [[- if .Ports]]
 
     network {
-      port "http" {
+      [[- range .Ports]]
+      port "[[.Name]]" {
+        [[- if .ExposedPort]]
         static       = [[.ExposedPort]]
+        [[- end]]
         to           = [[.ContainerPort]]
         host_network = "private"
       }
+      [[- end]]
     }
 
     service {
       name = "[[.JobName]]"
       tags = ["apps", "catalog"]
-      port = "http"
+      port = "[[.PrimaryPortName]]"
       check {
         name     = "health"
         type     = "[[.HealthCheckType]]"
-        port     = "http"
+        port     = "[[.PrimaryPortName]]"
         [[- if eq .HealthCheckType "http"]]
         path     = "[[.HealthCheckPath]]"
         [[- end]]
@@ -68,8 +73,8 @@ const hclTemplate = `job "[[.JobName]]-App" {
 
       config {
         image = "[[.Image]]"
-        [[- if .HasPort]]
-        ports = ["http"]
+        [[- if .Ports]]
+        ports = [[print "["]][[range $i, $p := .Ports]][[if $i]], [[end]]"[[$p.Name]]"[[end]]]
         [[- end]]
         [[- if .RegistryUsername]]
         auth {
@@ -106,13 +111,19 @@ EOF
   }
 }`
 
+type nomadPort struct {
+	Name          string
+	ContainerPort int
+	ExposedPort   int // 0 = no static host binding
+}
+
 type nomadTemplateVars struct {
 	JobName          string
 	Datacenter       string
 	Namespace        string
 	WorkerName       string
-	ExposedPort      int
-	ContainerPort    int
+	Ports            []nomadPort
+	PrimaryPortName  string
 	CPU              int
 	Memory           int
 	Image            string
@@ -162,7 +173,10 @@ spec:
         - name: {{.JobName}}
           image: {{.Image}}
           ports:
+            {{- range .Ports}}
             - containerPort: {{.ContainerPort}}
+              name: {{.Name}}
+            {{- end}}
           resources:
             requests:
               cpu: "{{.CPU}}m"
@@ -170,17 +184,17 @@ spec:
             limits:
               cpu: "{{.CPULimit}}m"
               memory: "{{.MemoryLimitMB}}Mi"
-          {{- if eq .HealthCheckType "http"}}
+          {{- if and .PrimaryPort (eq .HealthCheckType "http")}}
           readinessProbe:
             httpGet:
               path: {{.HealthCheckPath}}
-              port: {{.ContainerPort}}
+              port: {{.PrimaryPort}}
             initialDelaySeconds: 15
             periodSeconds: 10
           livenessProbe:
             httpGet:
               path: {{.HealthCheckPath}}
-              port: {{.ContainerPort}}
+              port: {{.PrimaryPort}}
             initialDelaySeconds: 30
             periodSeconds: 30
           {{- end}}
@@ -196,14 +210,23 @@ spec:
   selector:
     app: {{.JobName}}
   ports:
+    {{- range .Ports}}
     - protocol: TCP
       port: {{.ContainerPort}}
       targetPort: {{.ContainerPort}}
+      name: {{.Name}}
       {{- if .NodePort}}
       nodePort: {{.NodePort}}
       {{- end}}
-  type: {{if .NodePort}}NodePort{{else}}ClusterIP{{end}}
+    {{- end}}
+  type: {{if .HasNodePort}}NodePort{{else}}ClusterIP{{end}}
 `
+
+type k8sPort struct {
+	Name          string
+	ContainerPort int
+	NodePort      int // 0 = ClusterIP only (no host binding)
+}
 
 type k8sCatalogTemplateVars struct {
 	JobName         string
@@ -211,18 +234,16 @@ type k8sCatalogTemplateVars struct {
 	Namespace       string
 	Replicas        int
 	Image           string
-	ContainerPort   int
+	Ports           []k8sPort
+	PrimaryPort     int // container port used for health probes; 0 = no probe
+	HasNodePort     bool
 	CPU             int
 	CPULimit        int
 	MemoryMB        int
 	MemoryLimitMB   int
 	HealthCheckType string
 	HealthCheckPath string
-	// NodeName pins the pod to a specific node via nodeSelector.
-	NodeName string
-	// NodePort exposes the service on this port on every node (NodePort service type).
-	// Zero means ClusterIP (internal only).
-	NodePort int
+	NodeName        string
 }
 
 var parsedK8sTemplate = template.Must(
@@ -308,6 +329,73 @@ func (s *Service) GetDeployment(id uuid.UUID) (*ServiceDeployment, error) {
 	return s.repo.FindDeployment(id)
 }
 
+// ── Port helpers ─────────────────────────────────────────────────────────────
+
+func primaryPortName(defs []PortDef) string {
+	for _, d := range defs {
+		if d.Primary {
+			return d.Name
+		}
+	}
+	if len(defs) > 0 {
+		return defs[0].Name
+	}
+	return ""
+}
+
+func primaryContainerPort(defs []PortDef) int {
+	for _, d := range defs {
+		if d.Primary {
+			return d.ContainerPort
+		}
+	}
+	if len(defs) > 0 {
+		return defs[0].ContainerPort
+	}
+	return 0
+}
+
+// defaultMappings builds zero-ExposedPort mappings from catalog PortDefs.
+func defaultMappings(defs []PortDef) []PortMapping {
+	out := make([]PortMapping, 0, len(defs))
+	for _, d := range defs {
+		out = append(out, PortMapping{
+			Name:          d.Name,
+			ContainerPort: d.ContainerPort,
+			Protocol:      d.Protocol,
+		})
+	}
+	return out
+}
+
+func toNomadPorts(mappings []PortMapping) []nomadPort {
+	out := make([]nomadPort, 0, len(mappings))
+	for _, m := range mappings {
+		out = append(out, nomadPort{
+			Name:          m.Name,
+			ContainerPort: m.ContainerPort,
+			ExposedPort:   m.ExposedPort,
+		})
+	}
+	return out
+}
+
+func toK8sPorts(mappings []PortMapping) ([]k8sPort, bool) {
+	out := make([]k8sPort, 0, len(mappings))
+	hasNodePort := false
+	for _, m := range mappings {
+		if m.ExposedPort > 0 {
+			hasNodePort = true
+		}
+		out = append(out, k8sPort{
+			Name:          m.Name,
+			ContainerPort: m.ContainerPort,
+			NodePort:      m.ExposedPort,
+		})
+	}
+	return out, hasNodePort
+}
+
 func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.UUID, input DeployInput) (*ServiceDeployment, error) {
 	item, err := s.repo.FindCatalogByName(input.CatalogName)
 	if err != nil {
@@ -333,14 +421,17 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		memory = *input.Memory
 	}
 
-	exposedPort := 0
-	if input.ExposedPort != nil {
-		exposedPort = *input.ExposedPort
+	// Resolve port mappings: prefer user-supplied, fall back to catalog defaults.
+	defaultDefs, err := item.ParseDefaultPorts()
+	if err != nil {
+		return nil, fmt.Errorf("parse catalog ports: %w", err)
 	}
-
-	if item.DefaultContainerPort == 0 && exposedPort > 0 {
-		return nil, ErrInvalidPortBinding
+	portMappings := input.Ports
+	if len(portMappings) == 0 {
+		portMappings = defaultMappings(defaultDefs)
 	}
+	primName := primaryPortName(defaultDefs)
+	primPort := primaryContainerPort(defaultDefs)
 
 	var (
 		runtimeJobID  string
@@ -355,7 +446,7 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		if namespace == "" {
 			namespace = "default"
 		}
-		runtimeJobID, nomadJobID, jobDefinition, err = s.deployNomad(ctx, envID, item, exposedPort, input, image, regUsername, regPassword, cpu, memory, namespace)
+		runtimeJobID, nomadJobID, jobDefinition, err = s.deployNomad(ctx, envID, item, portMappings, primName, input, image, regUsername, regPassword, cpu, memory, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -365,19 +456,24 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		if namespace == "" {
 			namespace = "default"
 		}
-		runtimeJobID, jobDefinition, err = s.deployKubernetes(ctx, envID, item, exposedPort, input, image, cpu, memory, namespace)
+		runtimeJobID, jobDefinition, err = s.deployKubernetes(ctx, envID, item, portMappings, primPort, input, image, cpu, memory, namespace)
 		if err != nil {
 			return nil, err
 		}
 
 	case "docker":
-		runtimeJobID, err = s.deployDocker(ctx, envID, item, exposedPort, input, image, cpu, memory)
+		runtimeJobID, err = s.deployDocker(ctx, envID, item, portMappings, input, image, cpu, memory)
 		if err != nil {
 			return nil, err
 		}
 
 	default:
 		return nil, ErrUnsupportedRuntime
+	}
+
+	portsJSON, err := json.Marshal(portMappings)
+	if err != nil {
+		return nil, fmt.Errorf("marshal ports: %w", err)
 	}
 
 	d := &ServiceDeployment{
@@ -388,8 +484,7 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		Datacenter:      input.Datacenter,
 		Namespace:       namespace,
 		WorkerName:      input.WorkerName,
-		ExposedPort:     exposedPort,
-		ContainerPort:   item.DefaultContainerPort,
+		Ports:           portsJSON,
 		CPU:             cpu,
 		Memory:          memory,
 		Image:           image,
@@ -411,7 +506,8 @@ func (s *Service) deployNomad(
 	ctx context.Context,
 	envID uuid.UUID,
 	item *CatalogItem,
-	exposedPort int,
+	portMappings []PortMapping,
+	primPortName string,
 	input DeployInput,
 	image, regUsername, regPassword string,
 	cpu, memory int,
@@ -430,8 +526,8 @@ func (s *Service) deployNomad(
 		Datacenter:       input.Datacenter,
 		Namespace:        namespace,
 		WorkerName:       input.WorkerName,
-		ExposedPort:      exposedPort,
-		ContainerPort:    item.DefaultContainerPort,
+		Ports:            toNomadPorts(portMappings),
+		PrimaryPortName:  primPortName,
 		CPU:              cpu,
 		Memory:           memory,
 		Image:            image,
@@ -460,7 +556,8 @@ func (s *Service) deployKubernetes(
 	ctx context.Context,
 	envID uuid.UUID,
 	item *CatalogItem,
-	exposedPort int,
+	portMappings []PortMapping,
+	primContainerPort int,
 	input DeployInput,
 	image string,
 	cpu, memory int,
@@ -471,13 +568,17 @@ func (s *Service) deployKubernetes(
 		replicas = *input.Replicas
 	}
 
+	k8sPorts, hasNodePort := toK8sPorts(portMappings)
+
 	vars := k8sCatalogTemplateVars{
 		JobName:         input.JobName,
 		CatalogName:     input.CatalogName,
 		Namespace:       namespace,
 		Replicas:        replicas,
 		Image:           image,
-		ContainerPort:   item.DefaultContainerPort,
+		Ports:           k8sPorts,
+		PrimaryPort:     primContainerPort,
+		HasNodePort:     hasNodePort,
 		CPU:             cpu,
 		CPULimit:        cpu * 2,
 		MemoryMB:        memory,
@@ -485,7 +586,6 @@ func (s *Service) deployKubernetes(
 		HealthCheckType: item.HealthCheckType,
 		HealthCheckPath: item.HealthCheckPath,
 		NodeName:        input.K8sNodeName,
-		NodePort:        exposedPort,
 	}
 
 	yamlManifest, err = renderK8sYAML(vars)
@@ -504,7 +604,7 @@ func (s *Service) deployDocker(
 	ctx context.Context,
 	envID uuid.UUID,
 	item *CatalogItem,
-	exposedPort int,
+	portMappings []PortMapping,
 	input DeployInput,
 	image string,
 	cpu, memory int,
@@ -513,15 +613,22 @@ func (s *Service) deployDocker(
 	for k, v := range input.EnvVars {
 		env = append(env, fmt.Sprintf("%s=%s", k, v))
 	}
+	dockerPorts := make([]docker.PortConfig, 0, len(portMappings))
+	for _, pm := range portMappings {
+		dockerPorts = append(dockerPorts, docker.PortConfig{
+			ContainerPort: pm.ContainerPort,
+			HostPort:      pm.ExposedPort,
+			Protocol:      pm.Protocol,
+		})
+	}
 	cfg := docker.ContainerRunConfig{
-		Image:         image,
-		Name:          input.JobName,
-		ContainerPort: item.DefaultContainerPort,
-		HostPort:      exposedPort,
-		CPU:           cpu,
-		MemoryMB:      memory,
-		Env:           env,
-		Labels:        map[string]string{"catalog": input.CatalogName},
+		Image:    image,
+		Name:     input.JobName,
+		Ports:    dockerPorts,
+		CPU:      cpu,
+		MemoryMB: memory,
+		Env:      env,
+		Labels:   map[string]string{"catalog": input.CatalogName},
 	}
 	runtimeJobID, err = s.dockerSvc.RunContainer(ctx, envID, cfg)
 	if err != nil {

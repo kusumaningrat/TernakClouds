@@ -827,7 +827,7 @@ function ServiceStep({
   useEffect(() => {
     if (catalog?.length && !selectedService) {
       setSelectedService(catalog[0].name);
-      setPort(String(catalog[0].default_container_port || 80));
+      setPort(String(catalog[0].default_ports?.[0]?.container_port || 80));
     }
   }, [catalog, selectedService]);
 
@@ -838,11 +838,21 @@ function ServiceStep({
     }
     setError("");
     try {
+      const selectedItem = catalog?.find((i) => i.name === selectedService);
+      const primaryPort = selectedItem?.default_ports?.[0];
       await deployService.mutateAsync({
         catalog_name: selectedService,
         job_name: `${selectedService}-${envSlug}`,
         runtime_provider: runtimeProvider,
-        exposed_port: parseInt(port, 10) || 80,
+        ports: primaryPort
+          ? [
+              {
+                name: primaryPort.name,
+                container_port: primaryPort.container_port,
+                exposed_port: parseInt(port, 10) || primaryPort.container_port,
+              },
+            ]
+          : undefined,
       });
       onDone();
     } catch (e: unknown) {
@@ -883,7 +893,7 @@ function ServiceStep({
                   key={item.name}
                   onClick={() => {
                     setSelectedService(item.name);
-                    setPort(String(item.default_container_port || 80));
+                    setPort(String(item.default_ports?.[0]?.container_port || 80));
                   }}
                   className={`flex items-start gap-2.5 p-3 rounded-lg border text-left transition ${
                     selectedService === item.name

@@ -325,7 +325,7 @@ func seedCatalog(db *gorm.DB) error {
 	all = append(all, seeds.Messaging...)
 	all = append(all, seeds.Networking...)
 	for _, item := range all {
-		if err := db.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
+		if err := db.Where("name = ?", item.Name).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return err
 		}
 	}

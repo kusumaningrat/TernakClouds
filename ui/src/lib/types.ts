@@ -524,14 +524,28 @@ export interface ProviderCapabilities {
 
 // ─── Catalog ──────────────────────────────────────────────────────────────────
 
+export interface PortDef {
+  name: string;
+  container_port: number;
+  protocol?: string;
+  primary?: boolean;
+}
+
+export interface PortMapping {
+  name: string;
+  container_port: number;
+  exposed_port?: number;
+  protocol?: string;
+}
+
 export interface CatalogItem {
   id: string;
   name: string;
   display_name: string;
   description: string;
   category?: string;
+  default_ports?: PortDef[];
   default_image: string;
-  default_container_port: number;
   default_cpu: number;
   default_memory: number;
   health_check_type: string;
@@ -551,8 +565,7 @@ export interface ServiceDeployment {
   datacenter: string;
   namespace: string;
   worker_name: string;
-  exposed_port: number;
-  container_port: number;
+  ports?: PortMapping[];
   cpu: number;
   memory: number;
   image: string;
@@ -569,7 +582,7 @@ export interface DeployServiceInput {
   catalog_name: string;
   job_name: string;
   runtime_provider: string;
-  exposed_port?: number;
+  ports?: PortMapping[];
   cpu?: number;
   memory?: number;
   // Nomad-specific
@@ -588,7 +601,6 @@ export interface DeployServiceInput {
   vault_role?: string;
   vault_path?: string;
   env_mappings?: Record<string, string>;
-  // Environment variables (Docker only for now)
   env_vars?: Record<string, string>;
 }
 

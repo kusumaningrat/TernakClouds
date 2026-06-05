@@ -58,7 +58,7 @@ func (h *Handler) Deploy(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
 		case errors.Is(err, ErrNoVaultCapability):
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
-		case errors.Is(err, ErrUnsupportedRuntime), errors.Is(err, ErrInvalidPortBinding):
+		case errors.Is(err, ErrUnsupportedRuntime):
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
 		case errors.Is(err, docker.ErrContainerNameConflict):
 			pkg.RespondErr(c, http.StatusConflict, err.Error())

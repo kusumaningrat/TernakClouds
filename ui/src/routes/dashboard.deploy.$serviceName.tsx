@@ -181,7 +181,7 @@ function DeployForm({
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
   const [k8sNodeName, setK8sNodeName] = useState("");
-  const [exposedPort, setExposedPort] = useState("");
+  const [portMappings, setPortMappings] = useState<{ name: string; containerPort: number; exposedPort: string }[]>([]);
   const [cpu, setCpu] = useState("");
   const [memory, setMemory] = useState("");
   const [registryId, setRegistryId] = useState("");
@@ -215,6 +215,11 @@ function DeployForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasNomad, hasKubernetes, hasDocker]);
 
+  useEffect(() => {
+    const defs = item?.default_ports ?? [];
+    setPortMappings(defs.map((p) => ({ name: p.name, containerPort: p.container_port, exposedPort: "" })));
+  }, [item?.name]);
+
   const datacenters = [...new Set((nodes ?? []).map((n) => n.Datacenter))];
   const workers = (nodes ?? []).filter((n) => !datacenter || n.Datacenter === datacenter);
 
@@ -241,18 +246,21 @@ function DeployForm({
       return acc;
     }, {});
 
-    const portValue = exposedPort.trim() ? parseInt(exposedPort, 10) : undefined;
-    if (exposedPort.trim() && Number.isNaN(portValue)) {
-      toast.error("Exposed port must be a valid number");
-      return;
-    }
+    const ports = portMappings.map((pm) => {
+      const ep = pm.exposedPort.trim() ? parseInt(pm.exposedPort, 10) : 0;
+      if (pm.exposedPort.trim() && Number.isNaN(ep)) {
+        toast.error(`Invalid host port for "${pm.name}"`);
+        throw new Error("invalid port");
+      }
+      return { name: pm.name, container_port: pm.containerPort, exposed_port: ep };
+    });
 
     try {
       await deploy.mutateAsync({
         catalog_name: item.name,
         job_name: jobName,
         runtime_provider: runtimeProvider,
-        exposed_port: portValue,
+        ports: ports.length > 0 ? ports : undefined,
         cpu: cpu ? parseInt(cpu, 10) : undefined,
         memory: memory ? parseInt(memory, 10) : undefined,
         datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
@@ -489,41 +497,49 @@ function DeployForm({
         </div>
       )}
 
-      {/* Exposed port — hidden for portless services (e.g. busybox) */}
-      {item.default_container_port === 0 ? (
+      {/* Port mappings */}
+      {portMappings.length === 0 ? (
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-md bg-muted/40 border border-border text-[11px] text-muted-foreground">
           <Globe className="size-3.5 shrink-0 mt-0.5" />
-          <span>
-            This service does not expose a network port and will run without port mapping.
-          </span>
+          <span>This service does not expose a network port and will run without port mapping.</span>
         </div>
       ) : (
-        <div>
+        <div className="space-y-2">
           <label className="text-xs font-medium text-muted-foreground">
-            {runtimeProvider === "kubernetes"
-              ? "Exposed port (NodePort) *"
-              : runtimeProvider === "docker"
-                ? "Exposed port (optional)"
-                : "Exposed port *"}
+            {runtimeProvider === "kubernetes" ? "Port mappings (NodePort)" : "Port mappings"}
           </label>
           {runtimeProvider === "kubernetes" && (
-            <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
-              Port exposed on every node (30000–32767). The container listens on{" "}
-              <span className="font-mono">{item.default_container_port}</span> internally.
+            <p className="text-[11px] text-muted-foreground">
+              NodePort must be in range 30000–32767. Leave blank for ClusterIP-only (internal).
             </p>
           )}
-          <input
-            type="number"
-            required={runtimeProvider !== "docker"}
-            min={runtimeProvider === "kubernetes" ? 30000 : 1}
-            max={runtimeProvider === "kubernetes" ? 32767 : 65535}
-            value={exposedPort}
-            onChange={(e) => setExposedPort(e.target.value)}
-            placeholder={
-              runtimeProvider === "kubernetes" ? "e.g. 30080" : String(item.default_container_port)
-            }
-            className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-          />
+          {portMappings.map((pm, i) => (
+            <div key={pm.name} className="flex items-center gap-2">
+              <span className="text-xs font-mono text-muted-foreground w-20 shrink-0 truncate">{pm.name}</span>
+              <span className="text-xs text-muted-foreground shrink-0">:{pm.containerPort}</span>
+              <span className="text-xs text-muted-foreground shrink-0">→</span>
+              <input
+                type="number"
+                required={runtimeProvider === "nomad" && i === 0}
+                min={runtimeProvider === "kubernetes" ? 30000 : 1}
+                max={runtimeProvider === "kubernetes" ? 32767 : 65535}
+                value={pm.exposedPort}
+                onChange={(e) =>
+                  setPortMappings((prev) =>
+                    prev.map((p, idx) => (idx === i ? { ...p, exposedPort: e.target.value } : p)),
+                  )
+                }
+                placeholder={
+                  runtimeProvider === "kubernetes"
+                    ? "e.g. 30080"
+                    : runtimeProvider === "docker"
+                      ? "host port (optional)"
+                      : String(pm.containerPort)
+                }
+                className="flex-1 px-3 py-2 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+              />
+            </div>
+          ))}
         </div>
       )}
 
