@@ -321,14 +321,18 @@ function DeployDialog({
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
   const [k8sNodeName, setK8sNodeName] = useState("");
-  const [portMappings, setPortMappings] = useState<{ name: string; containerPort: number; exposedPort: string }[]>([]);
+  const [portMappings, setPortMappings] = useState<
+    { name: string; containerPort: number; exposedPort: string }[]
+  >([]);
   const [cpu, setCpu] = useState("");
 
   // Sync port mappings whenever the item changes.
   useEffect(() => {
     const defs = item?.default_ports ?? [];
-    setPortMappings(defs.map((p) => ({ name: p.name, containerPort: p.container_port, exposedPort: "" })));
-  }, [item?.name]);
+    setPortMappings(
+      defs.map((p) => ({ name: p.name, containerPort: p.container_port, exposedPort: "" })),
+    );
+  }, [item?.name, item?.default_ports]);
   const [memory, setMemory] = useState("");
   const [registryId, setRegistryId] = useState("");
   const [imagePath, setImagePath] = useState("");
@@ -680,18 +684,27 @@ function DeployDialog({
               )}
               {portMappings.map((pm, i) => (
                 <div key={pm.name} className="flex items-center gap-2">
-                  <span className="text-xs font-mono text-muted-foreground w-20 shrink-0 truncate">{pm.name}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">:{pm.containerPort}</span>
+                  <span className="text-xs font-mono text-muted-foreground w-20 shrink-0 truncate">
+                    {pm.name}
+                  </span>
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    :{pm.containerPort}
+                  </span>
                   <span className="text-xs text-muted-foreground shrink-0">→</span>
                   <input
                     type="number"
-                    required={runtimeProvider === "nomad" && pm.name === (item.default_ports?.[0]?.name ?? "")}
+                    required={
+                      runtimeProvider === "nomad" &&
+                      pm.name === (item.default_ports?.[0]?.name ?? "")
+                    }
                     min={runtimeProvider === "kubernetes" ? 30000 : 1}
                     max={runtimeProvider === "kubernetes" ? 32767 : 65535}
                     value={pm.exposedPort}
                     onChange={(e) =>
                       setPortMappings((prev) =>
-                        prev.map((p, idx) => (idx === i ? { ...p, exposedPort: e.target.value } : p)),
+                        prev.map((p, idx) =>
+                          idx === i ? { ...p, exposedPort: e.target.value } : p,
+                        ),
                       )
                     }
                     placeholder={
