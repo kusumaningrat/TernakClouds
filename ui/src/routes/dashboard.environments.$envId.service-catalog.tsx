@@ -618,7 +618,8 @@ function DeployDialog({
                   ))}
                 </div>
                 <p className="mt-1 text-[11px] text-muted-foreground">
-                  Use <span className="font-mono">public</span> to bind ports on the host's public interface.
+                  Use <span className="font-mono">public</span> to bind ports on the host's public
+                  interface.
                 </p>
               </div>
             </>

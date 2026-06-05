@@ -146,7 +146,7 @@ function DeployForm({
 }) {
   const navigate = useNavigate();
 
-  const { data: capabilities } = useCapabilities(workspaceSlug, envSlug);
+  const { data: capabilities, isLoading: capsLoading } = useCapabilities(workspaceSlug, envSlug);
   const capList = capabilities ?? [];
 
   const hasNomad = capList.some(
@@ -224,6 +224,14 @@ function DeployForm({
       defs.map((p) => ({ name: p.name, containerPort: p.container_port, exposedPort: "" })),
     );
   }, [item?.name, item?.default_ports]);
+
+  if (capsLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="size-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   const datacenters = [...new Set((nodes ?? []).map((n) => n.Datacenter))];
   const workers = (nodes ?? []).filter((n) => !datacenter || n.Datacenter === datacenter);
@@ -451,7 +459,8 @@ function DeployForm({
               ))}
             </div>
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Use <span className="font-mono">public</span> to bind ports on the host's public interface.
+              Use <span className="font-mono">public</span> to bind ports on the host's public
+              interface.
             </p>
           </div>
         </>
