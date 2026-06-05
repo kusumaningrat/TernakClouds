@@ -33,7 +33,6 @@ function SettingsPage() {
         subtitle="Platform configuration — runtimes, registries, repositories, and access control."
       />
       <main className="p-6 space-y-8 overflow-auto">
-
         {/* Runtimes — per environment */}
         <section>
           <div className="flex items-center justify-between mb-3">
@@ -99,9 +98,12 @@ function SettingsPage() {
             </div>
             <div className="flex-1">
               <div className="font-medium text-sm">
-                {(registries ?? []).length} registr{(registries ?? []).length === 1 ? "y" : "ies"} connected
+                {(registries ?? []).length} registr{(registries ?? []).length === 1 ? "y" : "ies"}{" "}
+                connected
               </div>
-              <div className="text-xs text-muted-foreground">Harbor, Docker Hub, GHCR, ECR supported</div>
+              <div className="text-xs text-muted-foreground">
+                Harbor, Docker Hub, GHCR, ECR supported
+              </div>
             </div>
             <ChevronRight className="size-4 text-muted-foreground" />
           </div>
@@ -129,7 +131,8 @@ function SettingsPage() {
             </div>
             <div className="flex-1">
               <div className="font-medium text-sm">
-                {(repoProviders ?? []).length} provider{(repoProviders ?? []).length === 1 ? "" : "s"} connected
+                {(repoProviders ?? []).length} provider
+                {(repoProviders ?? []).length === 1 ? "" : "s"} connected
               </div>
               <div className="text-xs text-muted-foreground">GitHub and GitLab supported</div>
             </div>
@@ -146,32 +149,34 @@ function SettingsPage() {
             </p>
           </div>
           <div className="space-y-2">
-            {([
-              {
-                to: "/dashboard/roles",
-                label: "Roles & Permissions",
-                desc: "Define and assign platform roles",
-                icon: KeyRound,
-              },
-              {
-                to: "/dashboard/users",
-                label: "Platform Members",
-                desc: "All users across the platform",
-                icon: Users,
-              },
-              {
-                to: "/dashboard/workspaces",
-                label: "All Workspaces",
-                desc: "Manage workspace isolation",
-                icon: Building2,
-              },
-              {
-                to: "/dashboard/departments",
-                label: "Departments",
-                desc: "Organisational structure",
-                icon: Building2,
-              },
-            ] as const).map(({ to, label, desc, icon: Icon }) => (
+            {(
+              [
+                {
+                  to: "/dashboard/roles",
+                  label: "Roles & Permissions",
+                  desc: "Define and assign platform roles",
+                  icon: KeyRound,
+                },
+                {
+                  to: "/dashboard/users",
+                  label: "Platform Members",
+                  desc: "All users across the platform",
+                  icon: Users,
+                },
+                {
+                  to: "/dashboard/workspaces",
+                  label: "All Workspaces",
+                  desc: "Manage workspace isolation",
+                  icon: Building2,
+                },
+                {
+                  to: "/dashboard/departments",
+                  label: "Departments",
+                  desc: "Organisational structure",
+                  icon: Building2,
+                },
+              ] as const
+            ).map(({ to, label, desc, icon: Icon }) => (
               <Link
                 key={to}
                 to={to}

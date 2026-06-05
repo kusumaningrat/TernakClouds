@@ -27,8 +27,9 @@ const EnvironmentContext = createContext<EnvironmentContextValue>({
 });
 
 export function EnvironmentProvider({ children }: { children: ReactNode }) {
-  const [selectedEnvironment, setSelectedEnvironmentState] =
-    useState<WorkspaceEnvironment | null>(null);
+  const [selectedEnvironment, setSelectedEnvironmentState] = useState<WorkspaceEnvironment | null>(
+    null,
+  );
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -58,6 +59,7 @@ export function EnvironmentProvider({ children }: { children: ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useEnvironmentContext() {
   return useContext(EnvironmentContext);
 }

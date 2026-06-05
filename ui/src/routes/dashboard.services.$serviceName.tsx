@@ -39,7 +39,14 @@ export const Route = createFileRoute("/dashboard/services/$serviceName")({
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Tab = "overview" | "deployments" | "logs" | "secrets" | "dependencies" | "ownership" | "settings";
+type Tab =
+  | "overview"
+  | "deployments"
+  | "logs"
+  | "secrets"
+  | "dependencies"
+  | "ownership"
+  | "settings";
 type ServiceStatus = "healthy" | "degraded" | "stopped" | "undeployed";
 
 function deploymentStatus(d: ServiceDeployment | undefined): ServiceStatus {
@@ -59,7 +66,9 @@ function StatusBadge({ status }: { status: ServiceStatus }) {
   };
   const { icon: Icon, label, cls } = map[status];
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>
+    <span
+      className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}
+    >
       <Icon className="size-3" />
       {label}
     </span>
@@ -84,9 +93,7 @@ function ServiceDetailPage() {
 
   // Build env → deployment map for this service
   const envDeployments = useMemo(() => {
-    const visibleEnvs = selectedEnvironment
-      ? [selectedEnvironment]
-      : (environments ?? []);
+    const visibleEnvs = selectedEnvironment ? [selectedEnvironment] : (environments ?? []);
 
     return visibleEnvs.map((env, i) => {
       const globalIdx = (environments ?? []).findIndex((e) => e.id === env.id);
@@ -100,25 +107,24 @@ function ServiceDetailPage() {
   const allStatuses = envDeployments.map((e) => deploymentStatus(e.deployment));
   const hasAnyDeployment = envDeployments.some((e) => e.deployment);
 
-  const overallStatus: ServiceStatus =
-    allStatuses.some((s) => s === "degraded")
-      ? "degraded"
-      : allStatuses.some((s) => s === "stopped")
-        ? "stopped"
-        : allStatuses.every((s) => s === "healthy") && hasAnyDeployment
-          ? "healthy"
-          : hasAnyDeployment
-            ? "degraded"
-            : "undeployed";
+  const overallStatus: ServiceStatus = allStatuses.some((s) => s === "degraded")
+    ? "degraded"
+    : allStatuses.some((s) => s === "stopped")
+      ? "stopped"
+      : allStatuses.every((s) => s === "healthy") && hasAnyDeployment
+        ? "healthy"
+        : hasAnyDeployment
+          ? "degraded"
+          : "undeployed";
 
   const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-    { id: "overview",      label: "Overview",      icon: Layers },
-    { id: "deployments",   label: "Deployments",   icon: Rocket },
-    { id: "logs",          label: "Logs",          icon: ScrollText },
-    { id: "secrets",       label: "Secrets",       icon: KeyRound },
-    { id: "dependencies",  label: "Dependencies",  icon: Link2 },
-    { id: "ownership",     label: "Ownership",     icon: Users },
-    { id: "settings",      label: "Settings",      icon: Settings2 },
+    { id: "overview", label: "Overview", icon: Layers },
+    { id: "deployments", label: "Deployments", icon: Rocket },
+    { id: "logs", label: "Logs", icon: ScrollText },
+    { id: "secrets", label: "Secrets", icon: KeyRound },
+    { id: "dependencies", label: "Dependencies", icon: Link2 },
+    { id: "ownership", label: "Ownership", icon: Users },
+    { id: "settings", label: "Settings", icon: Settings2 },
   ];
 
   if (catalogLoading) {
@@ -206,24 +212,14 @@ function ServiceDetailPage() {
           {tab === "overview" && (
             <OverviewTab envDeployments={envDeployments} serviceName={serviceName} />
           )}
-          {tab === "deployments" && (
-            <DeploymentsTab envDeployments={envDeployments} />
-          )}
-          {tab === "logs" && (
-            <LogsTab envDeployments={envDeployments} />
-          )}
-          {tab === "secrets" && (
-            <SecretsTab slug={slug} envDeployments={envDeployments} />
-          )}
-          {tab === "dependencies" && (
-            <DependenciesTab serviceName={serviceName} />
-          )}
+          {tab === "deployments" && <DeploymentsTab envDeployments={envDeployments} />}
+          {tab === "logs" && <LogsTab envDeployments={envDeployments} />}
+          {tab === "secrets" && <SecretsTab slug={slug} envDeployments={envDeployments} />}
+          {tab === "dependencies" && <DependenciesTab serviceName={serviceName} />}
           {tab === "ownership" && (
             <OwnershipTab serviceName={serviceName} catalogItem={catalogItem} />
           )}
-          {tab === "settings" && catalogItem && (
-            <SettingsTab item={catalogItem} />
-          )}
+          {tab === "settings" && catalogItem && <SettingsTab item={catalogItem} />}
         </div>
       </main>
     </>
@@ -411,7 +407,9 @@ function LogsTab({ envDeployments }: { envDeployments: EnvDeployment[] }) {
             <div className="flex-1 min-w-0">
               <div className="font-medium text-sm">{env.name}</div>
               <div className="text-xs text-muted-foreground">
-                {deployment ? "Streaming live · click to view" : "No deployment in this environment"}
+                {deployment
+                  ? "Streaming live · click to view"
+                  : "No deployment in this environment"}
               </div>
             </div>
             <ChevronRight className="size-4 text-muted-foreground" />
@@ -424,13 +422,7 @@ function LogsTab({ envDeployments }: { envDeployments: EnvDeployment[] }) {
 
 // ─── Secrets tab ─────────────────────────────────────────────────────────────
 
-function SecretsTab({
-  slug,
-  envDeployments,
-}: {
-  slug: string;
-  envDeployments: EnvDeployment[];
-}) {
+function SecretsTab({ slug, envDeployments }: { slug: string; envDeployments: EnvDeployment[] }) {
   return (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Secrets by environment</h3>
@@ -460,10 +452,15 @@ function SecretsTab({
 // ─── Dependencies tab ─────────────────────────────────────────────────────────
 
 const DEPENDENCY_TYPES = [
-  { type: "service",      icon: Layers,   label: "Service",      color: "text-primary bg-primary/10" },
-  { type: "database",     icon: Database, label: "Database",     color: "text-success bg-success/10" },
-  { type: "cache",        icon: Radio,    label: "Cache",        color: "text-warning bg-warning/10" },
-  { type: "external_api", icon: Link2,    label: "External API", color: "text-muted-foreground bg-secondary" },
+  { type: "service", icon: Layers, label: "Service", color: "text-primary bg-primary/10" },
+  { type: "database", icon: Database, label: "Database", color: "text-success bg-success/10" },
+  { type: "cache", icon: Radio, label: "Cache", color: "text-warning bg-warning/10" },
+  {
+    type: "external_api",
+    icon: Link2,
+    label: "External API",
+    color: "text-muted-foreground bg-secondary",
+  },
 ] as const;
 
 function DependenciesTab({ serviceName }: { serviceName: string }) {
@@ -493,8 +490,8 @@ function DependenciesTab({ serviceName }: { serviceName: string }) {
           <Link2 className="size-7 text-muted-foreground mx-auto mb-2" />
           <p className="text-sm font-medium">No dependencies registered</p>
           <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-            Register what this service depends on. This powers the dependency graph and
-            incident impact analysis.
+            Register what this service depends on. This powers the dependency graph and incident
+            impact analysis.
           </p>
           <div className="flex items-center justify-center gap-2 mt-4 flex-wrap">
             {DEPENDENCY_TYPES.map(({ type, icon: Icon, label, color }) => (
@@ -530,10 +527,10 @@ function DependenciesTab({ serviceName }: { serviceName: string }) {
 
       <div className="glass rounded-xl p-4 bg-secondary/30">
         <p className="text-xs text-muted-foreground leading-relaxed">
-          <span className="font-medium text-foreground">Why register dependencies?</span>
-          {" "}The dependency graph powers incident blast-radius analysis, change risk scoring,
-          and platform-level capacity planning. Dependencies are never enforced at deploy time —
-          they are informational and used only for insights.
+          <span className="font-medium text-foreground">Why register dependencies?</span> The
+          dependency graph powers incident blast-radius analysis, change risk scoring, and
+          platform-level capacity planning. Dependencies are never enforced at deploy time — they
+          are informational and used only for insights.
         </p>
       </div>
     </div>
@@ -542,7 +539,14 @@ function DependenciesTab({ serviceName }: { serviceName: string }) {
 
 // ─── Ownership tab ────────────────────────────────────────────────────────────
 
-type CatalogItem = { name: string; display_name: string; description: string; default_cpu: number; default_memory: number; default_container_port: number };
+type CatalogItem = {
+  name: string;
+  display_name: string;
+  description: string;
+  default_cpu: number;
+  default_memory: number;
+  default_container_port: number;
+};
 
 function OwnershipTab({
   serviceName,
@@ -552,12 +556,12 @@ function OwnershipTab({
   catalogItem: CatalogItem | undefined;
 }) {
   const readinessItems = [
-    { label: "Owner team assigned",       done: true },
-    { label: "Repository linked",         done: false },
-    { label: "Incident runbook present",  done: false },
-    { label: "Production monitoring",     done: true },
-    { label: "Deployment automation",     done: false },
-    { label: "On-call assignment",        done: false },
+    { label: "Owner team assigned", done: true },
+    { label: "Repository linked", done: false },
+    { label: "Incident runbook present", done: false },
+    { label: "Production monitoring", done: true },
+    { label: "Deployment automation", done: false },
+    { label: "On-call assignment", done: false },
   ];
 
   const readinessScore = Math.round(
@@ -603,20 +607,26 @@ function OwnershipTab({
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <BookOpen className="size-3.5 text-muted-foreground" />
             Readiness
-            <span className={`ml-auto text-xs font-bold font-mono ${
-              readinessScore >= 80 ? "text-success" :
-              readinessScore >= 50 ? "text-warning" :
-              "text-destructive"
-            }`}>
+            <span
+              className={`ml-auto text-xs font-bold font-mono ${
+                readinessScore >= 80
+                  ? "text-success"
+                  : readinessScore >= 50
+                    ? "text-warning"
+                    : "text-destructive"
+              }`}
+            >
               {readinessScore}/100
             </span>
           </h3>
           <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${
-                readinessScore >= 80 ? "bg-success" :
-                readinessScore >= 50 ? "bg-warning" :
-                "bg-destructive"
+                readinessScore >= 80
+                  ? "bg-success"
+                  : readinessScore >= 50
+                    ? "bg-warning"
+                    : "bg-destructive"
               }`}
               style={{ width: `${readinessScore}%` }}
             />
@@ -668,7 +678,18 @@ function OwnershipTab({
 
 // ─── Settings tab ─────────────────────────────────────────────────────────────
 
-function SettingsTab({ item }: { item: { name: string; display_name: string; description: string; default_cpu: number; default_memory: number; default_container_port: number } }) {
+function SettingsTab({
+  item,
+}: {
+  item: {
+    name: string;
+    display_name: string;
+    description: string;
+    default_cpu: number;
+    default_memory: number;
+    default_container_port: number;
+  };
+}) {
   return (
     <div className="space-y-6 max-w-lg">
       <section className="glass rounded-xl p-5 space-y-3">

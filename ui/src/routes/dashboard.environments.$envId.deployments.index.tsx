@@ -11,6 +11,7 @@ import {
   useK8sNamespaces,
   useK8sPods,
   useDockerContainers,
+  useRemoveDockerContainer,
 } from "@/lib/queries";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -22,6 +23,7 @@ import {
   X,
   Search,
   Settings2,
+  Trash2,
 } from "lucide-react";
 import type {
   NomadJobStub,
@@ -77,18 +79,18 @@ const JOB_STATUS_TEXT: Record<string, string> = {
 // ─── Docker-specific helpers ─────────────────────────────────────────────────
 
 const CONTAINER_STATE_DOT: Record<string, string> = {
-  running:    "bg-success",
-  exited:     "bg-muted-foreground",
-  paused:     "bg-yellow-500",
+  running: "bg-success",
+  exited: "bg-muted-foreground",
+  paused: "bg-yellow-500",
   restarting: "bg-warning",
-  dead:       "bg-destructive",
+  dead: "bg-destructive",
 };
 const CONTAINER_STATE_TEXT: Record<string, string> = {
-  running:    "text-success",
-  exited:     "text-muted-foreground",
-  paused:     "text-yellow-500",
+  running: "text-success",
+  exited: "text-muted-foreground",
+  paused: "text-yellow-500",
   restarting: "text-warning",
-  dead:       "text-destructive",
+  dead: "text-destructive",
 };
 
 function formatCreated(unix: number) {
@@ -114,8 +116,16 @@ function formatPorts(ports: DockerContainerStub["ports"]): string {
 // ─── Log streaming hooks ──────────────────────────────────────────────────────
 
 function useDockerLogStream({
-  slug, envSlug, containerId, enabled,
-}: { slug: string; envSlug: string; containerId: string; enabled: boolean }) {
+  slug,
+  envSlug,
+  containerId,
+  enabled,
+}: {
+  slug: string;
+  envSlug: string;
+  containerId: string;
+  enabled: boolean;
+}) {
   const [lines, setLines] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
   const [streamError, setStreamError] = useState<string | null>(null);
@@ -123,7 +133,9 @@ function useDockerLogStream({
   useEffect(() => {
     if (!enabled || !containerId) return;
     const ctrl = new AbortController();
-    setLines([]); setConnected(false); setStreamError(null);
+    setLines([]);
+    setConnected(false);
+    setStreamError(null);
     const token = getAccessToken();
     const url =
       `${LOG_BASE_URL}/api/v1/workspaces/${slug}/environments/${encodeURIComponent(envSlug)}` +
@@ -134,8 +146,14 @@ function useDockerLogStream({
     void (async () => {
       try {
         const res = await fetch(url, { signal: ctrl.signal, headers });
-        if (!res.ok) { setStreamError(`HTTP ${res.status}`); return; }
-        if (!res.body) { setStreamError("No response body"); return; }
+        if (!res.ok) {
+          setStreamError(`HTTP ${res.status}`);
+          return;
+        }
+        if (!res.body) {
+          setStreamError("No response body");
+          return;
+        }
         setConnected(true);
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -147,7 +165,8 @@ function useDockerLogStream({
           const parts = buffer.split("\n\n");
           buffer = parts.pop() ?? "";
           for (const part of parts) {
-            let eventType = "message"; let data = "";
+            let eventType = "message";
+            let data = "";
             for (const ln of part.split("\n")) {
               if (ln.startsWith("event: ")) eventType = ln.slice(7).trim();
               else if (ln.startsWith("data: ")) data = ln.slice(6);
@@ -173,10 +192,19 @@ function useDockerLogStream({
 }
 
 function useNomadAllocLogStream({
-  slug, envSlug, allocID, task, logType, enabled,
+  slug,
+  envSlug,
+  allocID,
+  task,
+  logType,
+  enabled,
 }: {
-  slug: string; envSlug: string; allocID: string;
-  task: string; logType: "stdout" | "stderr"; enabled: boolean;
+  slug: string;
+  envSlug: string;
+  allocID: string;
+  task: string;
+  logType: "stdout" | "stderr";
+  enabled: boolean;
 }) {
   const [lines, setLines] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
@@ -185,7 +213,9 @@ function useNomadAllocLogStream({
   useEffect(() => {
     if (!enabled || !allocID || !task) return;
     const ctrl = new AbortController();
-    setLines([]); setConnected(false); setStreamError(null);
+    setLines([]);
+    setConnected(false);
+    setStreamError(null);
     const token = getAccessToken();
     const url =
       `${LOG_BASE_URL}/api/v1/workspaces/${slug}/environments/${encodeURIComponent(envSlug)}` +
@@ -197,8 +227,14 @@ function useNomadAllocLogStream({
     void (async () => {
       try {
         const res = await fetch(url, { signal: ctrl.signal, headers });
-        if (!res.ok) { setStreamError(`HTTP ${res.status}`); return; }
-        if (!res.body) { setStreamError("No response body"); return; }
+        if (!res.ok) {
+          setStreamError(`HTTP ${res.status}`);
+          return;
+        }
+        if (!res.body) {
+          setStreamError("No response body");
+          return;
+        }
         setConnected(true);
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -210,7 +246,8 @@ function useNomadAllocLogStream({
           const parts = buffer.split("\n\n");
           buffer = parts.pop() ?? "";
           for (const part of parts) {
-            let eventType = "message"; let data = "";
+            let eventType = "message";
+            let data = "";
             for (const ln of part.split("\n")) {
               if (ln.startsWith("event: ")) eventType = ln.slice(7).trim();
               else if (ln.startsWith("data: ")) data = ln.slice(6);
@@ -236,10 +273,19 @@ function useNomadAllocLogStream({
 }
 
 function useK8sPodLogStream({
-  slug, envSlug, namespace, podName, container, enabled,
+  slug,
+  envSlug,
+  namespace,
+  podName,
+  container,
+  enabled,
 }: {
-  slug: string; envSlug: string; namespace: string;
-  podName: string; container: string; enabled: boolean;
+  slug: string;
+  envSlug: string;
+  namespace: string;
+  podName: string;
+  container: string;
+  enabled: boolean;
 }) {
   const [lines, setLines] = useState<string[]>([]);
   const [connected, setConnected] = useState(false);
@@ -248,7 +294,9 @@ function useK8sPodLogStream({
   useEffect(() => {
     if (!enabled || !podName || !container) return;
     const ctrl = new AbortController();
-    setLines([]); setConnected(false); setStreamError(null);
+    setLines([]);
+    setConnected(false);
+    setStreamError(null);
     const token = getAccessToken();
     const url =
       `${LOG_BASE_URL}/api/v1/workspaces/${slug}/environments/${encodeURIComponent(envSlug)}` +
@@ -260,8 +308,14 @@ function useK8sPodLogStream({
     void (async () => {
       try {
         const res = await fetch(url, { signal: ctrl.signal, headers });
-        if (!res.ok) { setStreamError(`HTTP ${res.status}`); return; }
-        if (!res.body) { setStreamError("No response body"); return; }
+        if (!res.ok) {
+          setStreamError(`HTTP ${res.status}`);
+          return;
+        }
+        if (!res.body) {
+          setStreamError("No response body");
+          return;
+        }
         setConnected(true);
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -273,7 +327,8 @@ function useK8sPodLogStream({
           const parts = buffer.split("\n\n");
           buffer = parts.pop() ?? "";
           for (const part of parts) {
-            let eventType = "message"; let data = "";
+            let eventType = "message";
+            let data = "";
             for (const ln of part.split("\n")) {
               if (ln.startsWith("event: ")) eventType = ln.slice(7).trim();
               else if (ln.startsWith("data: ")) data = ln.slice(6);
@@ -301,7 +356,12 @@ function useK8sPodLogStream({
 // ─── Shared log terminal ──────────────────────────────────────────────────────
 
 function LogTerminal({
-  lines, connected, streamError, termRef, onScroll, onClear,
+  lines,
+  connected,
+  streamError,
+  termRef,
+  onScroll,
+  onClear,
 }: {
   lines: string[];
   connected: boolean;
@@ -326,7 +386,10 @@ function LogTerminal({
               <span className="text-[11px] text-success font-medium">live</span>
             </>
           ) : streamError ? (
-            <span className="text-[11px] text-destructive truncate max-w-[220px]" title={streamError}>
+            <span
+              className="text-[11px] text-destructive truncate max-w-[220px]"
+              title={streamError}
+            >
               {streamError}
             </span>
           ) : (
@@ -348,7 +411,9 @@ function LogTerminal({
           </span>
         ) : (
           lines.map((line, i) => (
-            <div key={i} className="whitespace-pre-wrap break-all">{line}</div>
+            <div key={i} className="whitespace-pre-wrap break-all">
+              {line}
+            </div>
           ))
         )}
       </div>
@@ -359,9 +424,23 @@ function LogTerminal({
 // ─── Runtime-specific log panels ─────────────────────────────────────────────
 
 function NomadLogsPanel({
-  slug, envSlug, jobId, namespace,
-}: { slug: string; envSlug: string; jobId: string; namespace: string }) {
-  const { data: allocations = [], isLoading } = useNomadAllocations(slug, envSlug, jobId, namespace, true);
+  slug,
+  envSlug,
+  jobId,
+  namespace,
+}: {
+  slug: string;
+  envSlug: string;
+  jobId: string;
+  namespace: string;
+}) {
+  const { data: allocations = [], isLoading } = useNomadAllocations(
+    slug,
+    envSlug,
+    jobId,
+    namespace,
+    true,
+  );
   const termRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
 
@@ -378,13 +457,15 @@ function NomadLogsPanel({
   const taskKey = tasks.join(",");
   useEffect(() => {
     if (!task && tasks.length > 0) setTask(tasks[0] ?? "");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [taskKey]);
 
   const { lines, connected, streamError, clear } = useNomadAllocLogStream({
-    slug, envSlug,
+    slug,
+    envSlug,
     allocID: runningAlloc?.ID ?? "",
-    task, logType,
+    task,
+    logType,
     enabled: !!runningAlloc?.ID && !!task,
   });
 
@@ -422,11 +503,13 @@ function NomadLogsPanel({
           <span className="font-mono text-[11px] bg-secondary px-1.5 py-0.5 rounded border border-border">
             {runningAlloc.ID.slice(0, 8)}
           </span>
-          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
-            runningAlloc.ClientStatus === "running"
-              ? "bg-success/10 text-success"
-              : "bg-muted text-muted-foreground"
-          }`}>
+          <span
+            className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${
+              runningAlloc.ClientStatus === "running"
+                ? "bg-success/10 text-success"
+                : "bg-muted text-muted-foreground"
+            }`}
+          >
             {runningAlloc.ClientStatus}
           </span>
         </div>
@@ -436,7 +519,11 @@ function NomadLogsPanel({
             onChange={(e) => setTask(e.target.value)}
             className="text-xs px-2 py-1 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
-            {tasks.map((t) => <option key={t} value={t}>{t}</option>)}
+            {tasks.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
           </select>
         )}
         <div className="flex rounded-md border border-border overflow-hidden text-[11px]">
@@ -456,17 +543,31 @@ function NomadLogsPanel({
         </div>
       </div>
       <LogTerminal
-        lines={lines} connected={connected} streamError={streamError}
-        termRef={termRef} onScroll={handleScroll}
-        onClear={() => { clear(); atBottomRef.current = true; }}
+        lines={lines}
+        connected={connected}
+        streamError={streamError}
+        termRef={termRef}
+        onScroll={handleScroll}
+        onClear={() => {
+          clear();
+          atBottomRef.current = true;
+        }}
       />
     </>
   );
 }
 
 function K8sLogsPanel({
-  slug, envSlug, namespace, depName,
-}: { slug: string; envSlug: string; namespace: string; depName: string }) {
+  slug,
+  envSlug,
+  namespace,
+  depName,
+}: {
+  slug: string;
+  envSlug: string;
+  namespace: string;
+  depName: string;
+}) {
   const { data: pods = [], isLoading } = useK8sPods(slug, envSlug, namespace, true);
   const termRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
@@ -481,18 +582,22 @@ function K8sLogsPanel({
   const candidatesKey = candidates.map((p) => p.name).join(",");
   useEffect(() => {
     if (!podName && candidates.length > 0) setPodName(candidates[0]?.name ?? "");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [candidatesKey]);
 
   const selectedPod = pods.find((p) => p.name === podName);
   const containerKey = selectedPod?.containers.join(",") ?? "";
   useEffect(() => {
     if (selectedPod?.containers.length) setContainer(selectedPod.containers[0] ?? "");
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [podName, containerKey]);
 
   const { lines, connected, streamError, clear } = useK8sPodLogStream({
-    slug, envSlug, namespace, podName, container,
+    slug,
+    envSlug,
+    namespace,
+    podName,
+    container,
     enabled: !!podName && !!container,
   });
 
@@ -527,10 +632,17 @@ function K8sLogsPanel({
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border shrink-0 flex-wrap">
         <select
           value={podName}
-          onChange={(e) => { setPodName(e.target.value); setContainer(""); }}
+          onChange={(e) => {
+            setPodName(e.target.value);
+            setContainer("");
+          }}
           className="text-xs px-2 py-1 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/50 font-mono flex-1 min-w-0"
         >
-          {candidates.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
+          {candidates.map((p) => (
+            <option key={p.name} value={p.name}>
+              {p.name}
+            </option>
+          ))}
         </select>
         {selectedPod && selectedPod.containers.length > 0 && (
           <select
@@ -538,27 +650,46 @@ function K8sLogsPanel({
             onChange={(e) => setContainer(e.target.value)}
             className="text-xs px-2 py-1 rounded border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
-            {selectedPod.containers.map((c) => <option key={c} value={c}>{c}</option>)}
+            {selectedPod.containers.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
           </select>
         )}
       </div>
       <LogTerminal
-        lines={lines} connected={connected} streamError={streamError}
-        termRef={termRef} onScroll={handleScroll}
-        onClear={() => { clear(); atBottomRef.current = true; }}
+        lines={lines}
+        connected={connected}
+        streamError={streamError}
+        termRef={termRef}
+        onScroll={handleScroll}
+        onClear={() => {
+          clear();
+          atBottomRef.current = true;
+        }}
       />
     </>
   );
 }
 
 function DockerLogsPanel({
-  slug, envSlug, container,
-}: { slug: string; envSlug: string; container: DockerContainerStub }) {
+  slug,
+  envSlug,
+  container,
+}: {
+  slug: string;
+  envSlug: string;
+  container: DockerContainerStub;
+}) {
   const termRef = useRef<HTMLDivElement>(null);
   const atBottomRef = useRef(true);
 
   const { lines, connected, streamError, clear } = useDockerLogStream({
-    slug, envSlug, containerId: container.id, enabled: true,
+    slug,
+    envSlug,
+    containerId: container.id,
+    enabled: true,
   });
 
   useEffect(() => {
@@ -574,9 +705,15 @@ function DockerLogsPanel({
 
   return (
     <LogTerminal
-      lines={lines} connected={connected} streamError={streamError}
-      termRef={termRef} onScroll={handleScroll}
-      onClear={() => { clear(); atBottomRef.current = true; }}
+      lines={lines}
+      connected={connected}
+      streamError={streamError}
+      termRef={termRef}
+      onScroll={handleScroll}
+      onClear={() => {
+        clear();
+        atBottomRef.current = true;
+      }}
     />
   );
 }
@@ -591,17 +728,29 @@ type DrawerTarget =
 // ─── Log drawer ───────────────────────────────────────────────────────────────
 
 function LogDrawer({
-  slug, envSlug, target, onClose,
-}: { slug: string; envSlug: string; target: DrawerTarget; onClose: () => void }) {
+  slug,
+  envSlug,
+  target,
+  onClose,
+}: {
+  slug: string;
+  envSlug: string;
+  target: DrawerTarget;
+  onClose: () => void;
+}) {
   const title =
-    target.kind === "nomad" ? target.job.Name :
-    target.kind === "k8s" ? target.dep.name :
-    target.container.name.replace(/^\//, "");
+    target.kind === "nomad"
+      ? target.job.Name
+      : target.kind === "k8s"
+        ? target.dep.name
+        : target.container.name.replace(/^\//, "");
 
   const subtitle =
-    target.kind === "nomad" ? `${target.namespace} · Nomad` :
-    target.kind === "k8s" ? `${target.dep.namespace} · Kubernetes` :
-    `${target.container.id.slice(0, 12)} · Docker`;
+    target.kind === "nomad"
+      ? `${target.namespace} · Nomad`
+      : target.kind === "k8s"
+        ? `${target.dep.namespace} · Kubernetes`
+        : `${target.container.id.slice(0, 12)} · Docker`;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex">
@@ -615,16 +764,29 @@ function LogDrawer({
               <p className="text-xs font-mono text-muted-foreground mt-0.5">{subtitle}</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-accent transition text-muted-foreground shrink-0">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-accent transition text-muted-foreground shrink-0"
+          >
             <X className="size-4" />
           </button>
         </div>
 
         {target.kind === "nomad" && (
-          <NomadLogsPanel slug={slug} envSlug={envSlug} jobId={target.job.ID} namespace={target.namespace} />
+          <NomadLogsPanel
+            slug={slug}
+            envSlug={envSlug}
+            jobId={target.job.ID}
+            namespace={target.namespace}
+          />
         )}
         {target.kind === "k8s" && (
-          <K8sLogsPanel slug={slug} envSlug={envSlug} namespace={target.dep.namespace} depName={target.dep.name} />
+          <K8sLogsPanel
+            slug={slug}
+            envSlug={envSlug}
+            namespace={target.dep.namespace}
+            depName={target.dep.name}
+          />
         )}
         {target.kind === "docker" && (
           <DockerLogsPanel slug={slug} envSlug={envSlug} container={target.container} />
@@ -649,19 +811,21 @@ function DetailRow({ label, value }: { label: string; value?: React.ReactNode })
 function LabelRow({ k, v }: { k: string; v: string }) {
   return (
     <div className="py-2 border-b border-border last:border-0 space-y-0.5">
-      <div className="text-[11px] text-muted-foreground font-mono truncate" title={k}>{k}</div>
+      <div className="text-[11px] text-muted-foreground font-mono truncate" title={k}>
+        {k}
+      </div>
       <div className="text-xs font-mono break-all">{v || "—"}</div>
     </div>
   );
 }
 
-function DetailsDrawer({
-  target, onClose,
-}: { target: DrawerTarget; onClose: () => void }) {
+function DetailsDrawer({ target, onClose }: { target: DrawerTarget; onClose: () => void }) {
   const title =
-    target.kind === "nomad" ? target.job.Name :
-    target.kind === "k8s" ? target.dep.name :
-    target.container.name.replace(/^\//, "");
+    target.kind === "nomad"
+      ? target.job.Name
+      : target.kind === "k8s"
+        ? target.dep.name
+        : target.container.name.replace(/^\//, "");
 
   const [width, setWidth] = useState(400);
   const dragging = useRef(false);
@@ -704,7 +868,10 @@ function DetailsDrawer({
             <Settings2 className="size-4 text-muted-foreground shrink-0" />
             <p className="font-semibold text-sm truncate">{title}</p>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-accent transition text-muted-foreground shrink-0">
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-md hover:bg-accent transition text-muted-foreground shrink-0"
+          >
             <X className="size-4" />
           </button>
         </div>
@@ -712,22 +879,32 @@ function DetailsDrawer({
         <div className="flex-1 overflow-y-auto p-4 space-y-5">
           {target.kind === "nomad" && (
             <section>
-              <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">JOB</p>
+              <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">
+                JOB
+              </p>
               <DetailRow label="Job ID" value={target.job.ID} />
               <DetailRow label="Name" value={target.job.Name} />
               <DetailRow label="Type" value={target.job.Type} />
               <DetailRow label="Status" value={target.job.Status} />
               <DetailRow label="Namespace" value={target.namespace} />
-              <DetailRow label="Datacenters" value={(target.job.Datacenters ?? []).join(", ") || "—"} />
+              <DetailRow
+                label="Datacenters"
+                value={(target.job.Datacenters ?? []).join(", ") || "—"}
+              />
               <DetailRow label="Submitted" value={formatTime(target.job.SubmitTime)} />
             </section>
           )}
           {target.kind === "k8s" && (
             <section>
-              <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">DEPLOYMENT</p>
+              <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">
+                DEPLOYMENT
+              </p>
               <DetailRow label="Name" value={target.dep.name} />
               <DetailRow label="Namespace" value={target.dep.namespace} />
-              <DetailRow label="Replicas" value={`${target.dep.ready} / ${target.dep.desired} ready`} />
+              <DetailRow
+                label="Replicas"
+                value={`${target.dep.ready} / ${target.dep.desired} ready`}
+              />
               <DetailRow label="Up-to-date" value={String(target.dep.upToDate)} />
               <DetailRow label="Available" value={String(target.dep.available)} />
               <DetailRow label="Created" value={formatDate(target.dep.createdAt)} />
@@ -736,7 +913,9 @@ function DetailsDrawer({
           {target.kind === "docker" && (
             <>
               <section>
-                <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">CONTAINER</p>
+                <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">
+                  CONTAINER
+                </p>
                 <DetailRow label="Container ID" value={target.container.id} />
                 <DetailRow label="Name" value={target.container.name.replace(/^\//, "")} />
                 <DetailRow label="Image" value={target.container.image} />
@@ -747,7 +926,9 @@ function DetailsDrawer({
               </section>
               {Object.keys(target.container.labels ?? {}).length > 0 && (
                 <section>
-                  <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">LABELS</p>
+                  <p className="text-[10px] font-semibold tracking-widest text-muted-foreground mb-2">
+                    LABELS
+                  </p>
                   {Object.entries(target.container.labels).map(([k, v]) => (
                     <LabelRow key={k} k={k} v={v} />
                   ))}
@@ -788,13 +969,11 @@ function ActionBtn({
   );
 }
 
-function RowActions({
-  onLogs, onDetails,
-}: { onLogs: () => void; onDetails: () => void }) {
+function RowActions({ onLogs, onDetails }: { onLogs: () => void; onDetails: () => void }) {
   return (
     <div className="flex items-center gap-0.5">
-      <ActionBtn onClick={onLogs}    icon={Terminal}  label="View logs" />
-      <ActionBtn onClick={onDetails} icon={Settings2} label="Details"   />
+      <ActionBtn onClick={onLogs} icon={Terminal} label="View logs" />
+      <ActionBtn onClick={onDetails} icon={Settings2} label="Details" />
     </div>
   );
 }
@@ -802,7 +981,11 @@ function RowActions({
 // ─── Nomad job row ────────────────────────────────────────────────────────────
 
 function JobRow({
-  job, envId, namespace, onLogs, onDetails,
+  job,
+  envId,
+  namespace,
+  onLogs,
+  onDetails,
 }: {
   job: NomadJobStub;
   envId: string;
@@ -810,7 +993,7 @@ function JobRow({
   onLogs: () => void;
   onDetails: () => void;
 }) {
-  const dotCls  = JOB_STATUS_DOT[job.Status]  ?? "bg-muted-foreground";
+  const dotCls = JOB_STATUS_DOT[job.Status] ?? "bg-muted-foreground";
   const textCls = JOB_STATUS_TEXT[job.Status] ?? "text-muted-foreground";
 
   return (
@@ -861,8 +1044,14 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
   const [detailsTarget, setDetailsTarget] = useState<DrawerTarget | null>(null);
 
   const { data: namespaces = [] } = useNomadNamespaces(slug, envId);
-  const { data: jobs = [], isLoading, isFetching, error, refetch, dataUpdatedAt } =
-    useNomadJobs(slug, envId, namespace);
+  const {
+    data: jobs = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    dataUpdatedAt,
+  } = useNomadJobs(slug, envId, namespace);
 
   const filtered = search
     ? jobs.filter(
@@ -893,20 +1082,26 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
             className="text-xs px-2 py-1 rounded-md border border-border bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
             {namespaces.map((ns) => (
-              <option key={ns.Name} value={ns.Name}>{ns.Name}</option>
+              <option key={ns.Name} value={ns.Name}>
+                {ns.Name}
+              </option>
             ))}
           </select>
         )}
         {!isLoading && (
           <span className="text-xs text-muted-foreground">
-            {filtered.length}{filtered.length !== jobs.length ? `/${jobs.length}` : ""} job{jobs.length !== 1 ? "s" : ""}
+            {filtered.length}
+            {filtered.length !== jobs.length ? `/${jobs.length}` : ""} job
+            {jobs.length !== 1 ? "s" : ""}
           </span>
         )}
         {dataUpdatedAt > 0 && !isLoading && (
           <span className="text-xs text-muted-foreground/60">
             · updated{" "}
             {new Date(dataUpdatedAt).toLocaleTimeString(undefined, {
-              hour: "2-digit", minute: "2-digit", second: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
             })}
           </span>
         )}
@@ -933,9 +1128,7 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
       )}
       {!isLoading && !error && filtered.length === 0 && (
         <div className="py-16 text-center text-sm text-muted-foreground">
-          {jobs.length === 0
-            ? `No jobs in namespace ${namespace}.`
-            : "No jobs match the search."}
+          {jobs.length === 0 ? `No jobs in namespace ${namespace}.` : "No jobs match the search."}
         </div>
       )}
 
@@ -945,7 +1138,10 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 {["Job", "Type", "Status", "Datacenters", "Submitted", ""].map((h) => (
-                  <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th
+                    key={h}
+                    className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
                     {h}
                   </th>
                 ))}
@@ -968,7 +1164,12 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
       )}
 
       {logTarget && (
-        <LogDrawer slug={slug} envSlug={envId} target={logTarget} onClose={() => setLogTarget(null)} />
+        <LogDrawer
+          slug={slug}
+          envSlug={envId}
+          target={logTarget}
+          onClose={() => setLogTarget(null)}
+        />
       )}
       {detailsTarget && (
         <DetailsDrawer target={detailsTarget} onClose={() => setDetailsTarget(null)} />
@@ -980,14 +1181,17 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
 // ─── K8s deployment row ───────────────────────────────────────────────────────
 
 function K8sDeploymentRow({
-  dep, envId, onLogs, onDetails,
+  dep,
+  envId,
+  onLogs,
+  onDetails,
 }: {
   dep: K8sDeploymentStub;
   envId: string;
   onLogs: () => void;
   onDetails: () => void;
 }) {
-  const isHealthy    = dep.ready >= dep.desired && dep.desired > 0;
+  const isHealthy = dep.ready >= dep.desired && dep.desired > 0;
   const isScaledDown = dep.desired === 0;
 
   return (
@@ -1011,17 +1215,25 @@ function K8sDeploymentRow({
           />
           <span
             className={`text-xs font-medium ${
-              isScaledDown ? "text-muted-foreground" : isHealthy ? "text-success" : "text-yellow-500"
+              isScaledDown
+                ? "text-muted-foreground"
+                : isHealthy
+                  ? "text-success"
+                  : "text-yellow-500"
             }`}
           >
             {isScaledDown ? "scaled down" : isHealthy ? "healthy" : "degraded"}
           </span>
         </div>
       </td>
-      <td className="px-3 py-3 text-xs font-mono text-muted-foreground">{dep.ready}/{dep.desired}</td>
+      <td className="px-3 py-3 text-xs font-mono text-muted-foreground">
+        {dep.ready}/{dep.desired}
+      </td>
       <td className="px-3 py-3 text-xs font-mono text-muted-foreground">{dep.upToDate}</td>
       <td className="px-3 py-3 text-xs font-mono text-muted-foreground">{dep.available}</td>
-      <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">{formatDate(dep.createdAt)}</td>
+      <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">
+        {formatDate(dep.createdAt)}
+      </td>
       <td className="px-3 py-2">
         <RowActions onLogs={onLogs} onDetails={onDetails} />
       </td>
@@ -1041,16 +1253,27 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
   const [detailsTarget, setDetailsTarget] = useState<DrawerTarget | null>(null);
 
   const { data: namespaces = [] } = useK8sNamespaces(slug, envId);
-  const { data: deployments = [], isLoading, isFetching, error, refetch, dataUpdatedAt } =
-    useK8sDeployments(slug, envId, namespace);
+  const {
+    data: deployments = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    dataUpdatedAt,
+  } = useK8sDeployments(slug, envId, namespace);
 
-  const filtered = deployments.filter((d) => {
-    if (filter === "active") return d.desired > 0;
-    if (filter === "scaled-down") return d.desired === 0;
-    return true;
-  }).filter((d) =>
-    !search || d.name.toLowerCase().includes(search.toLowerCase()) || d.namespace.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = deployments
+    .filter((d) => {
+      if (filter === "active") return d.desired > 0;
+      if (filter === "scaled-down") return d.desired === 0;
+      return true;
+    })
+    .filter(
+      (d) =>
+        !search ||
+        d.name.toLowerCase().includes(search.toLowerCase()) ||
+        d.namespace.toLowerCase().includes(search.toLowerCase()),
+    );
 
   const filterBtns: { key: K8sFilter; label: string }[] = [
     { key: "all", label: "All" },
@@ -1079,7 +1302,9 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
             className="text-xs px-2 py-1 rounded-md border border-border bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary/50"
           >
             {namespaces.map((ns) => (
-              <option key={ns.name} value={ns.name}>{ns.name}</option>
+              <option key={ns.name} value={ns.name}>
+                {ns.name}
+              </option>
             ))}
           </select>
         )}
@@ -1090,7 +1315,9 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
               key={key}
               onClick={() => setFilter(key)}
               className={`px-2.5 py-1 transition ${
-                filter === key ? "bg-primary text-primary-foreground" : "hover:bg-accent text-muted-foreground"
+                filter === key
+                  ? "bg-primary text-primary-foreground"
+                  : "hover:bg-accent text-muted-foreground"
               }`}
             >
               {label}
@@ -1099,14 +1326,18 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
         </div>
         {!isLoading && (
           <span className="text-xs text-muted-foreground">
-            {filtered.length}{filtered.length !== deployments.length ? `/${deployments.length}` : ""} deployment{deployments.length !== 1 ? "s" : ""}
+            {filtered.length}
+            {filtered.length !== deployments.length ? `/${deployments.length}` : ""} deployment
+            {deployments.length !== 1 ? "s" : ""}
           </span>
         )}
         {dataUpdatedAt > 0 && !isLoading && (
           <span className="text-xs text-muted-foreground/60">
             · updated{" "}
             {new Date(dataUpdatedAt).toLocaleTimeString(undefined, {
-              hour: "2-digit", minute: "2-digit", second: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
             })}
           </span>
         )}
@@ -1144,11 +1375,16 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                {["Deployment", "Status", "Ready", "Up-to-date", "Available", "Created", ""].map((h) => (
-                  <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {h}
-                  </th>
-                ))}
+                {["Deployment", "Status", "Ready", "Up-to-date", "Available", "Created", ""].map(
+                  (h) => (
+                    <th
+                      key={h}
+                      className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                    >
+                      {h}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody className="bg-background">
@@ -1167,7 +1403,12 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
       )}
 
       {logTarget && (
-        <LogDrawer slug={slug} envSlug={envId} target={logTarget} onClose={() => setLogTarget(null)} />
+        <LogDrawer
+          slug={slug}
+          envSlug={envId}
+          target={logTarget}
+          onClose={() => setLogTarget(null)}
+        />
       )}
       {detailsTarget && (
         <DetailsDrawer target={detailsTarget} onClose={() => setDetailsTarget(null)} />
@@ -1179,17 +1420,37 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
 // ─── Docker container row ─────────────────────────────────────────────────────
 
 function DockerContainerRow({
-  container, onLogs, onDetails,
+  container,
+  slug,
+  envId,
+  onLogs,
+  onDetails,
 }: {
   container: DockerContainerStub;
+  slug: string;
+  envId: string;
   onLogs: () => void;
   onDetails: () => void;
 }) {
-  const state   = container.state?.toLowerCase() ?? "";
-  const dotCls  = CONTAINER_STATE_DOT[state]  ?? "bg-muted-foreground";
+  const state = container.state?.toLowerCase() ?? "";
+  const dotCls = CONTAINER_STATE_DOT[state] ?? "bg-muted-foreground";
   const textCls = CONTAINER_STATE_TEXT[state] ?? "text-muted-foreground";
   const shortId = container.id.slice(0, 12);
-  const imgTag  = container.image.includes(":") ? container.image : `${container.image}:latest`;
+  const imgTag = container.image.includes(":") ? container.image : `${container.image}:latest`;
+
+  const [confirming, setConfirming] = useState(false);
+  const remove = useRemoveDockerContainer();
+
+  const handleDelete = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    remove.mutate(
+      { slug, envSlug: envId, id: container.id },
+      { onSettled: () => setConfirming(false) },
+    );
+  };
 
   return (
     <tr className="border-b border-border hover:bg-accent/30 transition-colors">
@@ -1214,7 +1475,30 @@ function DockerContainerRow({
         {formatCreated(container.created)}
       </td>
       <td className="px-3 py-2">
-        <RowActions onLogs={onLogs} onDetails={onDetails} />
+        <div className="flex items-center gap-0.5">
+          <ActionBtn onClick={onLogs} icon={Terminal} label="View logs" />
+          <ActionBtn onClick={onDetails} icon={Settings2} label="Details" />
+          {confirming ? (
+            <div className="flex items-center gap-1 ml-1">
+              <button
+                onClick={() => setConfirming(false)}
+                className="text-[10px] px-1.5 py-0.5 rounded hover:bg-accent text-muted-foreground transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={remove.isPending}
+                className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/15 text-destructive hover:bg-destructive/25 transition flex items-center gap-1 disabled:opacity-60"
+              >
+                {remove.isPending && <Loader2 className="size-2.5 animate-spin" />}
+                Confirm
+              </button>
+            </div>
+          ) : (
+            <ActionBtn onClick={handleDelete} icon={Trash2} label="Stop & remove" />
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -1227,8 +1511,14 @@ function DockerContainersListView({ slug, envId }: { slug: string; envId: string
   const [logTarget, setLogTarget] = useState<DrawerTarget | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<DrawerTarget | null>(null);
 
-  const { data: containers = [], isLoading, isFetching, error, refetch, dataUpdatedAt } =
-    useDockerContainers(slug, envId, true);
+  const {
+    data: containers = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    dataUpdatedAt,
+  } = useDockerContainers(slug, envId, true);
 
   const filtered = search
     ? containers.filter(
@@ -1254,14 +1544,18 @@ function DockerContainersListView({ slug, envId }: { slug: string; envId: string
         </div>
         {!isLoading && (
           <span className="text-xs text-muted-foreground">
-            {filtered.length}{filtered.length !== containers.length ? `/${containers.length}` : ""} container{containers.length !== 1 ? "s" : ""}
+            {filtered.length}
+            {filtered.length !== containers.length ? `/${containers.length}` : ""} container
+            {containers.length !== 1 ? "s" : ""}
           </span>
         )}
         {dataUpdatedAt > 0 && !isLoading && (
           <span className="text-xs text-muted-foreground/60">
             · updated{" "}
             {new Date(dataUpdatedAt).toLocaleTimeString(undefined, {
-              hour: "2-digit", minute: "2-digit", second: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
             })}
           </span>
         )}
@@ -1297,7 +1591,10 @@ function DockerContainersListView({ slug, envId }: { slug: string; envId: string
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 {["Container", "Image", "State", "Status", "Ports", "Created", ""].map((h) => (
-                  <th key={h} className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <th
+                    key={h}
+                    className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
                     {h}
                   </th>
                 ))}
@@ -1308,6 +1605,8 @@ function DockerContainersListView({ slug, envId }: { slug: string; envId: string
                 <DockerContainerRow
                   key={c.id}
                   container={c}
+                  slug={slug}
+                  envId={envId}
                   onLogs={() => setLogTarget({ kind: "docker", container: c })}
                   onDetails={() => setDetailsTarget({ kind: "docker", container: c })}
                 />
@@ -1318,7 +1617,12 @@ function DockerContainersListView({ slug, envId }: { slug: string; envId: string
       )}
 
       {logTarget && (
-        <LogDrawer slug={slug} envSlug={envId} target={logTarget} onClose={() => setLogTarget(null)} />
+        <LogDrawer
+          slug={slug}
+          envSlug={envId}
+          target={logTarget}
+          onClose={() => setLogTarget(null)}
+        />
       )}
       {detailsTarget && (
         <DetailsDrawer target={detailsTarget} onClose={() => setDetailsTarget(null)} />
@@ -1337,10 +1641,10 @@ function EnvDeploymentsPage() {
   const slug = selectedWorkspace?.slug ?? "";
 
   const { data: status, isLoading: capLoading } = useCapability(slug, envId, "runtime");
-  const hasNomad  = (status?.providers ?? []).some((p) => p.provider_name === "nomad");
-  const hasK8s    = (status?.providers ?? []).some((p) => p.provider_name === "kubernetes");
+  const hasNomad = (status?.providers ?? []).some((p) => p.provider_name === "nomad");
+  const hasK8s = (status?.providers ?? []).some((p) => p.provider_name === "kubernetes");
   const hasDocker = (status?.providers ?? []).some((p) => p.provider_name === "docker");
-  const hasAny    = hasNomad || hasK8s || hasDocker;
+  const hasAny = hasNomad || hasK8s || hasDocker;
 
   type Tab = "nomad" | "k8s" | "docker";
   const [activeTab, setActiveTab] = useState<Tab>(() =>
@@ -1348,9 +1652,9 @@ function EnvDeploymentsPage() {
   );
 
   const tabs: { key: Tab; label: string; enabled: boolean }[] = [
-    { key: "nomad",  label: "Nomad",      enabled: hasNomad },
-    { key: "k8s",    label: "Kubernetes", enabled: hasK8s },
-    { key: "docker", label: "Docker",     enabled: hasDocker },
+    { key: "nomad", label: "Nomad", enabled: hasNomad },
+    { key: "k8s", label: "Kubernetes", enabled: hasK8s },
+    { key: "docker", label: "Docker", enabled: hasDocker },
   ];
 
   return (
@@ -1406,9 +1710,11 @@ function EnvDeploymentsPage() {
             </div>
           )}
 
-          {activeTab === "nomad"  && hasNomad  && <JobsListView             slug={slug} envId={envId} />}
-          {activeTab === "k8s"    && hasK8s    && <K8sDeploymentsListView   slug={slug} envId={envId} />}
-          {activeTab === "docker" && hasDocker && <DockerContainersListView slug={slug} envId={envId} />}
+          {activeTab === "nomad" && hasNomad && <JobsListView slug={slug} envId={envId} />}
+          {activeTab === "k8s" && hasK8s && <K8sDeploymentsListView slug={slug} envId={envId} />}
+          {activeTab === "docker" && hasDocker && (
+            <DockerContainersListView slug={slug} envId={envId} />
+          )}
         </main>
       )}
     </>

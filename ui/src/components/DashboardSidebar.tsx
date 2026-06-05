@@ -75,25 +75,37 @@ function EnvSwitcher() {
       {open && (
         <div className="absolute left-3 right-3 top-full mt-1.5 z-50 rounded-lg border border-border bg-popover shadow-lg overflow-hidden py-1">
           <button
-            onClick={() => { setSelectedEnvironment(null); setOpen(false); }}
+            onClick={() => {
+              setSelectedEnvironment(null);
+              setOpen(false);
+            }}
             className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors hover:bg-accent ${
               !selectedEnvironment ? "text-primary font-medium" : "text-muted-foreground"
             }`}
           >
-            <span className={`size-1.5 rounded-full shrink-0 ${!selectedEnvironment ? "bg-primary" : "bg-muted-foreground/30"}`} />
+            <span
+              className={`size-1.5 rounded-full shrink-0 ${!selectedEnvironment ? "bg-primary" : "bg-muted-foreground/30"}`}
+            />
             All Environments
           </button>
           {environments.map((env) => (
             <button
               key={env.id}
-              onClick={() => { setSelectedEnvironment(env); setOpen(false); }}
+              onClick={() => {
+                setSelectedEnvironment(env);
+                setOpen(false);
+              }}
               className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors hover:bg-accent ${
-                selectedEnvironment?.id === env.id ? "text-primary font-medium" : "text-muted-foreground"
+                selectedEnvironment?.id === env.id
+                  ? "text-primary font-medium"
+                  : "text-muted-foreground"
               }`}
             >
-              <span className={`size-1.5 rounded-full shrink-0 ${
-                selectedEnvironment?.id === env.id ? "bg-primary" : "bg-muted-foreground/30"
-              }`} />
+              <span
+                className={`size-1.5 rounded-full shrink-0 ${
+                  selectedEnvironment?.id === env.id ? "bg-primary" : "bg-muted-foreground/30"
+                }`}
+              />
               {env.name}
             </button>
           ))}
@@ -143,13 +155,7 @@ function NavItem({
 
 // ─── Nav section ──────────────────────────────────────────────────────────────
 
-function NavSection({
-  label,
-  children,
-}: {
-  label?: string;
-  children: React.ReactNode;
-}) {
+function NavSection({ label, children }: { label?: string; children: React.ReactNode }) {
   return (
     <div className="space-y-0.5">
       {label && (
@@ -171,7 +177,7 @@ export function DashboardSidebar() {
   const { selectedEnvironment } = useEnvironmentContext();
 
   const { data: me } = useMe();
-  const privileged    = isAdminOrManager(me?.roles);
+  const privileged = isAdminOrManager(me?.roles);
   const isPlatformEng = isPlatformEngineer(me?.roles);
 
   const { data: pendingRequests } = useAccessRequestsPending();
@@ -184,16 +190,16 @@ export function DashboardSidebar() {
     to === "/dashboard" ? path === to : path === to || path.startsWith(to + "/");
 
   // Environment-scoped nav targets
-  const deploymentsTo     = envBase ? `${envBase}/deployments` : "/dashboard/deployments";
+  const deploymentsTo = envBase ? `${envBase}/deployments` : "/dashboard/deployments";
   const deploymentsActive = active(envBase ? `${envBase}/deployments` : "/dashboard/deployments");
 
-  const secretsTo     = envBase ? `${envBase}/secrets` : "/dashboard/environments";
+  const secretsTo = envBase ? `${envBase}/secrets` : "/dashboard/environments";
   const secretsActive = envBase ? active(`${envBase}/secrets`) : active("/dashboard/environments");
 
   // Overview: env home but not any sub-path (deployments, secrets, etc.)
-  const overviewTo     = envBase ?? "/dashboard/environments";
+  const overviewTo = envBase ?? "/dashboard/environments";
   const overviewActive = envBase
-    ? (path === envBase || path === `${envBase}/`)
+    ? path === envBase || path === `${envBase}/`
     : active("/dashboard/environments");
 
   // Deploy CTA destination
@@ -201,7 +207,6 @@ export function DashboardSidebar() {
 
   return (
     <aside className="hidden md:flex w-52 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-
       {/* ── Logo header ── */}
       <div className="h-12 shrink-0 flex items-center px-4 border-b border-sidebar-border">
         <Link to="/dashboard" className="flex items-center gap-2 min-w-0">
@@ -218,7 +223,6 @@ export function DashboardSidebar() {
 
       {/* ── Scrollable nav body ── */}
       <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-5">
-
         {/* Environment switcher */}
         <EnvSwitcher />
 
@@ -234,30 +238,20 @@ export function DashboardSidebar() {
 
         {/* Environment-scoped */}
         <NavSection label="ENVIRONMENT">
-          <NavItem
-            to={overviewTo}
-            icon={Globe}
-            label="Overview"
-            active={overviewActive}
-          />
+          <NavItem to={overviewTo} icon={Globe} label="Overview" active={overviewActive} />
           <NavItem
             to={deploymentsTo}
             icon={Rocket}
             label="Deployments"
             active={deploymentsActive}
           />
-          <NavItem
+          {/* <NavItem
             to="/dashboard/logs"
             icon={ScrollText}
             label="Logs"
             active={active("/dashboard/logs")}
-          />
-          <NavItem
-            to={secretsTo}
-            icon={KeyRound}
-            label="Secrets"
-            active={secretsActive}
-          />
+          /> */}
+          <NavItem to={secretsTo} icon={KeyRound} label="Secrets" active={secretsActive} />
         </NavSection>
 
         {/* Catalog */}
@@ -298,7 +292,6 @@ export function DashboardSidebar() {
             )}
           </NavSection>
         )}
-
       </div>
 
       {/* ── Deploy CTA ── */}

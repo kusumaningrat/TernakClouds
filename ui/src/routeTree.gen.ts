@@ -32,6 +32,7 @@ import { Route as DashboardInsightsRouteImport } from './routes/dashboard.insigh
 import { Route as DashboardEnvironmentsRouteImport } from './routes/dashboard.environments'
 import { Route as DashboardDeploymentsRouteImport } from './routes/dashboard.deployments'
 import { Route as DashboardDeploymentControlsRouteImport } from './routes/dashboard.deployment-controls'
+import { Route as DashboardDeployRouteImport } from './routes/dashboard.deploy'
 import { Route as DashboardDepartmentsRouteImport } from './routes/dashboard.departments'
 import { Route as DashboardAccessRequestsRouteImport } from './routes/dashboard.access-requests'
 import { Route as DashboardAccessRouteImport } from './routes/dashboard.access'
@@ -39,6 +40,7 @@ import { Route as DashboardEnvironmentsIndexRouteImport } from './routes/dashboa
 import { Route as EnvironmentsEnvIdIntegrationsRouteImport } from './routes/environments.$envId.integrations'
 import { Route as DashboardServicesServiceNameRouteImport } from './routes/dashboard.services.$serviceName'
 import { Route as DashboardEnvironmentsEnvIdRouteImport } from './routes/dashboard.environments.$envId'
+import { Route as DashboardDeployServiceNameRouteImport } from './routes/dashboard.deploy.$serviceName'
 import { Route as DashboardEnvironmentsEnvIdIndexRouteImport } from './routes/dashboard.environments.$envId.index'
 import { Route as DashboardEnvironmentsEnvIdSettingsRouteImport } from './routes/dashboard.environments.$envId.settings'
 import { Route as DashboardEnvironmentsEnvIdServicesRouteImport } from './routes/dashboard.environments.$envId.services'
@@ -185,6 +187,11 @@ const DashboardDeploymentControlsRoute =
     path: '/deployment-controls',
     getParentRoute: () => DashboardRoute,
   } as any)
+const DashboardDeployRoute = DashboardDeployRouteImport.update({
+  id: '/deploy',
+  path: '/deploy',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardDepartmentsRoute = DashboardDepartmentsRouteImport.update({
   id: '/departments',
   path: '/departments',
@@ -223,6 +230,12 @@ const DashboardEnvironmentsEnvIdRoute =
     id: '/$envId',
     path: '/$envId',
     getParentRoute: () => DashboardEnvironmentsRoute,
+  } as any)
+const DashboardDeployServiceNameRoute =
+  DashboardDeployServiceNameRouteImport.update({
+    id: '/$serviceName',
+    path: '/$serviceName',
+    getParentRoute: () => DashboardDeployRoute,
   } as any)
 const DashboardEnvironmentsEnvIdIndexRoute =
   DashboardEnvironmentsEnvIdIndexRouteImport.update({
@@ -408,6 +421,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/access': typeof DashboardAccessRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
+  '/dashboard/deploy': typeof DashboardDeployRouteWithChildren
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/environments': typeof DashboardEnvironmentsRouteWithChildren
@@ -426,6 +440,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/workspaces': typeof DashboardWorkspacesRoute
   '/environments/$envId': typeof EnvironmentsEnvIdRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/deploy/$serviceName': typeof DashboardDeployServiceNameRoute
   '/dashboard/environments/$envId': typeof DashboardEnvironmentsEnvIdRouteWithChildren
   '/dashboard/services/$serviceName': typeof DashboardServicesServiceNameRoute
   '/environments/$envId/integrations': typeof EnvironmentsEnvIdIntegrationsRoute
@@ -468,6 +483,7 @@ export interface FileRoutesByTo {
   '/dashboard/access': typeof DashboardAccessRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
+  '/dashboard/deploy': typeof DashboardDeployRouteWithChildren
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/insights': typeof DashboardInsightsRoute
@@ -485,6 +501,7 @@ export interface FileRoutesByTo {
   '/dashboard/workspaces': typeof DashboardWorkspacesRoute
   '/environments/$envId': typeof EnvironmentsEnvIdRouteWithChildren
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/deploy/$serviceName': typeof DashboardDeployServiceNameRoute
   '/dashboard/services/$serviceName': typeof DashboardServicesServiceNameRoute
   '/environments/$envId/integrations': typeof EnvironmentsEnvIdIntegrationsRoute
   '/dashboard/environments': typeof DashboardEnvironmentsIndexRoute
@@ -525,6 +542,7 @@ export interface FileRoutesById {
   '/dashboard/access': typeof DashboardAccessRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
+  '/dashboard/deploy': typeof DashboardDeployRouteWithChildren
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
   '/dashboard/environments': typeof DashboardEnvironmentsRouteWithChildren
@@ -543,6 +561,7 @@ export interface FileRoutesById {
   '/dashboard/workspaces': typeof DashboardWorkspacesRoute
   '/environments/$envId': typeof EnvironmentsEnvIdRouteWithChildren
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/deploy/$serviceName': typeof DashboardDeployServiceNameRoute
   '/dashboard/environments/$envId': typeof DashboardEnvironmentsEnvIdRouteWithChildren
   '/dashboard/services/$serviceName': typeof DashboardServicesServiceNameRoute
   '/environments/$envId/integrations': typeof EnvironmentsEnvIdIntegrationsRoute
@@ -588,6 +607,7 @@ export interface FileRouteTypes {
     | '/dashboard/access'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
+    | '/dashboard/deploy'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
     | '/dashboard/environments'
@@ -606,6 +626,7 @@ export interface FileRouteTypes {
     | '/dashboard/workspaces'
     | '/environments/$envId'
     | '/dashboard/'
+    | '/dashboard/deploy/$serviceName'
     | '/dashboard/environments/$envId'
     | '/dashboard/services/$serviceName'
     | '/environments/$envId/integrations'
@@ -648,6 +669,7 @@ export interface FileRouteTypes {
     | '/dashboard/access'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
+    | '/dashboard/deploy'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
     | '/dashboard/insights'
@@ -665,6 +687,7 @@ export interface FileRouteTypes {
     | '/dashboard/workspaces'
     | '/environments/$envId'
     | '/dashboard'
+    | '/dashboard/deploy/$serviceName'
     | '/dashboard/services/$serviceName'
     | '/environments/$envId/integrations'
     | '/dashboard/environments'
@@ -704,6 +727,7 @@ export interface FileRouteTypes {
     | '/dashboard/access'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
+    | '/dashboard/deploy'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
     | '/dashboard/environments'
@@ -722,6 +746,7 @@ export interface FileRouteTypes {
     | '/dashboard/workspaces'
     | '/environments/$envId'
     | '/dashboard/'
+    | '/dashboard/deploy/$serviceName'
     | '/dashboard/environments/$envId'
     | '/dashboard/services/$serviceName'
     | '/environments/$envId/integrations'
@@ -929,6 +954,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDeploymentControlsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/deploy': {
+      id: '/dashboard/deploy'
+      path: '/deploy'
+      fullPath: '/dashboard/deploy'
+      preLoaderRoute: typeof DashboardDeployRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/departments': {
       id: '/dashboard/departments'
       path: '/departments'
@@ -977,6 +1009,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dashboard/environments/$envId'
       preLoaderRoute: typeof DashboardEnvironmentsEnvIdRouteImport
       parentRoute: typeof DashboardEnvironmentsRoute
+    }
+    '/dashboard/deploy/$serviceName': {
+      id: '/dashboard/deploy/$serviceName'
+      path: '/$serviceName'
+      fullPath: '/dashboard/deploy/$serviceName'
+      preLoaderRoute: typeof DashboardDeployServiceNameRouteImport
+      parentRoute: typeof DashboardDeployRoute
     }
     '/dashboard/environments/$envId/': {
       id: '/dashboard/environments/$envId/'
@@ -1184,6 +1223,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface DashboardDeployRouteChildren {
+  DashboardDeployServiceNameRoute: typeof DashboardDeployServiceNameRoute
+}
+
+const DashboardDeployRouteChildren: DashboardDeployRouteChildren = {
+  DashboardDeployServiceNameRoute: DashboardDeployServiceNameRoute,
+}
+
+const DashboardDeployRouteWithChildren = DashboardDeployRoute._addFileChildren(
+  DashboardDeployRouteChildren,
+)
+
 interface DashboardEnvironmentsEnvIdDeploymentsRouteChildren {
   DashboardEnvironmentsEnvIdDeploymentsJobIdRoute: typeof DashboardEnvironmentsEnvIdDeploymentsJobIdRoute
   DashboardEnvironmentsEnvIdDeploymentsIndexRoute: typeof DashboardEnvironmentsEnvIdDeploymentsIndexRoute
@@ -1359,6 +1410,7 @@ interface DashboardRouteChildren {
   DashboardAccessRoute: typeof DashboardAccessRoute
   DashboardAccessRequestsRoute: typeof DashboardAccessRequestsRoute
   DashboardDepartmentsRoute: typeof DashboardDepartmentsRoute
+  DashboardDeployRoute: typeof DashboardDeployRouteWithChildren
   DashboardDeploymentControlsRoute: typeof DashboardDeploymentControlsRoute
   DashboardDeploymentsRoute: typeof DashboardDeploymentsRoute
   DashboardEnvironmentsRoute: typeof DashboardEnvironmentsRouteWithChildren
@@ -1382,6 +1434,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAccessRoute: DashboardAccessRoute,
   DashboardAccessRequestsRoute: DashboardAccessRequestsRoute,
   DashboardDepartmentsRoute: DashboardDepartmentsRoute,
+  DashboardDeployRoute: DashboardDeployRouteWithChildren,
   DashboardDeploymentControlsRoute: DashboardDeploymentControlsRoute,
   DashboardDeploymentsRoute: DashboardDeploymentsRoute,
   DashboardEnvironmentsRoute: DashboardEnvironmentsRouteWithChildren,

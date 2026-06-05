@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useParams } from "@tanstack/react-router";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 import {
@@ -15,10 +15,9 @@ import {
   useCapabilities,
   catalogKeys,
 } from "@/lib/queries";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  Package,
   Plus,
   Trash2,
   Loader2,
@@ -32,7 +31,19 @@ import {
   Eye,
   EyeOff,
   Server,
+  Search,
+  Rocket,
+  Circle,
+  ScrollText,
+  Database,
+  Zap,
+  Radio,
+  HardDrive,
+  Activity,
+  Network,
+  Box,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { CatalogItem, ServiceDeployment } from "@/lib/types";
 import type { ApiError } from "@/lib/api";
@@ -59,7 +70,54 @@ export const Route = createFileRoute("/dashboard/environments/$envId/service-cat
   component: ServiceCatalogPage,
 });
 
-// ─── Runtime badge ─────────────────────────────────────────────────────────────
+// ─── Category system ────────────────────────────────────────────────────────────
+
+const ALL_CATEGORIES = [
+  "All",
+  "Database",
+  "Cache",
+  "Message Broker",
+  "Object Storage",
+  "Monitoring",
+  "Networking",
+  "AI Services",
+  "Application",
+] as const;
+
+type Category = (typeof ALL_CATEGORIES)[number];
+
+const CATEGORY_PATTERNS: [RegExp, Exclude<Category, "All">][] = [
+  [/postgres|mysql|mariadb|mongodb|mongo|cassandra|cockroach|clickhouse|tidb/i, "Database"],
+  [/redis|memcached|dragonfly|keydb/i, "Cache"],
+  [/rabbit|kafka|nats|pulsar|activemq/i, "Message Broker"],
+  [/minio|seaweed|ceph|swift/i, "Object Storage"],
+  [/prometheus|grafana|loki|jaeger|tempo|alertmanager|zipkin/i, "Monitoring"],
+  [/nginx|traefik|haproxy|envoy|kong|caddy/i, "Networking"],
+  [/ollama|llm|whisper|ai-/i, "AI Services"],
+];
+
+function inferCategory(item: CatalogItem): Exclude<Category, "All"> {
+  const text = `${item.name} ${item.display_name}`;
+  for (const [pattern, cat] of CATEGORY_PATTERNS) {
+    if (pattern.test(text)) return cat;
+  }
+  return "Application";
+}
+
+type CategoryConfig = { icon: LucideIcon; color: string; bg: string };
+
+const CATEGORY_CONFIG: Record<Exclude<Category, "All">, CategoryConfig> = {
+  Database: { icon: Database, color: "text-blue-600", bg: "bg-blue-500/10" },
+  Cache: { icon: Zap, color: "text-amber-600", bg: "bg-amber-500/10" },
+  "Message Broker": { icon: Radio, color: "text-purple-600", bg: "bg-purple-500/10" },
+  "Object Storage": { icon: HardDrive, color: "text-teal-600", bg: "bg-teal-500/10" },
+  Monitoring: { icon: Activity, color: "text-orange-600", bg: "bg-orange-500/10" },
+  Networking: { icon: Network, color: "text-slate-600", bg: "bg-slate-500/10" },
+  "AI Services": { icon: Cpu, color: "text-violet-600", bg: "bg-violet-500/10" },
+  Application: { icon: Box, color: "text-primary", bg: "bg-primary/10" },
+};
+
+// ─── Runtime badge ──────────────────────────────────────────────────────────────
 
 const RUNTIME_COLORS: Record<string, string> = {
   nomad: "bg-purple-500/15 text-purple-600",
@@ -70,16 +128,16 @@ const RUNTIME_COLORS: Record<string, string> = {
 function RuntimeBadge({ provider }: { provider: string }) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${RUNTIME_COLORS[provider] ?? "bg-muted text-muted-foreground"}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${RUNTIME_COLORS[provider] ?? "bg-muted text-muted-foreground"}`}
     >
       {provider}
     </span>
   );
 }
 
-// ─── Status badge ──────────────────────────────────────────────────────────────
+// ─── Status badge ───────────────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<string, string> = {
+const STATUS_STYLES: Record<string, string> = {
   running: "bg-emerald-500/15 text-emerald-600",
   pending: "bg-amber-500/15 text-amber-600",
   dead: "bg-gray-400/15 text-gray-500",
@@ -89,14 +147,15 @@ const STATUS_COLORS: Record<string, string> = {
 function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium ${STATUS_COLORS[status] ?? "bg-muted text-muted-foreground"}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium ${STATUS_STYLES[status] ?? "bg-muted text-muted-foreground"}`}
     >
       {status}
     </span>
   );
 }
 
-// Fetches live Nomad status — only rendered for Nomad deployments.
+// ─── Nomad live status ──────────────────────────────────────────────────────────
+
 function NomadLiveStatus({
   workspaceSlug,
   envSlug,
@@ -119,8 +178,6 @@ function NomadLiveStatus({
     enabled,
   );
 
-  // When the Nomad job can't be reached, invalidate the deployments list so
-  // the backend sync can detect and remove jobs that no longer exist on the provider.
   useEffect(() => {
     if (!error) return;
     void queryClient.invalidateQueries({
@@ -129,78 +186,52 @@ function NomadLiveStatus({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [!!error]);
 
-  if (!enabled) return <span className="text-[11px] text-muted-foreground">no provider</span>;
+  if (!enabled) return <span className="text-[10px] text-muted-foreground">no provider</span>;
   if (isLoading) return <Loader2 className="size-3 animate-spin text-muted-foreground" />;
   if (error) return <StatusBadge status="unknown" />;
   return <StatusBadge status={data?.Status?.toLowerCase() ?? "unknown"} />;
 }
 
-// ─── Catalog card ──────────────────────────────────────────────────────────────
+// ─── Env mapping row ────────────────────────────────────────────────────────────
 
-function CatalogCard({
-  item,
-  onDeploy,
+function EnvVarRow({
+  envKey,
+  envValue,
+  onChangeKey,
+  onChangeValue,
+  onRemove,
 }: {
-  item: CatalogItem;
-  onDeploy: (item: CatalogItem) => void;
+  envKey: string;
+  envValue: string;
+  onChangeKey: (v: string) => void;
+  onChangeValue: (v: string) => void;
+  onRemove: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col">
-      <div className="h-1.5 w-full bg-[image:var(--gradient-primary)]" />
-      <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2">
-            <div className="size-8 rounded-lg bg-secondary grid place-items-center shrink-0">
-              <Package className="size-4 text-muted-foreground" />
-            </div>
-            <div>
-              <div className="font-semibold text-sm">{item.display_name}</div>
-              <div className="text-[11px] text-muted-foreground font-mono">{item.name}</div>
-            </div>
-          </div>
-          {item.is_public_image ? (
-            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              <Globe className="size-3" /> Public
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[11px] text-amber-600 bg-amber-500/10 px-2 py-0.5 rounded-full">
-              <Lock className="size-3" /> Private
-            </span>
-          )}
-        </div>
-
-        {item.description && (
-          <p className="text-xs text-muted-foreground mb-3 line-clamp-2">{item.description}</p>
-        )}
-
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground mb-4">
-          <span className="flex items-center gap-1">
-            <Cpu className="size-3" /> {item.default_cpu}m
-          </span>
-          <span className="flex items-center gap-1">
-            <MemoryStick className="size-3" /> {item.default_memory} MB
-          </span>
-          {item.default_image && (
-            <span className="font-mono truncate max-w-[120px]" title={item.default_image}>
-              :{item.default_image.split(":")[1] ?? "latest"}
-            </span>
-          )}
-        </div>
-
-        <div className="mt-auto">
-          <button
-            onClick={() => onDeploy(item)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition"
-          >
-            <Plus className="size-3.5" /> Deploy
-          </button>
-        </div>
-      </div>
+    <div className="flex items-center gap-2">
+      <input
+        value={envKey}
+        onChange={(e) => onChangeKey(e.target.value)}
+        placeholder="KEY"
+        className="flex-1 px-2.5 py-1.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-xs font-mono"
+      />
+      <span className="text-muted-foreground text-xs shrink-0">=</span>
+      <input
+        value={envValue}
+        onChange={(e) => onChangeValue(e.target.value)}
+        placeholder="value"
+        className="flex-1 px-2.5 py-1.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-xs font-mono"
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition shrink-0"
+      >
+        <X className="size-3.5" />
+      </button>
     </div>
   );
 }
-
-// ─── Env mapping row ────────────────────────────────────────────────────────────
 
 function EnvMappingRow({
   envVar,
@@ -253,7 +284,7 @@ function EnvMappingRow({
   );
 }
 
-// ─── Deploy dialog ─────────────────────────────────────────────────────────────
+// ─── Deploy dialog ──────────────────────────────────────────────────────────────
 
 function DeployDialog({
   open,
@@ -288,7 +319,6 @@ function DeployDialog({
   const { data: bindings } = useEnvironmentRegistries(workspaceSlug, envSlug);
   const deploy = useDeployService(workspaceSlug, envSlug);
 
-  // Determine available runtimes from capabilities
   const availableRuntimes = [
     ...(hasNomad ? [{ value: "nomad", label: "Nomad" }] : []),
     ...(hasKubernetes ? [{ value: "kubernetes", label: "Kubernetes" }] : []),
@@ -299,26 +329,39 @@ function DeployDialog({
 
   const [runtimeProvider, setRuntimeProvider] = useState(defaultRuntime);
   const [jobName, setJobName] = useState("");
-  // Nomad fields
   const [datacenter, setDatacenter] = useState("");
   const [namespace, setNamespace] = useState("default");
   const [workerName, setWorkerName] = useState("");
-  // Kubernetes fields
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
   const [k8sNodeName, setK8sNodeName] = useState("");
-  // Shared
   const [exposedPort, setExposedPort] = useState("");
   const [cpu, setCpu] = useState("");
   const [memory, setMemory] = useState("");
-  // Registry
   const [registryId, setRegistryId] = useState("");
   const [imagePath, setImagePath] = useState("");
   const [imageTag, setImageTag] = useState("");
-  // Vault (Nomad only)
   const [vaultRole, setVaultRole] = useState("");
   const [vaultPath, setVaultPath] = useState("");
   const [envMappings, setEnvMappings] = useState<[string, string][]>([]);
+  const copyCatalogEnvToMappings = (item: CatalogItem) => {
+    if (!item?.environment_config) return;
+    setEnvMappings(Object.entries(item.environment_config));
+  };
+
+  const [envVars, setEnvVars] = useState<[string, string][]>([]);
+  const addEnvVar = () => setEnvVars((prev) => [...prev, ["", ""]]);
+  const updateEnvVar = (i: number, field: 0 | 1, value: string) =>
+    setEnvVars((prev) =>
+      prev.map((pair, idx) =>
+        idx === i ? (field === 0 ? [value, pair[1]] : [pair[0], value]) : pair,
+      ),
+    );
+  const removeEnvVar = (i: number) => setEnvVars((prev) => prev.filter((_, idx) => idx !== i));
+  const copyCatalogEnvVars = (item: CatalogItem) => {
+    if (!item?.environment_config) return;
+    setEnvVars(Object.entries(item.environment_config));
+  };
 
   const datacenters = [...new Set((nodes ?? []).map((n) => n.Datacenter))];
   const workers = (nodes ?? []).filter((n) => !datacenter || n.Datacenter === datacenter);
@@ -341,6 +384,7 @@ function DeployDialog({
     setVaultRole("");
     setVaultPath("");
     setEnvMappings([]);
+    setEnvVars([]);
     onClose();
   };
 
@@ -363,31 +407,39 @@ function DeployDialog({
       return acc;
     }, {});
 
+    const vars = envVars.reduce<Record<string, string>>((acc, [k, v]) => {
+      if (k) acc[k] = v;
+      return acc;
+    }, {});
+
+    const portValue = exposedPort.trim() ? parseInt(exposedPort, 10) : undefined;
+    if (exposedPort.trim() && Number.isNaN(portValue)) {
+      toast.error("Exposed port must be a valid number");
+      return;
+    }
+
     try {
       await deploy.mutateAsync({
         catalog_name: item.name,
         job_name: jobName,
         runtime_provider: runtimeProvider,
-        exposed_port: parseInt(exposedPort, 10),
+        exposed_port: portValue,
         cpu: cpu ? parseInt(cpu, 10) : undefined,
         memory: memory ? parseInt(memory, 10) : undefined,
-        // Nomad
         datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
         namespace: runtimeProvider === "nomad" ? namespace : undefined,
         worker_name: runtimeProvider === "nomad" ? workerName : undefined,
-        // Kubernetes
         k8s_namespace: runtimeProvider === "kubernetes" ? k8sNamespace : undefined,
         replicas: runtimeProvider === "kubernetes" && replicas ? parseInt(replicas, 10) : undefined,
         k8s_node_name: runtimeProvider === "kubernetes" && k8sNodeName ? k8sNodeName : undefined,
-        // Registry
         registry_id: registryId || undefined,
         image_path: imagePath || undefined,
         image_tag: imageTag || undefined,
-        // Vault
         vault_role: runtimeProvider === "nomad" ? vaultRole || undefined : undefined,
         vault_path: runtimeProvider === "nomad" ? vaultPath || undefined : undefined,
         env_mappings:
           runtimeProvider === "nomad" && Object.keys(mappings).length > 0 ? mappings : undefined,
+        env_vars: runtimeProvider === "docker" && Object.keys(vars).length > 0 ? vars : undefined,
       });
       toast.success(`${item.display_name} deployed via ${runtimeProvider}`);
       handleClose();
@@ -465,7 +517,7 @@ function DeployDialog({
             />
           </div>
 
-          {/* ── Nomad-specific fields ── */}
+          {/* Nomad-specific fields */}
           {runtimeProvider === "nomad" && (
             <>
               <div>
@@ -547,7 +599,7 @@ function DeployDialog({
             </>
           )}
 
-          {/* ── Kubernetes-specific fields ── */}
+          {/* Kubernetes-specific fields */}
           {runtimeProvider === "kubernetes" && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -616,32 +668,42 @@ function DeployDialog({
             </div>
           )}
 
-          {/* Exposed port */}
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              {runtimeProvider === "kubernetes" ? "Exposed port (NodePort) *" : "Exposed port *"}
-            </label>
-            {runtimeProvider === "kubernetes" && (
-              <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
-                Port exposed on every node (30000–32767). The container listens on{" "}
-                <span className="font-mono">{item.default_container_port}</span> internally.
-              </p>
-            )}
-            <input
-              required
-              type="number"
-              min={runtimeProvider === "kubernetes" ? 30000 : 1}
-              max={runtimeProvider === "kubernetes" ? 32767 : 65535}
-              value={exposedPort}
-              onChange={(e) => setExposedPort(e.target.value)}
-              placeholder={
-                runtimeProvider === "kubernetes"
-                  ? "e.g. 30080"
-                  : String(item.default_container_port)
-              }
-              className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-            />
-          </div>
+          {/* Exposed port — hidden for portless services */}
+          {item.default_container_port === 0 ? (
+            <p className="text-[11px] text-muted-foreground px-3 py-2.5 rounded-md bg-muted/40 border border-border">
+              This service does not expose a network port and will run without port mapping.
+            </p>
+          ) : (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                {runtimeProvider === "kubernetes"
+                  ? "Exposed port (NodePort) *"
+                  : runtimeProvider === "docker"
+                    ? "Exposed port (optional)"
+                    : "Exposed port *"}
+              </label>
+              {runtimeProvider === "kubernetes" && (
+                <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
+                  Port exposed on every node (30000–32767). The container listens on{" "}
+                  <span className="font-mono">{item.default_container_port}</span> internally.
+                </p>
+              )}
+              <input
+                type="number"
+                required={runtimeProvider !== "docker"}
+                min={runtimeProvider === "kubernetes" ? 30000 : 1}
+                max={runtimeProvider === "kubernetes" ? 32767 : 65535}
+                value={exposedPort}
+                onChange={(e) => setExposedPort(e.target.value)}
+                placeholder={
+                  runtimeProvider === "kubernetes"
+                    ? "e.g. 30080"
+                    : String(item.default_container_port)
+                }
+                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+              />
+            </div>
+          )}
 
           {/* CPU + Memory */}
           <div className="grid grid-cols-2 gap-3">
@@ -723,6 +785,54 @@ function DeployDialog({
             />
           </div>
 
+          {/* Environment variables — Docker only */}
+          {runtimeProvider === "docker" && (
+            <div className="border-t border-border pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Environment variables{" "}
+                  <span className="font-normal text-muted-foreground/60">optional</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  {item?.environment_config && (
+                    <button
+                      type="button"
+                      onClick={() => copyCatalogEnvVars(item)}
+                      className="text-[11px] text-muted-foreground hover:text-primary hover:underline transition"
+                    >
+                      Copy catalog defaults
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={addEnvVar}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+              {envVars.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  No environment variables. Add one to pass config into the container.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {envVars.map(([k, v], i) => (
+                    <EnvVarRow
+                      key={i}
+                      envKey={k}
+                      envValue={v}
+                      onChangeKey={(val) => updateEnvVar(i, 0, val)}
+                      onChangeValue={(val) => updateEnvVar(i, 1, val)}
+                      onRemove={() => removeEnvVar(i)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Vault section — Nomad only */}
           {runtimeProvider === "nomad" && (
             <div className="border-t border-border pt-4 space-y-3">
@@ -758,13 +868,24 @@ function DeployDialog({
                       (ENV_VAR → secret value)
                     </span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={addEnvMapping}
-                    className="text-[11px] text-primary hover:underline"
-                  >
-                    + Add
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {item?.environment_config && (
+                      <button
+                        type="button"
+                        onClick={() => copyCatalogEnvToMappings(item)}
+                        className="text-[11px] text-muted-foreground hover:text-primary hover:underline transition"
+                      >
+                        Copy catalog defaults
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={addEnvMapping}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      + Add
+                    </button>
+                  </div>
                 </div>
                 {envMappings.length === 0 ? (
                   <p className="text-[11px] text-muted-foreground">
@@ -811,7 +932,7 @@ function DeployDialog({
   );
 }
 
-// ─── Job definition viewer ─────────────────────────────────────────────────────
+// ─── Job definition viewer ──────────────────────────────────────────────────────
 
 function DefinitionDialog({ definition, onClose }: { definition: string; onClose: () => void }) {
   return (
@@ -841,87 +962,237 @@ function DefinitionDialog({ definition, onClose }: { definition: string; onClose
   );
 }
 
-// ─── Deployment row ────────────────────────────────────────────────────────────
+// ─── Service card ───────────────────────────────────────────────────────────────
 
-function DeploymentRow({
-  d,
+type CardHealth = "running" | "pending" | "failed" | "inactive";
+
+const CARD_BORDER: Record<CardHealth, string> = {
+  running: "border-success/40",
+  pending: "border-warning/40",
+  failed: "border-destructive/40",
+  inactive: "border-border",
+};
+
+const CARD_ACCENT: Record<CardHealth, string> = {
+  running: "bg-success",
+  pending: "bg-warning",
+  failed: "bg-destructive",
+  inactive: "bg-transparent",
+};
+
+function cardHealth(d: ServiceDeployment | null): CardHealth {
+  if (!d) return "inactive";
+  const s = d.status?.toLowerCase() ?? "";
+  if (s === "running") return "running";
+  if (s === "pending") return "pending";
+  return "failed";
+}
+
+const HEALTH_ORDER: Record<CardHealth, number> = {
+  failed: 0,
+  pending: 1,
+  running: 2,
+  inactive: 3,
+};
+
+function EnvServiceCard({
+  item,
+  deployment,
+  category,
   workspaceSlug,
   envSlug,
   hasNomadProvider,
+  onDeploy,
   onStop,
   stopping,
   onViewDefinition,
 }: {
-  d: ServiceDeployment;
+  item: CatalogItem;
+  deployment: ServiceDeployment | null;
+  category: Exclude<Category, "All">;
   workspaceSlug: string;
   envSlug: string;
   hasNomadProvider: boolean;
+  onDeploy: (item: CatalogItem) => void;
   onStop: (d: ServiceDeployment) => void;
   stopping: boolean;
   onViewDefinition: (d: ServiceDeployment) => void;
 }) {
-  const isNomad = d.runtime_provider === "nomad" || d.runtime_provider === "";
+  const { icon: Icon, color, bg } = CATEGORY_CONFIG[category];
+  const health = cardHealth(deployment);
+  const isDeployed = !!deployment;
+  const isNomad =
+    !deployment || deployment.runtime_provider === "nomad" || deployment.runtime_provider === "";
 
   return (
-    <tr className="border-b border-border last:border-0 hover:bg-muted/40 transition">
-      <td className="px-4 py-3">
-        <div className="font-medium text-sm">{d.job_name}</div>
-        <div className="text-[11px] text-muted-foreground">{d.catalog_name}</div>
-      </td>
-      <td className="px-4 py-3">
-        <RuntimeBadge provider={d.runtime_provider || "nomad"} />
-      </td>
-      <td className="px-4 py-3">
-        {isNomad ? (
-          <NomadLiveStatus
-            workspaceSlug={workspaceSlug}
-            envSlug={envSlug}
-            nomadJobId={d.nomad_job_id}
-            namespace={d.namespace}
-            enabled={hasNomadProvider}
-          />
-        ) : (
-          <StatusBadge status={d.status} />
-        )}
-      </td>
-      <td className="px-4 py-3 text-xs text-muted-foreground font-mono">
-        {isNomad ? `${d.datacenter} / ${d.namespace}` : d.namespace || "—"}
-      </td>
-      <td className="px-4 py-3 text-xs text-muted-foreground font-mono">:{d.exposed_port}</td>
-      <td
-        className="px-4 py-3 text-xs text-muted-foreground font-mono max-w-[180px] truncate"
-        title={d.image}
-      >
-        {d.image}
-      </td>
-      <td className="px-4 py-3 text-xs text-muted-foreground">
-        {d.cpu}m / {d.memory} MB
-      </td>
-      <td className="px-4 py-3 text-right">
-        <div className="flex items-center gap-1.5 justify-end">
-          {d.job_definition && (
-            <button
-              onClick={() => onViewDefinition(d)}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md bg-secondary hover:bg-accent text-xs text-muted-foreground transition"
-              title="View job definition"
-            >
-              <FileCode className="size-3.5" /> Definition
-            </button>
+    <div
+      className={`flex flex-col rounded-xl border bg-card overflow-hidden ${CARD_BORDER[health]}`}
+    >
+      {/* Health accent stripe */}
+      <div className={`h-0.5 w-full ${CARD_ACCENT[health]}`} />
+
+      {/* Card body */}
+      <div className="p-4 flex-1 flex flex-col gap-3">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className={`size-8 rounded-lg ${bg} grid place-items-center shrink-0`}>
+              <Icon className={`size-4 ${color}`} />
+            </div>
+            <div className="min-w-0">
+              <div className="font-semibold text-sm truncate">{item.display_name || item.name}</div>
+              <span
+                className={`inline-flex items-center mt-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${bg} ${color}`}
+              >
+                {category}
+              </span>
+            </div>
+          </div>
+
+          {/* Live status badge */}
+          {isDeployed && (
+            <div className="shrink-0">
+              {isNomad ? (
+                <NomadLiveStatus
+                  workspaceSlug={workspaceSlug}
+                  envSlug={envSlug}
+                  nomadJobId={deployment!.nomad_job_id}
+                  namespace={deployment!.namespace}
+                  enabled={hasNomadProvider}
+                />
+              ) : (
+                <StatusBadge status={deployment!.status} />
+              )}
+            </div>
           )}
-          <button
-            onClick={() => onStop(d)}
-            disabled={stopping}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-secondary hover:bg-destructive/20 text-xs text-destructive transition disabled:opacity-50"
-          >
-            <Trash2 className="size-3.5" /> Stop
-          </button>
         </div>
-      </td>
-    </tr>
+
+        {/* Body content */}
+        {isDeployed ? (
+          <div className="space-y-2">
+            <div className="text-sm font-medium text-foreground truncate">
+              {deployment!.job_name}
+            </div>
+            <div className="flex items-center gap-3 flex-wrap text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <Cpu className="size-3" />
+                {deployment!.cpu}m
+              </span>
+              <span className="flex items-center gap-1">
+                <MemoryStick className="size-3" />
+                {deployment!.memory} MB
+              </span>
+              <span className="font-mono">:{deployment!.exposed_port}</span>
+              <RuntimeBadge provider={deployment!.runtime_provider || "nomad"} />
+            </div>
+            {isNomad && deployment!.datacenter && (
+              <div className="text-[11px] text-muted-foreground font-mono truncate">
+                {deployment!.datacenter} / {deployment!.namespace}
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {item.description && (
+              <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                {item.description}
+              </p>
+            )}
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 mt-auto">
+              <Circle className="size-2.5" />
+              Not deployed
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground/60">
+              {item.is_public_image ? (
+                <span className="flex items-center gap-1">
+                  <Globe className="size-3" /> Public image
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Lock className="size-3" /> Private image
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Cpu className="size-3" /> {item.default_cpu}m
+              </span>
+              <span className="flex items-center gap-1">
+                <MemoryStick className="size-3" /> {item.default_memory} MB
+              </span>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Actions footer */}
+      <div className="px-4 py-3 bg-muted/30 border-t border-border/50 flex items-center gap-2">
+        {isDeployed ? (
+          <>
+            <Link
+              to="/dashboard/services/$serviceName"
+              params={{ serviceName: item.name }}
+              search={{ tab: "logs" } as never}
+              className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition"
+            >
+              <ScrollText className="size-3" /> Logs
+            </Link>
+            {deployment!.job_definition && (
+              <button
+                onClick={() => onViewDefinition(deployment!)}
+                className="flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-md bg-secondary text-muted-foreground hover:text-foreground transition"
+              >
+                <FileCode className="size-3" /> Definition
+              </button>
+            )}
+            <button
+              onClick={() => onStop(deployment!)}
+              disabled={stopping}
+              className="ml-auto flex items-center gap-1 text-[11px] px-2.5 py-1.5 rounded-md bg-secondary text-destructive hover:bg-destructive/10 transition disabled:opacity-50"
+            >
+              <Trash2 className="size-3" /> Stop
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => onDeploy(item)}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition"
+          >
+            <Rocket className="size-3.5" /> Deploy
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
-// ─── Page ──────────────────────────────────────────────────────────────────────
+// ─── Loading skeleton ───────────────────────────────────────────────────────────
+
+function CardSkeleton() {
+  return (
+    <div className="rounded-xl border border-border bg-card overflow-hidden animate-pulse">
+      <div className="h-0.5 bg-transparent" />
+      <div className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-3">
+            <div className="size-8 rounded-lg bg-muted shrink-0" />
+            <div className="space-y-1.5">
+              <div className="h-3.5 bg-muted rounded w-24" />
+              <div className="h-2.5 bg-muted rounded w-16" />
+            </div>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <div className="h-2.5 bg-muted rounded" />
+          <div className="h-2.5 bg-muted rounded w-4/5" />
+        </div>
+      </div>
+      <div className="px-4 py-3 bg-muted/30 border-t border-border/50">
+        <div className="h-8 bg-muted rounded-md" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Page ───────────────────────────────────────────────────────────────────────
 
 function ServiceCatalogPage() {
   const { envId } = useParams({ from: "/dashboard/environments/$envId/service-catalog" });
@@ -948,6 +1219,8 @@ function ServiceCatalogPage() {
   const [deployingItem, setDeployingItem] = useState<CatalogItem | null>(null);
   const [stopping, setStopping] = useState<ServiceDeployment | null>(null);
   const [viewingDefinition, setViewingDefinition] = useState<ServiceDeployment | null>(null);
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<Category>("All");
 
   const handleStop = async () => {
     if (!stopping) return;
@@ -960,106 +1233,195 @@ function ServiceCatalogPage() {
     }
   };
 
+  // Merge catalog with deployments and sort: failing first, then running, then not deployed
+  const enrichedRows = useMemo(() => {
+    return (catalog ?? []).map((item) => {
+      const category = inferCategory(item);
+      // Pick the most recent deployment for this item in this env
+      const deps = (deployments ?? []).filter((d) => d.catalog_name === item.name);
+      const deployment =
+        deps.sort(
+          (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        )[0] ?? null;
+      return { item, category, deployment };
+    });
+  }, [catalog, deployments]);
+
+  const filtered = useMemo(() => {
+    const searchLower = search.toLowerCase();
+    return enrichedRows
+      .filter((row) => {
+        if (
+          search &&
+          !row.item.name.toLowerCase().includes(searchLower) &&
+          !row.item.display_name.toLowerCase().includes(searchLower) &&
+          !row.item.description?.toLowerCase().includes(searchLower)
+        ) {
+          return false;
+        }
+        if (activeCategory !== "All" && row.category !== activeCategory) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const ha = HEALTH_ORDER[cardHealth(a.deployment)];
+        const hb = HEALTH_ORDER[cardHealth(b.deployment)];
+        return ha - hb;
+      });
+  }, [enrichedRows, search, activeCategory]);
+
+  const categoryCounts = useMemo(() => {
+    const counts: Partial<Record<Category, number>> = { All: enrichedRows.length };
+    for (const row of enrichedRows) {
+      counts[row.category as Exclude<Category, "All">] =
+        (counts[row.category as Exclude<Category, "All">] ?? 0) + 1;
+    }
+    return counts;
+  }, [enrichedRows]);
+
+  const deployedCount = enrichedRows.filter((r) => r.deployment).length;
+  const failedCount = enrichedRows.filter((r) => cardHealth(r.deployment) === "failed").length;
+
+  const isLoading = catalogLoading || deploymentsLoading;
+
+  const visibleCategories = ALL_CATEGORIES.filter(
+    (cat) => cat === "All" || (categoryCounts[cat] ?? 0) > 0,
+  );
+
   return (
     <div className="flex flex-col h-full">
       <DashboardTopbar
         title="Service Catalog"
-        subtitle="Deploy managed services to this environment"
+        subtitle={`Browse and deploy services to this environment`}
       />
 
-      <div className="flex-1 overflow-auto p-6 space-y-8">
-        {/* Catalog section */}
-        <section>
-          <h2 className="text-base font-semibold mb-1">Available services</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Select a service template to deploy it to this environment.
-          </p>
-
-          {catalogLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Loading catalog…
+      <div className="flex-1 overflow-auto">
+        {/* ── Page header ── */}
+        <div className="px-6 pt-6 pb-4">
+          {!isLoading && enrichedRows.length > 0 && (
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <span className="text-xs text-muted-foreground">
+                {enrichedRows.length} service{enrichedRows.length !== 1 ? "s" : ""}
+              </span>
+              {deployedCount > 0 && (
+                <span className="text-xs text-success font-medium">· {deployedCount} deployed</span>
+              )}
+              {failedCount > 0 && (
+                <span className="text-xs text-destructive font-medium">
+                  · {failedCount} failing
+                </span>
+              )}
             </div>
-          ) : catalogError ? (
-            <div className="flex items-center gap-2 text-sm text-destructive">
+          )}
+
+          {/* Search */}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-input focus-within:border-primary/50 transition-colors max-w-lg mb-3">
+            <Search className="size-3.5 text-muted-foreground shrink-0" />
+            <input
+              className="bg-transparent outline-none flex-1 text-sm placeholder:text-muted-foreground/60"
+              placeholder="Search services…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="text-muted-foreground hover:text-foreground transition"
+                aria-label="Clear search"
+              >
+                <X className="size-3" />
+              </button>
+            )}
+          </div>
+
+          {/* Category chips */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {visibleCategories.map((cat) => {
+              const isActive = activeCategory === cat;
+              const count = categoryCounts[cat] ?? 0;
+              const config = cat !== "All" ? CATEGORY_CONFIG[cat] : null;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition border shrink-0 ${
+                    isActive
+                      ? "bg-primary/10 text-primary border-primary/30"
+                      : "bg-transparent text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
+                  }`}
+                >
+                  {config && <config.icon className="size-3" />}
+                  {cat}
+                  <span
+                    className={`text-[10px] px-1 rounded ${
+                      isActive ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── Card grid ── */}
+        <div className="px-6 pb-8">
+          {catalogError ? (
+            <div className="flex items-center gap-2 text-sm text-destructive py-6">
               <AlertCircle className="size-4" /> {catalogError.message}
             </div>
+          ) : isLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <CardSkeleton key={i} />
+              ))}
+            </div>
+          ) : enrichedRows.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="size-14 rounded-2xl bg-secondary grid place-items-center mb-4">
+                <Plus className="size-7 text-muted-foreground" />
+              </div>
+              <h2 className="text-base font-semibold mb-1">Catalog is empty</h2>
+              <p className="text-sm text-muted-foreground max-w-xs">
+                No services have been added to the catalog yet.
+              </p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="size-14 rounded-2xl bg-secondary grid place-items-center mb-4">
+                <Search className="size-7 text-muted-foreground" />
+              </div>
+              <h2 className="text-base font-semibold mb-1">No services match your filters</h2>
+              <button
+                onClick={() => {
+                  setSearch("");
+                  setActiveCategory("All");
+                }}
+                className="mt-3 text-xs text-primary hover:underline"
+              >
+                Clear filters
+              </button>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {(catalog ?? []).map((item) => (
-                <CatalogCard key={item.id} item={item} onDeploy={setDeployingItem} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {filtered.map(({ item, category, deployment }) => (
+                <EnvServiceCard
+                  key={item.id}
+                  item={item}
+                  deployment={deployment}
+                  category={category as Exclude<Category, "All">}
+                  workspaceSlug={workspaceSlug}
+                  envSlug={envId}
+                  hasNomadProvider={hasNomadProvider}
+                  onDeploy={setDeployingItem}
+                  onStop={setStopping}
+                  stopping={stopDeployment.isPending && stopping?.id === deployment?.id}
+                  onViewDefinition={setViewingDefinition}
+                />
               ))}
             </div>
           )}
-        </section>
-
-        {/* Active deployments section */}
-        <section>
-          <h2 className="text-base font-semibold mb-1">Active deployments</h2>
-          <p className="text-sm text-muted-foreground mb-4">
-            Services deployed to this environment via the catalog.
-          </p>
-
-          {deploymentsLoading ? (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="size-4 animate-spin" /> Loading deployments…
-            </div>
-          ) : !deployments || deployments.length === 0 ? (
-            <div className="rounded-xl border border-border bg-card p-8 flex flex-col items-center text-center">
-              <div className="size-12 rounded-xl bg-secondary grid place-items-center mb-3">
-                <Package className="size-6 text-muted-foreground" />
-              </div>
-              <div className="font-medium text-sm">No catalog deployments yet</div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Deploy a service from the catalog above to see it here.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-border overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/50">
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Job
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Runtime
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Location
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Port
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Image
-                    </th>
-                    <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
-                      Resources
-                    </th>
-                    <th className="px-4 py-2.5" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {deployments.map((d) => (
-                    <DeploymentRow
-                      key={d.id}
-                      d={d}
-                      workspaceSlug={workspaceSlug}
-                      envSlug={envId}
-                      hasNomadProvider={hasNomadProvider}
-                      onStop={setStopping}
-                      stopping={stopDeployment.isPending && stopping?.id === d.id}
-                      onViewDefinition={setViewingDefinition}
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+        </div>
       </div>
 
       {/* Deploy dialog */}

@@ -95,14 +95,18 @@ type ContainerRunConfig struct {
 	Name          string
 	ContainerPort int
 	HostPort      int
-	CPU           int               // millicores
-	MemoryMB      int               // megabytes
-	Env           []string          // "KEY=VALUE"
+	CPU           int      // millicores
+	MemoryMB      int      // megabytes
+	Env           []string // "KEY=VALUE"
 	Labels        map[string]string
 }
 
 // CreateContainer creates a container and returns its full ID (not started yet).
 func (c *Client) CreateContainer(ctx context.Context, cfg ContainerRunConfig) (string, error) {
+	if cfg.ContainerPort <= 0 {
+		cfg.HostPort = 0
+	}
+
 	labels := make(map[string]string, len(cfg.Labels)+1)
 	for k, v := range cfg.Labels {
 		labels[k] = v
@@ -114,23 +118,30 @@ func (c *Client) CreateContainer(ctx context.Context, cfg ContainerRunConfig) (s
 		env = []string{}
 	}
 
+	hostConfig := map[string]any{
+		"NanoCpus":      int64(cfg.CPU) * 1_000_000,
+		"Memory":        int64(cfg.MemoryMB) * 1024 * 1024,
+		"RestartPolicy": map[string]any{"Name": "unless-stopped"},
+	}
+
+	if cfg.ContainerPort > 0 && cfg.HostPort > 0 {
+		portKey := fmt.Sprintf("%d/tcp", cfg.ContainerPort)
+		hostConfig["PortBindings"] = map[string]any{
+			portKey: []map[string]string{{"HostPort": fmt.Sprintf("%d", cfg.HostPort)}},
+		}
+	}
+
 	body := map[string]any{
-		"Image":  cfg.Image,
-		"Env":    env,
-		"Labels": labels,
-		"ExposedPorts": map[string]any{
+		"Image":      cfg.Image,
+		"Env":        env,
+		"Labels":     labels,
+		"HostConfig": hostConfig,
+	}
+
+	if cfg.ContainerPort > 0 {
+		body["ExposedPorts"] = map[string]any{
 			fmt.Sprintf("%d/tcp", cfg.ContainerPort): struct{}{},
-		},
-		"HostConfig": map[string]any{
-			"PortBindings": map[string]any{
-				fmt.Sprintf("%d/tcp", cfg.ContainerPort): []map[string]string{
-					{"HostPort": fmt.Sprintf("%d", cfg.HostPort)},
-				},
-			},
-			"NanoCpus": int64(cfg.CPU) * 1_000_000,
-			"Memory":   int64(cfg.MemoryMB) * 1024 * 1024,
-			"RestartPolicy": map[string]any{"Name": "unless-stopped"},
-		},
+		}
 	}
 
 	path := "/containers/create"

@@ -21,9 +21,9 @@ function UserMenu() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const initials    = me ? `${me.first_name.charAt(0)}${me.last_name.charAt(0)}`.toUpperCase() : "?";
+  const initials = me ? `${me.first_name.charAt(0)}${me.last_name.charAt(0)}`.toUpperCase() : "?";
   const displayName = me ? `${me.first_name} ${me.last_name}` : "User";
-  const roleName    = me?.roles?.[0]?.role?.name ?? me?.email ?? "";
+  const roleName = me?.roles?.[0]?.role?.name ?? me?.email ?? "";
 
   const handleLogout = async () => {
     await logout.mutateAsync();
@@ -80,16 +80,13 @@ export function DashboardTopbar({
 }) {
   return (
     <header className="h-12 shrink-0 flex items-center border-b border-sidebar-border bg-sidebar px-4 gap-3">
-
       {/* ── Breadcrumbs or page title ── */}
       {breadcrumbs && breadcrumbs.length > 0 ? (
         <div className="flex items-center gap-1 label-mono text-muted-foreground">
           {breadcrumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1">
               {i > 0 && <span className="text-border mx-0.5">›</span>}
-              <span className={i === breadcrumbs.length - 1 ? "text-foreground" : ""}>
-                {crumb}
-              </span>
+              <span className={i === breadcrumbs.length - 1 ? "text-foreground" : ""}>{crumb}</span>
             </span>
           ))}
         </div>
