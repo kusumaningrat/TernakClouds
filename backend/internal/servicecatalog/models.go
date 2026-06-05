@@ -3,6 +3,7 @@ package servicecatalog
 import (
 	"github.com/google/uuid"
 	"github.com/kusumaningrat/ternakclouds/internal/models"
+	"gorm.io/datatypes"
 )
 
 // CatalogItem is a seeded, read-only entry describing a deployable service template.
@@ -21,23 +22,26 @@ type CatalogItem struct {
 	HealthCheckPath string `json:"health_check_path,omitempty"`
 	// IsPublicImage signals that DefaultImage can be pulled without a registry binding.
 	IsPublicImage bool `gorm:"not null;default:true" json:"is_public_image"`
+	// EnvironmentConfig holds optional default environment variables/config
+	// for this catalog item. Stored as JSON (key -> string value).
+	EnvironmentConfig datatypes.JSON `gorm:"type:jsonb" json:"environment_config,omitempty"`
 }
 
 // ServiceDeployment records a catalog item that has been deployed to an environment.
 type ServiceDeployment struct {
 	models.Base
-	WorkspaceID   uuid.UUID  `gorm:"type:uuid;not null;index"    json:"workspace_id"`
-	EnvironmentID uuid.UUID  `gorm:"type:uuid;not null;index"    json:"environment_id"`
-	CatalogName   string     `gorm:"not null"                    json:"catalog_name"`
-	JobName       string     `gorm:"not null"                    json:"job_name"`
-	Datacenter    string     `gorm:"not null"                    json:"datacenter"`
-	Namespace     string     `gorm:"not null;default:'default'"  json:"namespace"`
-	WorkerName    string     `gorm:"not null"                    json:"worker_name"`
-	ExposedPort   int        `gorm:"not null"                    json:"exposed_port"`
-	ContainerPort int        `gorm:"not null"                    json:"container_port"`
-	CPU           int        `gorm:"not null"                    json:"cpu"`
-	Memory        int        `gorm:"not null"                    json:"memory"`
-	Image         string     `gorm:"not null"                    json:"image"`
+	WorkspaceID   uuid.UUID `gorm:"type:uuid;not null;index"    json:"workspace_id"`
+	EnvironmentID uuid.UUID `gorm:"type:uuid;not null;index"    json:"environment_id"`
+	CatalogName   string    `gorm:"not null"                    json:"catalog_name"`
+	JobName       string    `gorm:"not null"                    json:"job_name"`
+	Datacenter    string    `gorm:"not null"                    json:"datacenter"`
+	Namespace     string    `gorm:"not null;default:'default'"  json:"namespace"`
+	WorkerName    string    `gorm:"not null"                    json:"worker_name"`
+	ExposedPort   int       `gorm:"not null"                    json:"exposed_port"`
+	ContainerPort int       `gorm:"not null"                    json:"container_port"`
+	CPU           int       `gorm:"not null"                    json:"cpu"`
+	Memory        int       `gorm:"not null"                    json:"memory"`
+	Image         string    `gorm:"not null"                    json:"image"`
 	// RegistryID is nil for public images.
 	RegistryID *uuid.UUID `gorm:"type:uuid"                    json:"registry_id,omitempty"`
 	// NomadJobID is kept for backward compatibility.
@@ -46,9 +50,9 @@ type ServiceDeployment struct {
 	RuntimeProvider string `gorm:"not null;default:'nomad'"      json:"runtime_provider"`
 	// RuntimeJobID holds the runtime-specific job identifier.
 	// Nomad: "{jobname}-App"; Kubernetes: "{namespace}/{name}"; Docker: container short ID.
-	RuntimeJobID  string    `gorm:"not null;default:''"           json:"runtime_job_id"`
-	Status        string    `gorm:"not null;default:'running'"    json:"status"`
-	DeployedBy    uuid.UUID `gorm:"type:uuid;not null"            json:"deployed_by"`
+	RuntimeJobID string    `gorm:"not null;default:''"           json:"runtime_job_id"`
+	Status       string    `gorm:"not null;default:'running'"    json:"status"`
+	DeployedBy   uuid.UUID `gorm:"type:uuid;not null"            json:"deployed_by"`
 	// JobDefinition stores the exact manifest rendered and submitted to the runtime.
 	JobDefinition string `gorm:"type:text"                    json:"job_definition"`
 }

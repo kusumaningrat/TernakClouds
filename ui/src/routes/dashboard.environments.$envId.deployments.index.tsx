@@ -11,6 +11,7 @@ import {
   useK8sNamespaces,
   useK8sPods,
   useDockerContainers,
+  useRemoveDockerContainer,
 } from "@/lib/queries";
 import { useState, useEffect, useRef } from "react";
 import {
@@ -22,6 +23,7 @@ import {
   X,
   Search,
   Settings2,
+  Trash2,
 } from "lucide-react";
 import type {
   NomadJobStub,
@@ -1419,10 +1421,14 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
 
 function DockerContainerRow({
   container,
+  slug,
+  envId,
   onLogs,
   onDetails,
 }: {
   container: DockerContainerStub;
+  slug: string;
+  envId: string;
   onLogs: () => void;
   onDetails: () => void;
 }) {
@@ -1431,6 +1437,20 @@ function DockerContainerRow({
   const textCls = CONTAINER_STATE_TEXT[state] ?? "text-muted-foreground";
   const shortId = container.id.slice(0, 12);
   const imgTag = container.image.includes(":") ? container.image : `${container.image}:latest`;
+
+  const [confirming, setConfirming] = useState(false);
+  const remove = useRemoveDockerContainer();
+
+  const handleDelete = () => {
+    if (!confirming) {
+      setConfirming(true);
+      return;
+    }
+    remove.mutate(
+      { slug, envSlug: envId, id: container.id },
+      { onSettled: () => setConfirming(false) },
+    );
+  };
 
   return (
     <tr className="border-b border-border hover:bg-accent/30 transition-colors">
@@ -1455,7 +1475,30 @@ function DockerContainerRow({
         {formatCreated(container.created)}
       </td>
       <td className="px-3 py-2">
-        <RowActions onLogs={onLogs} onDetails={onDetails} />
+        <div className="flex items-center gap-0.5">
+          <ActionBtn onClick={onLogs} icon={Terminal} label="View logs" />
+          <ActionBtn onClick={onDetails} icon={Settings2} label="Details" />
+          {confirming ? (
+            <div className="flex items-center gap-1 ml-1">
+              <button
+                onClick={() => setConfirming(false)}
+                className="text-[10px] px-1.5 py-0.5 rounded hover:bg-accent text-muted-foreground transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={remove.isPending}
+                className="text-[10px] px-1.5 py-0.5 rounded bg-destructive/15 text-destructive hover:bg-destructive/25 transition flex items-center gap-1 disabled:opacity-60"
+              >
+                {remove.isPending && <Loader2 className="size-2.5 animate-spin" />}
+                Confirm
+              </button>
+            </div>
+          ) : (
+            <ActionBtn onClick={handleDelete} icon={Trash2} label="Stop & remove" />
+          )}
+        </div>
       </td>
     </tr>
   );
@@ -1562,6 +1605,8 @@ function DockerContainersListView({ slug, envId }: { slug: string; envId: string
                 <DockerContainerRow
                   key={c.id}
                   container={c}
+                  slug={slug}
+                  envId={envId}
                   onLogs={() => setLogTarget({ kind: "docker", container: c })}
                   onDetails={() => setDetailsTarget({ kind: "docker", container: c })}
                 />

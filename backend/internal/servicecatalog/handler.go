@@ -25,6 +25,8 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) ListCatalog(c *gin.Context) {
 	items, err := h.svc.ListCatalog()
 	if err != nil {
+		// Log the underlying error to help debugging 500 responses during SSR
+		slog.Error("servicecatalog: list catalog failed", "err", err)
 		pkg.RespondErr(c, http.StatusInternalServerError, "failed to list catalog")
 		return
 	}
@@ -55,7 +57,7 @@ func (h *Handler) Deploy(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
 		case errors.Is(err, ErrNoVaultCapability):
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
-		case errors.Is(err, ErrUnsupportedRuntime):
+		case errors.Is(err, ErrUnsupportedRuntime), errors.Is(err, ErrInvalidPortBinding):
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
 		case errors.Is(err, nomad.ErrNoNomadProvider),
 			errors.Is(err, kubernetes.ErrNoK8sProvider):

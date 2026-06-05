@@ -194,6 +194,45 @@ function NomadLiveStatus({
 
 // ─── Env mapping row ────────────────────────────────────────────────────────────
 
+function EnvVarRow({
+  envKey,
+  envValue,
+  onChangeKey,
+  onChangeValue,
+  onRemove,
+}: {
+  envKey: string;
+  envValue: string;
+  onChangeKey: (v: string) => void;
+  onChangeValue: (v: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        value={envKey}
+        onChange={(e) => onChangeKey(e.target.value)}
+        placeholder="KEY"
+        className="flex-1 px-2.5 py-1.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-xs font-mono"
+      />
+      <span className="text-muted-foreground text-xs shrink-0">=</span>
+      <input
+        value={envValue}
+        onChange={(e) => onChangeValue(e.target.value)}
+        placeholder="value"
+        className="flex-1 px-2.5 py-1.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-xs font-mono"
+      />
+      <button
+        type="button"
+        onClick={onRemove}
+        className="p-1 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition shrink-0"
+      >
+        <X className="size-3.5" />
+      </button>
+    </div>
+  );
+}
+
 function EnvMappingRow({
   envVar,
   secretValue,
@@ -305,6 +344,24 @@ function DeployDialog({
   const [vaultRole, setVaultRole] = useState("");
   const [vaultPath, setVaultPath] = useState("");
   const [envMappings, setEnvMappings] = useState<[string, string][]>([]);
+  const copyCatalogEnvToMappings = (item: CatalogItem) => {
+    if (!item?.environment_config) return;
+    setEnvMappings(Object.entries(item.environment_config));
+  };
+
+  const [envVars, setEnvVars] = useState<[string, string][]>([]);
+  const addEnvVar = () => setEnvVars((prev) => [...prev, ["", ""]]);
+  const updateEnvVar = (i: number, field: 0 | 1, value: string) =>
+    setEnvVars((prev) =>
+      prev.map((pair, idx) =>
+        idx === i ? (field === 0 ? [value, pair[1]] : [pair[0], value]) : pair,
+      ),
+    );
+  const removeEnvVar = (i: number) => setEnvVars((prev) => prev.filter((_, idx) => idx !== i));
+  const copyCatalogEnvVars = (item: CatalogItem) => {
+    if (!item?.environment_config) return;
+    setEnvVars(Object.entries(item.environment_config));
+  };
 
   const datacenters = [...new Set((nodes ?? []).map((n) => n.Datacenter))];
   const workers = (nodes ?? []).filter((n) => !datacenter || n.Datacenter === datacenter);
@@ -327,6 +384,7 @@ function DeployDialog({
     setVaultRole("");
     setVaultPath("");
     setEnvMappings([]);
+    setEnvVars([]);
     onClose();
   };
 
@@ -349,12 +407,23 @@ function DeployDialog({
       return acc;
     }, {});
 
+    const vars = envVars.reduce<Record<string, string>>((acc, [k, v]) => {
+      if (k) acc[k] = v;
+      return acc;
+    }, {});
+
+    const portValue = exposedPort.trim() ? parseInt(exposedPort, 10) : undefined;
+    if (exposedPort.trim() && Number.isNaN(portValue)) {
+      toast.error("Exposed port must be a valid number");
+      return;
+    }
+
     try {
       await deploy.mutateAsync({
         catalog_name: item.name,
         job_name: jobName,
         runtime_provider: runtimeProvider,
-        exposed_port: parseInt(exposedPort, 10),
+        exposed_port: portValue,
         cpu: cpu ? parseInt(cpu, 10) : undefined,
         memory: memory ? parseInt(memory, 10) : undefined,
         datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
@@ -370,6 +439,7 @@ function DeployDialog({
         vault_path: runtimeProvider === "nomad" ? vaultPath || undefined : undefined,
         env_mappings:
           runtimeProvider === "nomad" && Object.keys(mappings).length > 0 ? mappings : undefined,
+        env_vars: runtimeProvider === "docker" && Object.keys(vars).length > 0 ? vars : undefined,
       });
       toast.success(`${item.display_name} deployed via ${runtimeProvider}`);
       handleClose();
@@ -598,32 +668,42 @@ function DeployDialog({
             </div>
           )}
 
-          {/* Exposed port */}
-          <div>
-            <label className="text-xs font-medium text-muted-foreground">
-              {runtimeProvider === "kubernetes" ? "Exposed port (NodePort) *" : "Exposed port *"}
-            </label>
-            {runtimeProvider === "kubernetes" && (
-              <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
-                Port exposed on every node (30000–32767). The container listens on{" "}
-                <span className="font-mono">{item.default_container_port}</span> internally.
-              </p>
-            )}
-            <input
-              required
-              type="number"
-              min={runtimeProvider === "kubernetes" ? 30000 : 1}
-              max={runtimeProvider === "kubernetes" ? 32767 : 65535}
-              value={exposedPort}
-              onChange={(e) => setExposedPort(e.target.value)}
-              placeholder={
-                runtimeProvider === "kubernetes"
-                  ? "e.g. 30080"
-                  : String(item.default_container_port)
-              }
-              className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-            />
-          </div>
+          {/* Exposed port — hidden for portless services */}
+          {item.default_container_port === 0 ? (
+            <p className="text-[11px] text-muted-foreground px-3 py-2.5 rounded-md bg-muted/40 border border-border">
+              This service does not expose a network port and will run without port mapping.
+            </p>
+          ) : (
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                {runtimeProvider === "kubernetes"
+                  ? "Exposed port (NodePort) *"
+                  : runtimeProvider === "docker"
+                    ? "Exposed port (optional)"
+                    : "Exposed port *"}
+              </label>
+              {runtimeProvider === "kubernetes" && (
+                <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
+                  Port exposed on every node (30000–32767). The container listens on{" "}
+                  <span className="font-mono">{item.default_container_port}</span> internally.
+                </p>
+              )}
+              <input
+                type="number"
+                required={runtimeProvider !== "docker"}
+                min={runtimeProvider === "kubernetes" ? 30000 : 1}
+                max={runtimeProvider === "kubernetes" ? 32767 : 65535}
+                value={exposedPort}
+                onChange={(e) => setExposedPort(e.target.value)}
+                placeholder={
+                  runtimeProvider === "kubernetes"
+                    ? "e.g. 30080"
+                    : String(item.default_container_port)
+                }
+                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+              />
+            </div>
+          )}
 
           {/* CPU + Memory */}
           <div className="grid grid-cols-2 gap-3">
@@ -705,6 +785,54 @@ function DeployDialog({
             />
           </div>
 
+          {/* Environment variables — Docker only */}
+          {runtimeProvider === "docker" && (
+            <div className="border-t border-border pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Environment variables{" "}
+                  <span className="font-normal text-muted-foreground/60">optional</span>
+                </p>
+                <div className="flex items-center gap-2">
+                  {item?.environment_config && (
+                    <button
+                      type="button"
+                      onClick={() => copyCatalogEnvVars(item)}
+                      className="text-[11px] text-muted-foreground hover:text-primary hover:underline transition"
+                    >
+                      Copy catalog defaults
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={addEnvVar}
+                    className="text-[11px] text-primary hover:underline"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+              {envVars.length === 0 ? (
+                <p className="text-[11px] text-muted-foreground">
+                  No environment variables. Add one to pass config into the container.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {envVars.map(([k, v], i) => (
+                    <EnvVarRow
+                      key={i}
+                      envKey={k}
+                      envValue={v}
+                      onChangeKey={(val) => updateEnvVar(i, 0, val)}
+                      onChangeValue={(val) => updateEnvVar(i, 1, val)}
+                      onRemove={() => removeEnvVar(i)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Vault section — Nomad only */}
           {runtimeProvider === "nomad" && (
             <div className="border-t border-border pt-4 space-y-3">
@@ -740,13 +868,24 @@ function DeployDialog({
                       (ENV_VAR → secret value)
                     </span>
                   </label>
-                  <button
-                    type="button"
-                    onClick={addEnvMapping}
-                    className="text-[11px] text-primary hover:underline"
-                  >
-                    + Add
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {item?.environment_config && (
+                      <button
+                        type="button"
+                        onClick={() => copyCatalogEnvToMappings(item)}
+                        className="text-[11px] text-muted-foreground hover:text-primary hover:underline transition"
+                      >
+                        Copy catalog defaults
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={addEnvMapping}
+                      className="text-[11px] text-primary hover:underline"
+                    >
+                      + Add
+                    </button>
+                  </div>
                 </div>
                 {envMappings.length === 0 ? (
                   <p className="text-[11px] text-muted-foreground">

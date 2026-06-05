@@ -75,7 +75,7 @@ func (h *Handler) RestartContainer(c *gin.Context) {
 // DELETE /workspaces/:slug/environments/:envSlug/docker/containers/:id
 func (h *Handler) RemoveContainer(c *gin.Context) {
 	id := c.Param("id")
-	if err := h.svc.RemoveContainer(c.Request.Context(), contextEnvironmentID(c), id); err != nil {
+	if err := h.svc.StopAndRemoveContainer(c.Request.Context(), contextEnvironmentID(c), id); err != nil {
 		respondDockerErr(c, err)
 		return
 	}

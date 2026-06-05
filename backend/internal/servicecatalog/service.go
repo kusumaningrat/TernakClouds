@@ -31,6 +31,7 @@ const hclTemplate = `job "[[.JobName]]-App" {
 
   group "[[.JobName]]" {
     count = 1
+    [[- if .HasPort]]
 
     network {
       port "http" {
@@ -55,6 +56,7 @@ const hclTemplate = `job "[[.JobName]]-App" {
         timeout  = "10s"
       }
     }
+    [[- end]]
 
     constraint {
       attribute = "${attr.unique.hostname}"
@@ -66,7 +68,9 @@ const hclTemplate = `job "[[.JobName]]-App" {
 
       config {
         image = "[[.Image]]"
+        [[- if .HasPort]]
         ports = ["http"]
+        [[- end]]
         [[- if .RegistryUsername]]
         auth {
           username = "[[.RegistryUsername]]"
@@ -329,6 +333,15 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		memory = *input.Memory
 	}
 
+	exposedPort := 0
+	if input.ExposedPort != nil {
+		exposedPort = *input.ExposedPort
+	}
+
+	if item.DefaultContainerPort == 0 && exposedPort > 0 {
+		return nil, ErrInvalidPortBinding
+	}
+
 	var (
 		runtimeJobID  string
 		nomadJobID    string
@@ -342,7 +355,7 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		if namespace == "" {
 			namespace = "default"
 		}
-		runtimeJobID, nomadJobID, jobDefinition, err = s.deployNomad(ctx, envID, item, input, image, regUsername, regPassword, cpu, memory, namespace)
+		runtimeJobID, nomadJobID, jobDefinition, err = s.deployNomad(ctx, envID, item, exposedPort, input, image, regUsername, regPassword, cpu, memory, namespace)
 		if err != nil {
 			return nil, err
 		}
@@ -352,13 +365,13 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		if namespace == "" {
 			namespace = "default"
 		}
-		runtimeJobID, jobDefinition, err = s.deployKubernetes(ctx, envID, item, input, image, cpu, memory, namespace)
+		runtimeJobID, jobDefinition, err = s.deployKubernetes(ctx, envID, item, exposedPort, input, image, cpu, memory, namespace)
 		if err != nil {
 			return nil, err
 		}
 
 	case "docker":
-		runtimeJobID, err = s.deployDocker(ctx, envID, item, input, image, cpu, memory)
+		runtimeJobID, err = s.deployDocker(ctx, envID, item, exposedPort, input, image, cpu, memory)
 		if err != nil {
 			return nil, err
 		}
@@ -375,7 +388,7 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		Datacenter:      input.Datacenter,
 		Namespace:       namespace,
 		WorkerName:      input.WorkerName,
-		ExposedPort:     input.ExposedPort,
+		ExposedPort:     exposedPort,
 		ContainerPort:   item.DefaultContainerPort,
 		CPU:             cpu,
 		Memory:          memory,
@@ -398,6 +411,7 @@ func (s *Service) deployNomad(
 	ctx context.Context,
 	envID uuid.UUID,
 	item *CatalogItem,
+	exposedPort int,
 	input DeployInput,
 	image, regUsername, regPassword string,
 	cpu, memory int,
@@ -416,7 +430,7 @@ func (s *Service) deployNomad(
 		Datacenter:       input.Datacenter,
 		Namespace:        namespace,
 		WorkerName:       input.WorkerName,
-		ExposedPort:      input.ExposedPort,
+		ExposedPort:      exposedPort,
 		ContainerPort:    item.DefaultContainerPort,
 		CPU:              cpu,
 		Memory:           memory,
@@ -446,6 +460,7 @@ func (s *Service) deployKubernetes(
 	ctx context.Context,
 	envID uuid.UUID,
 	item *CatalogItem,
+	exposedPort int,
 	input DeployInput,
 	image string,
 	cpu, memory int,
@@ -470,7 +485,7 @@ func (s *Service) deployKubernetes(
 		HealthCheckType: item.HealthCheckType,
 		HealthCheckPath: item.HealthCheckPath,
 		NodeName:        input.K8sNodeName,
-		NodePort:        input.ExposedPort,
+		NodePort:        exposedPort,
 	}
 
 	yamlManifest, err = renderK8sYAML(vars)
@@ -489,17 +504,23 @@ func (s *Service) deployDocker(
 	ctx context.Context,
 	envID uuid.UUID,
 	item *CatalogItem,
+	exposedPort int,
 	input DeployInput,
 	image string,
 	cpu, memory int,
 ) (runtimeJobID string, err error) {
+	var env []string
+	for k, v := range input.EnvVars {
+		env = append(env, fmt.Sprintf("%s=%s", k, v))
+	}
 	cfg := docker.ContainerRunConfig{
 		Image:         image,
 		Name:          input.JobName,
 		ContainerPort: item.DefaultContainerPort,
-		HostPort:      input.ExposedPort,
+		HostPort:      exposedPort,
 		CPU:           cpu,
 		MemoryMB:      memory,
+		Env:           env,
 		Labels:        map[string]string{"catalog": input.CatalogName},
 	}
 	runtimeJobID, err = s.dockerSvc.RunContainer(ctx, envID, cfg)

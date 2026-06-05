@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(go build *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(grep -n \"exposed_port\\\\|ExposedPort\\\\|exposedPort\" /home/clouders/personal/Oprek/Coding/idp/ui/src/routes/dashboard.environments.\\\\$envId.service-catalog.tsx | head -40)",
+      "Read(//home/clouders/personal/Oprek/Coding/idp/ui/src/routes/**)",
+      "Bash(netstat -tlnp)"
     ]
   }
 }

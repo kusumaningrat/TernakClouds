@@ -536,6 +536,9 @@ export interface CatalogItem {
   health_check_type: string;
   health_check_path?: string;
   is_public_image: boolean;
+  // Optional environment configuration provided by the catalog item.
+  // Keys -> string values.
+  environment_config?: Record<string, string>;
 }
 
 export interface ServiceDeployment {
@@ -567,7 +570,7 @@ export interface DeployServiceInput {
   catalog_name: string;
   job_name: string;
   runtime_provider: string;
-  exposed_port: number;
+  exposed_port?: number;
   cpu?: number;
   memory?: number;
   // Nomad-specific
@@ -586,6 +589,8 @@ export interface DeployServiceInput {
   vault_role?: string;
   vault_path?: string;
   env_mappings?: Record<string, string>;
+  // Environment variables (Docker only for now)
+  env_vars?: Record<string, string>;
 }
 
 // ─── Nomad ────────────────────────────────────────────────────────────────────
