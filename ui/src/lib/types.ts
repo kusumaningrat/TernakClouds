@@ -589,6 +589,7 @@ export interface DeployServiceInput {
   datacenter?: string;
   namespace?: string;
   worker_name?: string;
+  nomad_host_network?: "private" | "public";
   // Kubernetes-specific
   k8s_namespace?: string;
   replicas?: number;

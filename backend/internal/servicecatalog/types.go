@@ -29,9 +29,12 @@ type DeployInput struct {
 	Memory          *int          `json:"memory"`
 
 	// ── Nomad-specific ──────────────────────────────────────────────────────
-	Datacenter string `json:"datacenter"`
-	Namespace  string `json:"namespace"`
-	WorkerName string `json:"worker_name"`
+	Datacenter      string `json:"datacenter"`
+	Namespace       string `json:"namespace"`
+	WorkerName      string `json:"worker_name"`
+	// NomadHostNetwork sets host_network on every port block. Accepts "private"
+	// or "public". Defaults to "private" when omitted.
+	NomadHostNetwork string `json:"nomad_host_network"`
 
 	// ── Kubernetes-specific ─────────────────────────────────────────────────
 	K8sNamespace string `json:"k8s_namespace"`
