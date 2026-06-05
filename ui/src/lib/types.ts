@@ -522,13 +522,14 @@ export interface ProviderCapabilities {
   branch_protection: boolean;
 }
 
-// ─── Service Catalog ──────────────────────────────────────────────────────────
+// ─── Catalog ──────────────────────────────────────────────────────────────────
 
 export interface CatalogItem {
   id: string;
   name: string;
   display_name: string;
   description: string;
+  category?: string;
   default_image: string;
   default_container_port: number;
   default_cpu: number;
@@ -536,8 +537,6 @@ export interface CatalogItem {
   health_check_type: string;
   health_check_path?: string;
   is_public_image: boolean;
-  // Optional environment configuration provided by the catalog item.
-  // Keys -> string values.
   environment_config?: Record<string, string>;
 }
 

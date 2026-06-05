@@ -39,7 +39,6 @@ import {
   Zap,
   Radio,
   HardDrive,
-  Activity,
   Network,
   Box,
 } from "lucide-react";
@@ -66,7 +65,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/service-catalog")({
-  head: () => ({ meta: [{ title: "Service Catalog · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Catalog · TernakClouds" }] }),
   component: ServiceCatalogPage,
 });
 
@@ -74,32 +73,21 @@ export const Route = createFileRoute("/dashboard/environments/$envId/service-cat
 
 const ALL_CATEGORIES = [
   "All",
+  "Application",
   "Database",
   "Cache",
-  "Message Broker",
-  "Object Storage",
-  "Monitoring",
+  "Storage",
+  "Messaging",
   "Networking",
-  "AI Services",
-  "Application",
 ] as const;
 
 type Category = (typeof ALL_CATEGORIES)[number];
 
-const CATEGORY_PATTERNS: [RegExp, Exclude<Category, "All">][] = [
-  [/postgres|mysql|mariadb|mongodb|mongo|cassandra|cockroach|clickhouse|tidb/i, "Database"],
-  [/redis|memcached|dragonfly|keydb/i, "Cache"],
-  [/rabbit|kafka|nats|pulsar|activemq/i, "Message Broker"],
-  [/minio|seaweed|ceph|swift/i, "Object Storage"],
-  [/prometheus|grafana|loki|jaeger|tempo|alertmanager|zipkin/i, "Monitoring"],
-  [/nginx|traefik|haproxy|envoy|kong|caddy/i, "Networking"],
-  [/ollama|llm|whisper|ai-/i, "AI Services"],
-];
+const KNOWN_CATEGORIES = new Set<string>(ALL_CATEGORIES.filter((c) => c !== "All"));
 
 function inferCategory(item: CatalogItem): Exclude<Category, "All"> {
-  const text = `${item.name} ${item.display_name}`;
-  for (const [pattern, cat] of CATEGORY_PATTERNS) {
-    if (pattern.test(text)) return cat;
+  if (item.category && KNOWN_CATEGORIES.has(item.category)) {
+    return item.category as Exclude<Category, "All">;
   }
   return "Application";
 }
@@ -107,14 +95,12 @@ function inferCategory(item: CatalogItem): Exclude<Category, "All"> {
 type CategoryConfig = { icon: LucideIcon; color: string; bg: string };
 
 const CATEGORY_CONFIG: Record<Exclude<Category, "All">, CategoryConfig> = {
+  Application: { icon: Box, color: "text-primary", bg: "bg-primary/10" },
   Database: { icon: Database, color: "text-blue-600", bg: "bg-blue-500/10" },
   Cache: { icon: Zap, color: "text-amber-600", bg: "bg-amber-500/10" },
-  "Message Broker": { icon: Radio, color: "text-purple-600", bg: "bg-purple-500/10" },
-  "Object Storage": { icon: HardDrive, color: "text-teal-600", bg: "bg-teal-500/10" },
-  Monitoring: { icon: Activity, color: "text-orange-600", bg: "bg-orange-500/10" },
+  Storage: { icon: HardDrive, color: "text-teal-600", bg: "bg-teal-500/10" },
+  Messaging: { icon: Radio, color: "text-purple-600", bg: "bg-purple-500/10" },
   Networking: { icon: Network, color: "text-slate-600", bg: "bg-slate-500/10" },
-  "AI Services": { icon: Cpu, color: "text-violet-600", bg: "bg-violet-500/10" },
-  Application: { icon: Box, color: "text-primary", bg: "bg-primary/10" },
 };
 
 // ─── Runtime badge ──────────────────────────────────────────────────────────────
@@ -1290,7 +1276,7 @@ function ServiceCatalogPage() {
   return (
     <div className="flex flex-col h-full">
       <DashboardTopbar
-        title="Service Catalog"
+        title="Catalog"
         subtitle={`Browse and deploy services to this environment`}
       />
 
@@ -1300,7 +1286,7 @@ function ServiceCatalogPage() {
           {!isLoading && enrichedRows.length > 0 && (
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className="text-xs text-muted-foreground">
-                {enrichedRows.length} service{enrichedRows.length !== 1 ? "s" : ""}
+                {enrichedRows.length} item{enrichedRows.length !== 1 ? "s" : ""}
               </span>
               {deployedCount > 0 && (
                 <span className="text-xs text-success font-medium">· {deployedCount} deployed</span>
@@ -1318,7 +1304,7 @@ function ServiceCatalogPage() {
             <Search className="size-3.5 text-muted-foreground shrink-0" />
             <input
               className="bg-transparent outline-none flex-1 text-sm placeholder:text-muted-foreground/60"
-              placeholder="Search services…"
+              placeholder="Search catalog…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

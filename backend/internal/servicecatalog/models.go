@@ -12,6 +12,8 @@ type CatalogItem struct {
 	Name                 string    `gorm:"uniqueIndex;not null"   json:"name"`
 	DisplayName          string    `gorm:"not null"               json:"display_name"`
 	Description          string    `                              json:"description"`
+	// Category groups items in the catalog UI (e.g. "Application", "Database", "Cache").
+	Category             string    `gorm:"not null;default:''"    json:"category"`
 	DefaultImage         string    `gorm:"not null"               json:"default_image"`
 	DefaultContainerPort int       `gorm:"not null"               json:"default_container_port"`
 	DefaultCPU           int       `gorm:"not null"               json:"default_cpu"`
