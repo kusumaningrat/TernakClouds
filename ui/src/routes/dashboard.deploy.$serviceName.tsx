@@ -181,7 +181,9 @@ function DeployForm({
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
   const [k8sNodeName, setK8sNodeName] = useState("");
-  const [portMappings, setPortMappings] = useState<{ name: string; containerPort: number; exposedPort: string }[]>([]);
+  const [portMappings, setPortMappings] = useState<
+    { name: string; containerPort: number; exposedPort: string }[]
+  >([]);
   const [cpu, setCpu] = useState("");
   const [memory, setMemory] = useState("");
   const [registryId, setRegistryId] = useState("");
@@ -217,8 +219,10 @@ function DeployForm({
 
   useEffect(() => {
     const defs = item?.default_ports ?? [];
-    setPortMappings(defs.map((p) => ({ name: p.name, containerPort: p.container_port, exposedPort: "" })));
-  }, [item?.name]);
+    setPortMappings(
+      defs.map((p) => ({ name: p.name, containerPort: p.container_port, exposedPort: "" })),
+    );
+  }, [item?.name, item?.default_ports]);
 
   const datacenters = [...new Set((nodes ?? []).map((n) => n.Datacenter))];
   const workers = (nodes ?? []).filter((n) => !datacenter || n.Datacenter === datacenter);
@@ -501,7 +505,9 @@ function DeployForm({
       {portMappings.length === 0 ? (
         <div className="flex items-start gap-2 px-3 py-2.5 rounded-md bg-muted/40 border border-border text-[11px] text-muted-foreground">
           <Globe className="size-3.5 shrink-0 mt-0.5" />
-          <span>This service does not expose a network port and will run without port mapping.</span>
+          <span>
+            This service does not expose a network port and will run without port mapping.
+          </span>
         </div>
       ) : (
         <div className="space-y-2">
@@ -515,7 +521,9 @@ function DeployForm({
           )}
           {portMappings.map((pm, i) => (
             <div key={pm.name} className="flex items-center gap-2">
-              <span className="text-xs font-mono text-muted-foreground w-20 shrink-0 truncate">{pm.name}</span>
+              <span className="text-xs font-mono text-muted-foreground w-20 shrink-0 truncate">
+                {pm.name}
+              </span>
               <span className="text-xs text-muted-foreground shrink-0">:{pm.containerPort}</span>
               <span className="text-xs text-muted-foreground shrink-0">→</span>
               <input

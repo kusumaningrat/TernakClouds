@@ -1,4 +1,4 @@
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import {
   LayoutDashboard,
   Rocket,
@@ -40,6 +40,8 @@ function isPlatformEngineer(roles: { role?: { name?: string } }[] | undefined): 
 // ─── Environment switcher ─────────────────────────────────────────────────────
 
 function EnvSwitcher() {
+  const navigate = useNavigate();
+  const path = useRouterState({ select: (s) => s.location.pathname });
   const { selectedWorkspace } = useWorkspaceContext();
   const { selectedEnvironment, setSelectedEnvironment } = useEnvironmentContext();
   const { data: environments } = useEnvironments(selectedWorkspace?.slug ?? "");
@@ -78,6 +80,9 @@ function EnvSwitcher() {
             onClick={() => {
               setSelectedEnvironment(null);
               setOpen(false);
+              if (path.startsWith("/dashboard/environments/")) {
+                navigate({ to: "/dashboard/environments" as never });
+              }
             }}
             className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors hover:bg-accent ${
               !selectedEnvironment ? "text-primary font-medium" : "text-muted-foreground"
@@ -94,6 +99,13 @@ function EnvSwitcher() {
               onClick={() => {
                 setSelectedEnvironment(env);
                 setOpen(false);
+                if (path.startsWith("/dashboard/environments/")) {
+                  const match = path.match(/^\/dashboard\/environments\/[^/]+(\/.*)?$/);
+                  const suffix = match?.[1] ?? "";
+                  navigate({ to: `/dashboard/environments/${env.slug}${suffix}` as never });
+                } else if (path === "/dashboard/environments" || path === "/dashboard/environments/") {
+                  navigate({ to: `/dashboard/environments/${env.slug}` as never });
+                }
               }}
               className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-sm transition-colors hover:bg-accent ${
                 selectedEnvironment?.id === env.id
