@@ -30,7 +30,7 @@ import {
   X,
   Plus,
 } from "lucide-react";
-import { inferCategory, CATEGORY_CONFIG } from "@/routes/dashboard.services";
+import { inferCategory, CATEGORY_CONFIG } from "@/lib/catalog-category";
 
 export const Route = createFileRoute("/dashboard/deploy/$serviceName")({
   head: ({ params }) => ({
