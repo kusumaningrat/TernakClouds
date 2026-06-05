@@ -89,24 +89,26 @@ func (c *Client) postJSON(ctx context.Context, path string, body any, out any) e
 	return nil
 }
 
+// PortConfig is an input port binding for ContainerRunConfig.
+type PortConfig struct {
+	ContainerPort int
+	HostPort      int    // 0 = no host binding (container-internal only)
+	Protocol      string // "tcp" or "udp"; "" defaults to "tcp"
+}
+
 // ContainerRunConfig describes the desired state for a new managed container.
 type ContainerRunConfig struct {
-	Image         string
-	Name          string
-	ContainerPort int
-	HostPort      int
-	CPU           int      // millicores
-	MemoryMB      int      // megabytes
-	Env           []string // "KEY=VALUE"
-	Labels        map[string]string
+	Image    string
+	Name     string
+	Ports    []PortConfig
+	CPU      int      // millicores
+	MemoryMB int      // megabytes
+	Env      []string // "KEY=VALUE"
+	Labels   map[string]string
 }
 
 // CreateContainer creates a container and returns its full ID (not started yet).
 func (c *Client) CreateContainer(ctx context.Context, cfg ContainerRunConfig) (string, error) {
-	if cfg.ContainerPort <= 0 {
-		cfg.HostPort = 0
-	}
-
 	labels := make(map[string]string, len(cfg.Labels)+1)
 	for k, v := range cfg.Labels {
 		labels[k] = v
@@ -124,11 +126,25 @@ func (c *Client) CreateContainer(ctx context.Context, cfg ContainerRunConfig) (s
 		"RestartPolicy": map[string]any{"Name": "unless-stopped"},
 	}
 
-	if cfg.ContainerPort > 0 && cfg.HostPort > 0 {
-		portKey := fmt.Sprintf("%d/tcp", cfg.ContainerPort)
-		hostConfig["PortBindings"] = map[string]any{
-			portKey: []map[string]string{{"HostPort": fmt.Sprintf("%d", cfg.HostPort)}},
+	// Build PortBindings (host-side) and ExposedPorts from the Ports slice.
+	portBindings := make(map[string]any)
+	exposedPorts := make(map[string]any)
+	for _, p := range cfg.Ports {
+		if p.ContainerPort <= 0 {
+			continue
 		}
+		proto := p.Protocol
+		if proto == "" {
+			proto = "tcp"
+		}
+		portKey := fmt.Sprintf("%d/%s", p.ContainerPort, proto)
+		exposedPorts[portKey] = struct{}{}
+		if p.HostPort > 0 {
+			portBindings[portKey] = []map[string]string{{"HostPort": fmt.Sprintf("%d", p.HostPort)}}
+		}
+	}
+	if len(portBindings) > 0 {
+		hostConfig["PortBindings"] = portBindings
 	}
 
 	body := map[string]any{
@@ -138,10 +154,8 @@ func (c *Client) CreateContainer(ctx context.Context, cfg ContainerRunConfig) (s
 		"HostConfig": hostConfig,
 	}
 
-	if cfg.ContainerPort > 0 {
-		body["ExposedPorts"] = map[string]any{
-			fmt.Sprintf("%d/tcp", cfg.ContainerPort): struct{}{},
-		}
+	if len(exposedPorts) > 0 {
+		body["ExposedPorts"] = exposedPorts
 	}
 
 	path := "/containers/create"

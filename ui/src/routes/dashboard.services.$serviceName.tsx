@@ -166,11 +166,11 @@ function ServiceDetailPage() {
                     <span className="font-mono bg-secondary px-1.5 py-0.5 rounded">
                       {catalogItem.default_cpu}MHz · {catalogItem.default_memory}MB
                     </span>
-                    {catalogItem.default_container_port > 0 && (
-                      <span className="font-mono bg-secondary px-1.5 py-0.5 rounded">
-                        port :{catalogItem.default_container_port}
+                    {(catalogItem.default_ports ?? []).map((p) => (
+                      <span key={p.name} className="font-mono bg-secondary px-1.5 py-0.5 rounded">
+                        {p.name}:{p.container_port}
                       </span>
-                    )}
+                    ))}
                   </>
                 )}
               </div>
@@ -545,7 +545,7 @@ type CatalogItem = {
   description: string;
   default_cpu: number;
   default_memory: number;
-  default_container_port: number;
+  default_ports?: { name: string; container_port: number }[];
 };
 
 function OwnershipTab({
@@ -687,7 +687,7 @@ function SettingsTab({
     description: string;
     default_cpu: number;
     default_memory: number;
-    default_container_port: number;
+    default_ports?: { name: string; container_port: number }[];
   };
 }) {
   return (
@@ -711,12 +711,12 @@ function SettingsTab({
             <span className="text-muted-foreground">Default memory</span>
             <span className="font-mono">{item.default_memory} MB</span>
           </div>
-          {item.default_container_port > 0 && (
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Container port</span>
-              <span className="font-mono">:{item.default_container_port}</span>
+          {(item.default_ports ?? []).map((p) => (
+            <div key={p.name} className="flex justify-between">
+              <span className="text-muted-foreground">Port ({p.name})</span>
+              <span className="font-mono">:{p.container_port}</span>
             </div>
-          )}
+          ))}
         </div>
       </section>
     </div>

@@ -259,7 +259,7 @@ export function DashboardSidebar() {
           <NavItem
             to="/dashboard/services"
             icon={Package}
-            label="Service Catalog"
+            label="Catalog"
             active={active("/dashboard/services")}
           />
         </NavSection>
@@ -294,7 +294,7 @@ export function DashboardSidebar() {
         )}
       </div>
 
-      {/* ── Deploy CTA ── */}
+      {/* ── Deploy CTA ──
       <div className="shrink-0 px-3 py-4 border-t border-sidebar-border">
         <Link
           to={deployTo}
@@ -303,7 +303,7 @@ export function DashboardSidebar() {
           <Plus className="size-3.5" strokeWidth={2.5} />
           Deploy Service
         </Link>
-      </div>
+      </div> */}
     </aside>
   );
 }

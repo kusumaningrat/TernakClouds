@@ -18,6 +18,7 @@ import (
 	"github.com/kusumaningrat/ternakclouds/internal/servicecatalog"
 	"github.com/kusumaningrat/ternakclouds/internal/user"
 	"github.com/kusumaningrat/ternakclouds/internal/workspace"
+	"github.com/kusumaningrat/ternakclouds/internal/database/seeds"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -90,12 +91,12 @@ func Seed(db *gorm.DB, cfg *config.Config) error {
 	if err := seedCapabilityCatalogue(db); err != nil {
 		return err
 	}
-	if err := seedServiceCatalog(db); err != nil {
+	if err := seedCatalog(db); err != nil {
 		return err
 	}
-	if err := seedBlueprints(db); err != nil {
-		return err
-	}
+	// if err := seedBlueprints(db); err != nil {
+	// 	return err
+	// }
 	log.Println("database seeded successfully")
 	return nil
 }
@@ -315,152 +316,95 @@ func seedCapabilityCatalogue(db *gorm.DB) error {
 	return nil
 }
 
-func seedServiceCatalog(db *gorm.DB) error {
-	items := []servicecatalog.CatalogItem{
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000001"),
-			Name:                 "redis",
-			DisplayName:          "Redis",
-			Description:          "In-memory data structure store (cache, message broker)",
-			DefaultImage:         "redis:7-alpine",
-			DefaultContainerPort: 6379,
-			DefaultCPU:           100,
-			DefaultMemory:        100,
-			HealthCheckType:      "tcp",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000002"),
-			Name:                 "postgres",
-			DisplayName:          "PostgreSQL Server",
-			Description:          "Open source relational database",
-			DefaultImage:         "postgres:16-alpine",
-			DefaultContainerPort: 5432,
-			DefaultCPU:           200,
-			DefaultMemory:        200,
-			HealthCheckType:      "tcp",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000003"),
-			Name:                 "nginx",
-			DisplayName:          "Nginx",
-			Description:          "High-performance web server and reverse proxy",
-			DefaultImage:         "nginx:latest",
-			DefaultContainerPort: 80,
-			DefaultCPU:           100,
-			DefaultMemory:        128,
-			HealthCheckType:      "http",
-			HealthCheckPath:      "/",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000004"),
-			Name:                 "minio",
-			DisplayName:          "MinIO",
-			Description:          "S3-compatible object storage",
-			DefaultImage:         "minio/minio:latest",
-			DefaultContainerPort: 9000,
-			DefaultCPU:           100,
-			DefaultMemory:        128,
-			HealthCheckType:      "http",
-			HealthCheckPath:      "/minio/health/live",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000005"),
-			Name:                 "mysql",
-			DisplayName:          "MySQL Server",
-			Description:          "MySQL is a widely used, open-source relational database management system (RDBMS).",
-			DefaultImage:         "mysql:latest",
-			DefaultContainerPort: 3306,
-			DefaultCPU:           200,
-			DefaultMemory:        200,
-			HealthCheckType:      "tcp",
-			IsPublicImage:        true,
-		},
-	}
-	for _, item := range items {
-		if err := db.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
+func seedCatalog(db *gorm.DB) error {
+	all := make([]servicecatalog.CatalogItem, 0)
+	all = append(all, seeds.Applications...)
+	all = append(all, seeds.Databases...)
+	all = append(all, seeds.Cache...)
+	all = append(all, seeds.Storage...)
+	all = append(all, seeds.Messaging...)
+	all = append(all, seeds.Networking...)
+	for _, item := range all {
+		if err := db.Where("name = ?", item.Name).Assign(item).FirstOrCreate(&item).Error; err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func seedBlueprints(db *gorm.DB) error {
-	items := []blueprint.Blueprint{
-		{
-			Name:              "web-api",
-			DisplayName:       "Web API",
-			Description:       "HTTP REST or GraphQL API service. Includes health checks, rolling deployments, and optional Vault secret injection.",
-			Category:          "application",
-			Version:           "v1",
-			SupportedRuntimes: "nomad,kubernetes",
-			IsPublic:          true,
-			IsSystem:          true,
-			Icon:              "globe",
-		},
-		{
-			Name:              "worker",
-			DisplayName:       "Background Worker",
-			Description:       "Long-running background processor. No HTTP port exposed; suitable for queue consumers and async jobs.",
-			Category:          "application",
-			Version:           "v1",
-			SupportedRuntimes: "nomad,kubernetes",
-			IsPublic:          true,
-			IsSystem:          true,
-			Icon:              "cpu",
-		},
-		{
-			Name:              "cron-job",
-			DisplayName:       "Cron Job",
-			Description:       "Scheduled batch task that runs on a cron schedule. Mapped to Nomad batch jobs or Kubernetes CronJobs.",
-			Category:          "application",
-			Version:           "v1",
-			SupportedRuntimes: "nomad,kubernetes",
-			IsPublic:          true,
-			IsSystem:          true,
-			Icon:              "clock",
-		},
-		{
-			Name:              "internal-service",
-			DisplayName:       "Internal Service",
-			Description:       "Service exposed only within the cluster network. Suitable for gRPC microservices and internal APIs.",
-			Category:          "application",
-			Version:           "v1",
-			SupportedRuntimes: "nomad,kubernetes",
-			IsPublic:          true,
-			IsSystem:          true,
-			Icon:              "network",
-		},
-		{
-			Name:              "static-website",
-			DisplayName:       "Static Website",
-			Description:       "Static file server or SPA served via Nginx. Includes zero-downtime rolling updates.",
-			Category:          "application",
-			Version:           "v1",
-			SupportedRuntimes: "nomad,kubernetes",
-			IsPublic:          true,
-			IsSystem:          true,
-			Icon:              "layout-dashboard",
-		},
-		{
-			Name:              "background-processor",
-			DisplayName:       "Background Processor",
-			Description:       "Event-driven processor for streaming pipelines. Suitable for Kafka consumers and stream processors.",
-			Category:          "application",
-			Version:           "v1",
-			SupportedRuntimes: "nomad,kubernetes",
-			IsPublic:          true,
-			IsSystem:          true,
-			Icon:              "zap",
-		},
-	}
-	for _, item := range items {
-		if err := db.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
-			return err
-		}
-	}
-	return nil
-}
+// func seedBlueprints(db *gorm.DB) error {
+// 	items := []blueprint.Blueprint{
+// 		{
+// 			Name:              "web-api",
+// 			DisplayName:       "Web API",
+// 			Description:       "HTTP REST or GraphQL API service. Includes health checks, rolling deployments, and optional Vault secret injection.",
+// 			Category:          "application",
+// 			Version:           "v1",
+// 			SupportedRuntimes: "nomad,kubernetes",
+// 			IsPublic:          true,
+// 			IsSystem:          true,
+// 			Icon:              "globe",
+// 		},
+// 		{
+// 			Name:              "worker",
+// 			DisplayName:       "Background Worker",
+// 			Description:       "Long-running background processor. No HTTP port exposed; suitable for queue consumers and async jobs.",
+// 			Category:          "application",
+// 			Version:           "v1",
+// 			SupportedRuntimes: "nomad,kubernetes",
+// 			IsPublic:          true,
+// 			IsSystem:          true,
+// 			Icon:              "cpu",
+// 		},
+// 		{
+// 			Name:              "cron-job",
+// 			DisplayName:       "Cron Job",
+// 			Description:       "Scheduled batch task that runs on a cron schedule. Mapped to Nomad batch jobs or Kubernetes CronJobs.",
+// 			Category:          "application",
+// 			Version:           "v1",
+// 			SupportedRuntimes: "nomad,kubernetes",
+// 			IsPublic:          true,
+// 			IsSystem:          true,
+// 			Icon:              "clock",
+// 		},
+// 		{
+// 			Name:              "internal-service",
+// 			DisplayName:       "Internal Service",
+// 			Description:       "Service exposed only within the cluster network. Suitable for gRPC microservices and internal APIs.",
+// 			Category:          "application",
+// 			Version:           "v1",
+// 			SupportedRuntimes: "nomad,kubernetes",
+// 			IsPublic:          true,
+// 			IsSystem:          true,
+// 			Icon:              "network",
+// 		},
+// 		{
+// 			Name:              "static-website",
+// 			DisplayName:       "Static Website",
+// 			Description:       "Static file server or SPA served via Nginx. Includes zero-downtime rolling updates.",
+// 			Category:          "application",
+// 			Version:           "v1",
+// 			SupportedRuntimes: "nomad,kubernetes",
+// 			IsPublic:          true,
+// 			IsSystem:          true,
+// 			Icon:              "layout-dashboard",
+// 		},
+// 		{
+// 			Name:              "background-processor",
+// 			DisplayName:       "Background Processor",
+// 			Description:       "Event-driven processor for streaming pipelines. Suitable for Kafka consumers and stream processors.",
+// 			Category:          "application",
+// 			Version:           "v1",
+// 			SupportedRuntimes: "nomad,kubernetes",
+// 			IsPublic:          true,
+// 			IsSystem:          true,
+// 			Icon:              "zap",
+// 		},
+// 	}
+// 	for _, item := range items {
+// 		if err := db.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }

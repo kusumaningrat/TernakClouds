@@ -39,7 +39,6 @@ import {
   Zap,
   Radio,
   HardDrive,
-  Activity,
   Network,
   Box,
 } from "lucide-react";
@@ -66,7 +65,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/service-catalog")({
-  head: () => ({ meta: [{ title: "Service Catalog · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Catalog · TernakClouds" }] }),
   component: ServiceCatalogPage,
 });
 
@@ -74,32 +73,21 @@ export const Route = createFileRoute("/dashboard/environments/$envId/service-cat
 
 const ALL_CATEGORIES = [
   "All",
+  "Application",
   "Database",
   "Cache",
-  "Message Broker",
-  "Object Storage",
-  "Monitoring",
+  "Storage",
+  "Messaging",
   "Networking",
-  "AI Services",
-  "Application",
 ] as const;
 
 type Category = (typeof ALL_CATEGORIES)[number];
 
-const CATEGORY_PATTERNS: [RegExp, Exclude<Category, "All">][] = [
-  [/postgres|mysql|mariadb|mongodb|mongo|cassandra|cockroach|clickhouse|tidb/i, "Database"],
-  [/redis|memcached|dragonfly|keydb/i, "Cache"],
-  [/rabbit|kafka|nats|pulsar|activemq/i, "Message Broker"],
-  [/minio|seaweed|ceph|swift/i, "Object Storage"],
-  [/prometheus|grafana|loki|jaeger|tempo|alertmanager|zipkin/i, "Monitoring"],
-  [/nginx|traefik|haproxy|envoy|kong|caddy/i, "Networking"],
-  [/ollama|llm|whisper|ai-/i, "AI Services"],
-];
+const KNOWN_CATEGORIES = new Set<string>(ALL_CATEGORIES.filter((c) => c !== "All"));
 
 function inferCategory(item: CatalogItem): Exclude<Category, "All"> {
-  const text = `${item.name} ${item.display_name}`;
-  for (const [pattern, cat] of CATEGORY_PATTERNS) {
-    if (pattern.test(text)) return cat;
+  if (item.category && KNOWN_CATEGORIES.has(item.category)) {
+    return item.category as Exclude<Category, "All">;
   }
   return "Application";
 }
@@ -107,14 +95,12 @@ function inferCategory(item: CatalogItem): Exclude<Category, "All"> {
 type CategoryConfig = { icon: LucideIcon; color: string; bg: string };
 
 const CATEGORY_CONFIG: Record<Exclude<Category, "All">, CategoryConfig> = {
+  Application: { icon: Box, color: "text-primary", bg: "bg-primary/10" },
   Database: { icon: Database, color: "text-blue-600", bg: "bg-blue-500/10" },
   Cache: { icon: Zap, color: "text-amber-600", bg: "bg-amber-500/10" },
-  "Message Broker": { icon: Radio, color: "text-purple-600", bg: "bg-purple-500/10" },
-  "Object Storage": { icon: HardDrive, color: "text-teal-600", bg: "bg-teal-500/10" },
-  Monitoring: { icon: Activity, color: "text-orange-600", bg: "bg-orange-500/10" },
+  Storage: { icon: HardDrive, color: "text-teal-600", bg: "bg-teal-500/10" },
+  Messaging: { icon: Radio, color: "text-purple-600", bg: "bg-purple-500/10" },
   Networking: { icon: Network, color: "text-slate-600", bg: "bg-slate-500/10" },
-  "AI Services": { icon: Cpu, color: "text-violet-600", bg: "bg-violet-500/10" },
-  Application: { icon: Box, color: "text-primary", bg: "bg-primary/10" },
 };
 
 // ─── Runtime badge ──────────────────────────────────────────────────────────────
@@ -335,8 +321,14 @@ function DeployDialog({
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
   const [k8sNodeName, setK8sNodeName] = useState("");
-  const [exposedPort, setExposedPort] = useState("");
+  const [portMappings, setPortMappings] = useState<{ name: string; containerPort: number; exposedPort: string }[]>([]);
   const [cpu, setCpu] = useState("");
+
+  // Sync port mappings whenever the item changes.
+  useEffect(() => {
+    const defs = item?.default_ports ?? [];
+    setPortMappings(defs.map((p) => ({ name: p.name, containerPort: p.container_port, exposedPort: "" })));
+  }, [item?.name]);
   const [memory, setMemory] = useState("");
   const [registryId, setRegistryId] = useState("");
   const [imagePath, setImagePath] = useState("");
@@ -375,7 +367,7 @@ function DeployDialog({
     setK8sNamespace("default");
     setReplicas("1");
     setK8sNodeName("");
-    setExposedPort("");
+    setPortMappings([]);
     setCpu("");
     setMemory("");
     setRegistryId("");
@@ -412,18 +404,21 @@ function DeployDialog({
       return acc;
     }, {});
 
-    const portValue = exposedPort.trim() ? parseInt(exposedPort, 10) : undefined;
-    if (exposedPort.trim() && Number.isNaN(portValue)) {
-      toast.error("Exposed port must be a valid number");
-      return;
-    }
+    const ports = portMappings.map((pm) => {
+      const ep = pm.exposedPort.trim() ? parseInt(pm.exposedPort, 10) : 0;
+      if (pm.exposedPort.trim() && Number.isNaN(ep)) {
+        toast.error(`Invalid host port for "${pm.name}"`);
+        throw new Error("invalid port");
+      }
+      return { name: pm.name, container_port: pm.containerPort, exposed_port: ep };
+    });
 
     try {
       await deploy.mutateAsync({
         catalog_name: item.name,
         job_name: jobName,
         runtime_provider: runtimeProvider,
-        exposed_port: portValue,
+        ports: ports.length > 0 ? ports : undefined,
         cpu: cpu ? parseInt(cpu, 10) : undefined,
         memory: memory ? parseInt(memory, 10) : undefined,
         datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
@@ -668,40 +663,48 @@ function DeployDialog({
             </div>
           )}
 
-          {/* Exposed port — hidden for portless services */}
-          {item.default_container_port === 0 ? (
+          {/* Port mappings */}
+          {portMappings.length === 0 ? (
             <p className="text-[11px] text-muted-foreground px-3 py-2.5 rounded-md bg-muted/40 border border-border">
               This service does not expose a network port and will run without port mapping.
             </p>
           ) : (
-            <div>
+            <div className="space-y-2">
               <label className="text-xs font-medium text-muted-foreground">
-                {runtimeProvider === "kubernetes"
-                  ? "Exposed port (NodePort) *"
-                  : runtimeProvider === "docker"
-                    ? "Exposed port (optional)"
-                    : "Exposed port *"}
+                {runtimeProvider === "kubernetes" ? "Port mappings (NodePort)" : "Port mappings"}
               </label>
               {runtimeProvider === "kubernetes" && (
-                <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
-                  Port exposed on every node (30000–32767). The container listens on{" "}
-                  <span className="font-mono">{item.default_container_port}</span> internally.
+                <p className="text-[11px] text-muted-foreground">
+                  NodePort must be in range 30000–32767. Leave blank for ClusterIP-only (internal).
                 </p>
               )}
-              <input
-                type="number"
-                required={runtimeProvider !== "docker"}
-                min={runtimeProvider === "kubernetes" ? 30000 : 1}
-                max={runtimeProvider === "kubernetes" ? 32767 : 65535}
-                value={exposedPort}
-                onChange={(e) => setExposedPort(e.target.value)}
-                placeholder={
-                  runtimeProvider === "kubernetes"
-                    ? "e.g. 30080"
-                    : String(item.default_container_port)
-                }
-                className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-              />
+              {portMappings.map((pm, i) => (
+                <div key={pm.name} className="flex items-center gap-2">
+                  <span className="text-xs font-mono text-muted-foreground w-20 shrink-0 truncate">{pm.name}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">:{pm.containerPort}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">→</span>
+                  <input
+                    type="number"
+                    required={runtimeProvider === "nomad" && pm.name === (item.default_ports?.[0]?.name ?? "")}
+                    min={runtimeProvider === "kubernetes" ? 30000 : 1}
+                    max={runtimeProvider === "kubernetes" ? 32767 : 65535}
+                    value={pm.exposedPort}
+                    onChange={(e) =>
+                      setPortMappings((prev) =>
+                        prev.map((p, idx) => (idx === i ? { ...p, exposedPort: e.target.value } : p)),
+                      )
+                    }
+                    placeholder={
+                      runtimeProvider === "kubernetes"
+                        ? "e.g. 30080"
+                        : runtimeProvider === "docker"
+                          ? "host port (optional)"
+                          : String(pm.containerPort)
+                    }
+                    className="flex-1 px-3 py-2 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                  />
+                </div>
+              ))}
             </div>
           )}
 
@@ -1082,7 +1085,13 @@ function EnvServiceCard({
                 <MemoryStick className="size-3" />
                 {deployment!.memory} MB
               </span>
-              <span className="font-mono">:{deployment!.exposed_port}</span>
+              {(deployment!.ports ?? [])
+                .filter((p) => p.exposed_port && p.exposed_port > 0)
+                .map((p) => (
+                  <span key={p.name} className="font-mono">
+                    :{p.exposed_port}
+                  </span>
+                ))}
               <RuntimeBadge provider={deployment!.runtime_provider || "nomad"} />
             </div>
             {isNomad && deployment!.datacenter && (
@@ -1290,7 +1299,7 @@ function ServiceCatalogPage() {
   return (
     <div className="flex flex-col h-full">
       <DashboardTopbar
-        title="Service Catalog"
+        title="Catalog"
         subtitle={`Browse and deploy services to this environment`}
       />
 
@@ -1300,7 +1309,7 @@ function ServiceCatalogPage() {
           {!isLoading && enrichedRows.length > 0 && (
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               <span className="text-xs text-muted-foreground">
-                {enrichedRows.length} service{enrichedRows.length !== 1 ? "s" : ""}
+                {enrichedRows.length} item{enrichedRows.length !== 1 ? "s" : ""}
               </span>
               {deployedCount > 0 && (
                 <span className="text-xs text-success font-medium">· {deployedCount} deployed</span>
@@ -1318,7 +1327,7 @@ function ServiceCatalogPage() {
             <Search className="size-3.5 text-muted-foreground shrink-0" />
             <input
               className="bg-transparent outline-none flex-1 text-sm placeholder:text-muted-foreground/60"
-              placeholder="Search services…"
+              placeholder="Search catalog…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />

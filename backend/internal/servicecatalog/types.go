@@ -15,17 +15,18 @@ var (
 	ErrRegistryRequired   = errors.New("A registry must be selected for private catalog items.")
 	ErrNoVaultCapability  = errors.New("Secret storage is not available for this environment. Please configure a Vault provider.")
 	ErrUnsupportedRuntime = errors.New("unsupported runtime provider; use 'nomad', 'kubernetes', or 'docker'")
-	ErrInvalidPortBinding = errors.New("host port cannot be bound without a container port")
 )
 
 type DeployInput struct {
 	CatalogName string `json:"catalog_name" binding:"required"`
 	JobName     string `json:"job_name"     binding:"required"`
 	// RuntimeProvider selects the deployment target. Defaults to "nomad" when omitted.
-	RuntimeProvider string `json:"runtime_provider"`
-	ExposedPort     *int   `json:"exposed_port"`
-	CPU             *int   `json:"cpu"`
-	Memory          *int   `json:"memory"`
+	RuntimeProvider string        `json:"runtime_provider"`
+	// Ports overrides the catalog default port mappings. Each entry may set
+	// ExposedPort to bind a host-side port; 0 means container-internal only.
+	Ports           []PortMapping `json:"ports"`
+	CPU             *int          `json:"cpu"`
+	Memory          *int          `json:"memory"`
 
 	// ── Nomad-specific ──────────────────────────────────────────────────────
 	Datacenter string `json:"datacenter"`
