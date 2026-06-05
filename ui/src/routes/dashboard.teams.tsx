@@ -37,12 +37,12 @@ function TeamsPage() {
   const { data: members, isLoading: membersLoading } = useWorkspaceMembers(slug);
   const { data: catalog } = useCatalog();
 
-  const teams = (departments?.items ?? []).filter((d) =>
-    !search.trim() || d.name.toLowerCase().includes(search.toLowerCase()),
+  const teams = (departments?.items ?? []).filter(
+    (d) => !search.trim() || d.name.toLowerCase().includes(search.toLowerCase()),
   );
 
   const totalMembers = members?.length ?? 0;
-  const totalTeams   = departments?.items?.length ?? 0;
+  const totalTeams = departments?.items?.length ?? 0;
 
   return (
     <div className="flex flex-col h-full">
@@ -54,7 +54,8 @@ function TeamsPage() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Teams</h1>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {totalTeams} team{totalTeams !== 1 ? "s" : ""} · {totalMembers} workspace member{totalMembers !== 1 ? "s" : ""}
+              {totalTeams} team{totalTeams !== 1 ? "s" : ""} · {totalMembers} workspace member
+              {totalMembers !== 1 ? "s" : ""}
             </p>
           </div>
           <button className="flex items-center gap-1.5 text-xs px-3 py-2 rounded bg-secondary border border-border text-muted-foreground hover:text-foreground transition font-medium">
@@ -78,9 +79,7 @@ function TeamsPage() {
       <div className="flex flex-1 min-h-0 overflow-auto">
         {/* Teams list */}
         <div className="flex-1 p-6 space-y-3 overflow-auto">
-          <div className="label-mono text-muted-foreground mb-2">
-            ALL TEAMS ({teams.length})
-          </div>
+          <div className="label-mono text-muted-foreground mb-2">ALL TEAMS ({teams.length})</div>
 
           {deptsLoading ? (
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
@@ -91,7 +90,9 @@ function TeamsPage() {
               <Users className="size-8 text-muted-foreground mx-auto mb-3" />
               <p className="text-sm font-medium">No teams yet</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {search ? "No teams match your search." : "Create a team to organize service ownership."}
+                {search
+                  ? "No teams match your search."
+                  : "Create a team to organize service ownership."}
               </p>
             </div>
           ) : (
@@ -133,7 +134,9 @@ function TeamsPage() {
               ].map(({ label, value, good }) => (
                 <div key={label} className="glass rounded-lg p-3">
                   <div className="text-xl font-bold font-mono text-foreground">{value}</div>
-                  <div className="text-[10px] label-mono text-muted-foreground mt-1">{label.toUpperCase()}</div>
+                  <div className="text-[10px] label-mono text-muted-foreground mt-1">
+                    {label.toUpperCase()}
+                  </div>
                 </div>
               ))}
             </div>
@@ -168,9 +171,7 @@ function TeamsPage() {
                         {m.first_name} {m.last_name}
                       </div>
                     </div>
-                    {m.role === "owner" && (
-                      <Crown className="size-3 text-warning shrink-0" />
-                    )}
+                    {m.role === "owner" && <Crown className="size-3 text-warning shrink-0" />}
                   </div>
                 ))}
               </div>
@@ -183,11 +184,13 @@ function TeamsPage() {
               <h3 className="text-xs font-medium label-mono text-muted-foreground">ADMIN</h3>
             </div>
             <div className="divide-y divide-border">
-              {([
-                { to: "/dashboard/departments", label: "Manage Departments" },
-                { to: "/dashboard/roles",       label: "Roles & Permissions" },
-                { to: "/dashboard/users",       label: "All Platform Users" },
-              ] as const).map(({ to, label }) => (
+              {(
+                [
+                  { to: "/dashboard/departments", label: "Manage Departments" },
+                  { to: "/dashboard/roles", label: "Roles & Permissions" },
+                  { to: "/dashboard/users", label: "All Platform Users" },
+                ] as const
+              ).map(({ to, label }) => (
                 <Link
                   key={to}
                   to={to}

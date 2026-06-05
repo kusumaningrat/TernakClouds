@@ -20,10 +20,7 @@ function LogsPage() {
   if (selectedEnvironment) {
     return (
       <>
-        <DashboardTopbar
-          title="Logs"
-          subtitle={`Streaming logs for ${selectedEnvironment.name}`}
-        />
+        <DashboardTopbar title="Logs" subtitle={`Streaming logs for ${selectedEnvironment.name}`} />
         <main className="p-6 space-y-4 overflow-auto">
           <div className="glass rounded-xl p-5">
             <div className="flex items-center gap-3 mb-4">
@@ -32,7 +29,9 @@ function LogsPage() {
               </div>
               <div>
                 <div className="font-semibold text-sm">{selectedEnvironment.name}</div>
-                <div className="text-xs text-muted-foreground font-mono">{selectedEnvironment.slug}</div>
+                <div className="text-xs text-muted-foreground font-mono">
+                  {selectedEnvironment.slug}
+                </div>
               </div>
             </div>
             <Link
@@ -42,7 +41,9 @@ function LogsPage() {
             >
               <div className="flex items-center gap-2">
                 <ScrollText className="size-4" />
-                <span className="text-sm font-medium">Open log stream for {selectedEnvironment.name}</span>
+                <span className="text-sm font-medium">
+                  Open log stream for {selectedEnvironment.name}
+                </span>
               </div>
               <ArrowRight className="size-4" />
             </Link>
@@ -80,10 +81,7 @@ function LogsPage() {
   // No environment selected — show picker
   return (
     <>
-      <DashboardTopbar
-        title="Logs"
-        subtitle="Select an environment to stream logs."
-      />
+      <DashboardTopbar title="Logs" subtitle="Select an environment to stream logs." />
       <main className="p-6 space-y-4 overflow-auto">
         <p className="text-sm text-muted-foreground">
           Use the environment switcher at the top right, or pick an environment below.

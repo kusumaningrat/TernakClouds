@@ -107,22 +107,22 @@ function inferCategory(item: CatalogItem): Exclude<Category, "All"> {
 type CategoryConfig = { icon: LucideIcon; color: string; bg: string };
 
 const CATEGORY_CONFIG: Record<Exclude<Category, "All">, CategoryConfig> = {
-  Database:         { icon: Database,  color: "text-blue-600",   bg: "bg-blue-500/10" },
-  Cache:            { icon: Zap,       color: "text-amber-600",  bg: "bg-amber-500/10" },
-  "Message Broker": { icon: Radio,     color: "text-purple-600", bg: "bg-purple-500/10" },
-  "Object Storage": { icon: HardDrive, color: "text-teal-600",   bg: "bg-teal-500/10" },
-  Monitoring:       { icon: Activity,  color: "text-orange-600", bg: "bg-orange-500/10" },
-  Networking:       { icon: Network,   color: "text-slate-600",  bg: "bg-slate-500/10" },
-  "AI Services":    { icon: Cpu,       color: "text-violet-600", bg: "bg-violet-500/10" },
-  Application:      { icon: Box,       color: "text-primary",    bg: "bg-primary/10" },
+  Database: { icon: Database, color: "text-blue-600", bg: "bg-blue-500/10" },
+  Cache: { icon: Zap, color: "text-amber-600", bg: "bg-amber-500/10" },
+  "Message Broker": { icon: Radio, color: "text-purple-600", bg: "bg-purple-500/10" },
+  "Object Storage": { icon: HardDrive, color: "text-teal-600", bg: "bg-teal-500/10" },
+  Monitoring: { icon: Activity, color: "text-orange-600", bg: "bg-orange-500/10" },
+  Networking: { icon: Network, color: "text-slate-600", bg: "bg-slate-500/10" },
+  "AI Services": { icon: Cpu, color: "text-violet-600", bg: "bg-violet-500/10" },
+  Application: { icon: Box, color: "text-primary", bg: "bg-primary/10" },
 };
 
 // ─── Runtime badge ──────────────────────────────────────────────────────────────
 
 const RUNTIME_COLORS: Record<string, string> = {
-  nomad:      "bg-purple-500/15 text-purple-600",
+  nomad: "bg-purple-500/15 text-purple-600",
   kubernetes: "bg-blue-500/15 text-blue-600",
-  docker:     "bg-sky-500/15 text-sky-600",
+  docker: "bg-sky-500/15 text-sky-600",
 };
 
 function RuntimeBadge({ provider }: { provider: string }) {
@@ -140,7 +140,7 @@ function RuntimeBadge({ provider }: { provider: string }) {
 const STATUS_STYLES: Record<string, string> = {
   running: "bg-emerald-500/15 text-emerald-600",
   pending: "bg-amber-500/15 text-amber-600",
-  dead:    "bg-gray-400/15 text-gray-500",
+  dead: "bg-gray-400/15 text-gray-500",
   unknown: "bg-muted text-muted-foreground",
 };
 
@@ -267,12 +267,10 @@ function DeployDialog({
   );
   const hasKubernetes = capabilities.some(
     (c) =>
-      c.capability_name === "runtime" &&
-      c.providers.some((p) => p.provider_name === "kubernetes"),
+      c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "kubernetes"),
   );
   const hasDocker = capabilities.some(
-    (c) =>
-      c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "docker"),
+    (c) => c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "docker"),
   );
 
   const { data: nodes } = useNomadNodes(workspaceSlug, envSlug, hasNomad);
@@ -363,10 +361,8 @@ function DeployDialog({
         namespace: runtimeProvider === "nomad" ? namespace : undefined,
         worker_name: runtimeProvider === "nomad" ? workerName : undefined,
         k8s_namespace: runtimeProvider === "kubernetes" ? k8sNamespace : undefined,
-        replicas:
-          runtimeProvider === "kubernetes" && replicas ? parseInt(replicas, 10) : undefined,
-        k8s_node_name:
-          runtimeProvider === "kubernetes" && k8sNodeName ? k8sNodeName : undefined,
+        replicas: runtimeProvider === "kubernetes" && replicas ? parseInt(replicas, 10) : undefined,
+        k8s_node_name: runtimeProvider === "kubernetes" && k8sNodeName ? k8sNodeName : undefined,
         registry_id: registryId || undefined,
         image_path: imagePath || undefined,
         image_tag: imageTag || undefined,
@@ -395,12 +391,22 @@ function DeployDialog({
   if (!item) return null;
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) handleClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Deploy {item.display_name}</DialogTitle>
         </DialogHeader>
-        <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-4 mt-2">
+        <form
+          onSubmit={(e) => {
+            void handleSubmit(e);
+          }}
+          className="space-y-4 mt-2"
+        >
           {/* Runtime selector */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">Runtime *</label>
@@ -450,12 +456,17 @@ function DeployDialog({
                   <select
                     required
                     value={datacenter}
-                    onChange={(e) => { setDatacenter(e.target.value); setWorkerName(""); }}
+                    onChange={(e) => {
+                      setDatacenter(e.target.value);
+                      setWorkerName("");
+                    }}
                     className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
                   >
                     <option value="">Select datacenter…</option>
                     {datacenters.map((dc) => (
-                      <option key={dc} value={dc}>{dc}</option>
+                      <option key={dc} value={dc}>
+                        {dc}
+                      </option>
                     ))}
                   </select>
                 ) : (
@@ -480,7 +491,9 @@ function DeployDialog({
                   >
                     <option value="">Select worker…</option>
                     {workers.map((n) => (
-                      <option key={n.ID} value={n.Name}>{n.Name} ({n.Address})</option>
+                      <option key={n.ID} value={n.Name}>
+                        {n.Name} ({n.Address})
+                      </option>
                     ))}
                   </select>
                 ) : (
@@ -504,7 +517,9 @@ function DeployDialog({
                 >
                   {nomadNamespaces && nomadNamespaces.length > 0 ? (
                     nomadNamespaces.map((ns) => (
-                      <option key={ns.Name} value={ns.Name}>{ns.Name}</option>
+                      <option key={ns.Name} value={ns.Name}>
+                        {ns.Name}
+                      </option>
                     ))
                   ) : (
                     <option value="default">default</option>
@@ -528,7 +543,9 @@ function DeployDialog({
                   >
                     {k8sNamespaces && k8sNamespaces.length > 0 ? (
                       k8sNamespaces.map((ns) => (
-                        <option key={ns.name} value={ns.name}>{ns.name}</option>
+                        <option key={ns.name} value={ns.name}>
+                          {ns.name}
+                        </option>
                       ))
                     ) : (
                       <option value="default">default</option>
@@ -600,7 +617,9 @@ function DeployDialog({
               value={exposedPort}
               onChange={(e) => setExposedPort(e.target.value)}
               placeholder={
-                runtimeProvider === "kubernetes" ? "e.g. 30080" : String(item.default_container_port)
+                runtimeProvider === "kubernetes"
+                  ? "e.g. 30080"
+                  : String(item.default_container_port)
               }
               className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
             />
@@ -778,7 +797,12 @@ function DeployDialog({
 
 function DefinitionDialog({ definition, onClose }: { definition: string; onClose: () => void }) {
   return (
-    <Dialog open onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Job definition</DialogTitle>
@@ -804,16 +828,16 @@ function DefinitionDialog({ definition, onClose }: { definition: string; onClose
 type CardHealth = "running" | "pending" | "failed" | "inactive";
 
 const CARD_BORDER: Record<CardHealth, string> = {
-  running:  "border-success/40",
-  pending:  "border-warning/40",
-  failed:   "border-destructive/40",
+  running: "border-success/40",
+  pending: "border-warning/40",
+  failed: "border-destructive/40",
   inactive: "border-border",
 };
 
 const CARD_ACCENT: Record<CardHealth, string> = {
-  running:  "bg-success",
-  pending:  "bg-warning",
-  failed:   "bg-destructive",
+  running: "bg-success",
+  pending: "bg-warning",
+  failed: "bg-destructive",
   inactive: "bg-transparent",
 };
 
@@ -824,6 +848,13 @@ function cardHealth(d: ServiceDeployment | null): CardHealth {
   if (s === "pending") return "pending";
   return "failed";
 }
+
+const HEALTH_ORDER: Record<CardHealth, number> = {
+  failed: 0,
+  pending: 1,
+  running: 2,
+  inactive: 3,
+};
 
 function EnvServiceCard({
   item,
@@ -852,9 +883,7 @@ function EnvServiceCard({
   const health = cardHealth(deployment);
   const isDeployed = !!deployment;
   const isNomad =
-    !deployment ||
-    deployment.runtime_provider === "nomad" ||
-    deployment.runtime_provider === "";
+    !deployment || deployment.runtime_provider === "nomad" || deployment.runtime_provider === "";
 
   return (
     <div
@@ -872,9 +901,7 @@ function EnvServiceCard({
               <Icon className={`size-4 ${color}`} />
             </div>
             <div className="min-w-0">
-              <div className="font-semibold text-sm truncate">
-                {item.display_name || item.name}
-              </div>
+              <div className="font-semibold text-sm truncate">{item.display_name || item.name}</div>
               <span
                 className={`inline-flex items-center mt-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded ${bg} ${color}`}
               >
@@ -1040,8 +1067,7 @@ function ServiceCatalogPage() {
     !capLoading &&
     capList.some(
       (c) =>
-        c.capability_name === "runtime" &&
-        c.providers.some((p) => p.provider_name === "nomad"),
+        c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
     );
 
   const { data: catalog, isLoading: catalogLoading, error: catalogError } = useCatalog();
@@ -1074,14 +1100,13 @@ function ServiceCatalogPage() {
       const category = inferCategory(item);
       // Pick the most recent deployment for this item in this env
       const deps = (deployments ?? []).filter((d) => d.catalog_name === item.name);
-      const deployment = deps.sort(
-        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
-      )[0] ?? null;
+      const deployment =
+        deps.sort(
+          (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
+        )[0] ?? null;
       return { item, category, deployment };
     });
   }, [catalog, deployments]);
-
-  const HEALTH_ORDER: Record<CardHealth, number> = { failed: 0, pending: 1, running: 2, inactive: 3 };
 
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
@@ -1142,7 +1167,9 @@ function ServiceCatalogPage() {
                 <span className="text-xs text-success font-medium">· {deployedCount} deployed</span>
               )}
               {failedCount > 0 && (
-                <span className="text-xs text-destructive font-medium">· {failedCount} failing</span>
+                <span className="text-xs text-destructive font-medium">
+                  · {failedCount} failing
+                </span>
               )}
             </div>
           )}
@@ -1187,9 +1214,7 @@ function ServiceCatalogPage() {
                   {cat}
                   <span
                     className={`text-[10px] px-1 rounded ${
-                      isActive
-                        ? "bg-primary/20 text-primary"
-                        : "bg-secondary text-muted-foreground"
+                      isActive ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
                     }`}
                   >
                     {count}
@@ -1229,7 +1254,10 @@ function ServiceCatalogPage() {
               </div>
               <h2 className="text-base font-semibold mb-1">No services match your filters</h2>
               <button
-                onClick={() => { setSearch(""); setActiveCategory("All"); }}
+                onClick={() => {
+                  setSearch("");
+                  setActiveCategory("All");
+                }}
                 className="mt-3 text-xs text-primary hover:underline"
               >
                 Clear filters
@@ -1278,7 +1306,9 @@ function ServiceCatalogPage() {
       {/* Stop confirmation */}
       <AlertDialog
         open={!!stopping}
-        onOpenChange={(v) => { if (!v) setStopping(null); }}
+        onOpenChange={(v) => {
+          if (!v) setStopping(null);
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1292,7 +1322,9 @@ function ServiceCatalogPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => { void handleStop(); }}
+              onClick={() => {
+                void handleStop();
+              }}
               disabled={stopDeployment.isPending}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >

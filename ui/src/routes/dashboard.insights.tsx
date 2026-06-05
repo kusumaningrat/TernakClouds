@@ -2,11 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 import { useEnvironmentContext } from "@/lib/environment-context";
-import {
-  useCatalog,
-  useEnvironments,
-  useAllServiceDeployments,
-} from "@/lib/queries";
+import { useCatalog, useEnvironments, useAllServiceDeployments } from "@/lib/queries";
 import type { ServiceDeployment } from "@/lib/types";
 import {
   CheckCircle2,
@@ -36,18 +32,44 @@ function computeOverallHealth(deployments: ServiceDeployment[]): ServiceHealth {
   return "degraded";
 }
 
-const HEALTH_CONFIG: Record<ServiceHealth, { icon: React.ElementType; label: string; dot: string; badge: string }> = {
-  healthy:    { icon: CheckCircle2,  label: "Healthy",      dot: "bg-success",             badge: "text-success bg-success/10 border-success/20" },
-  degraded:   { icon: AlertTriangle, label: "Degraded",     dot: "bg-warning",             badge: "text-warning bg-warning/10 border-warning/20" },
-  critical:   { icon: XCircle,       label: "Critical",     dot: "bg-destructive",         badge: "text-destructive bg-destructive/10 border-destructive/20" },
-  undeployed: { icon: Circle,        label: "Not deployed", dot: "bg-muted-foreground/30", badge: "text-muted-foreground bg-secondary border-border" },
+const HEALTH_CONFIG: Record<
+  ServiceHealth,
+  { icon: React.ElementType; label: string; dot: string; badge: string }
+> = {
+  healthy: {
+    icon: CheckCircle2,
+    label: "Healthy",
+    dot: "bg-success",
+    badge: "text-success bg-success/10 border-success/20",
+  },
+  degraded: {
+    icon: AlertTriangle,
+    label: "Degraded",
+    dot: "bg-warning",
+    badge: "text-warning bg-warning/10 border-warning/20",
+  },
+  critical: {
+    icon: XCircle,
+    label: "Critical",
+    dot: "bg-destructive",
+    badge: "text-destructive bg-destructive/10 border-destructive/20",
+  },
+  undeployed: {
+    icon: Circle,
+    label: "Not deployed",
+    dot: "bg-muted-foreground/30",
+    badge: "text-muted-foreground bg-secondary border-border",
+  },
 };
 
 function ScoreBar({ value, color }: { value: number; color: string }) {
   return (
     <div className="flex items-center gap-2">
       <div className="flex-1 h-1.5 bg-secondary rounded-full overflow-hidden">
-        <div className={`h-full rounded-full transition-all ${color}`} style={{ width: `${Math.min(value, 100)}%` }} />
+        <div
+          className={`h-full rounded-full transition-all ${color}`}
+          style={{ width: `${Math.min(value, 100)}%` }}
+        />
       </div>
       <span className="text-xs font-mono font-medium w-8 text-right">{value}</span>
     </div>
@@ -74,7 +96,9 @@ function InsightsPage() {
     return (catalog ?? []).map((item) => {
       const allDeps = visibleEnvs.flatMap((env) => {
         const globalIdx = (environments ?? []).findIndex((e) => e.id === env.id);
-        return (deploymentQueries[globalIdx]?.data ?? []).filter((d) => d.catalog_name === item.name);
+        return (deploymentQueries[globalIdx]?.data ?? []).filter(
+          (d) => d.catalog_name === item.name,
+        );
       });
 
       const health = computeOverallHealth(allDeps);
@@ -89,18 +113,26 @@ function InsightsPage() {
     });
   }, [catalog, environments, selectedEnvironment, deploymentQueries]);
 
-  const counts = useMemo(() =>
-    serviceHealthData.reduce((acc, s) => {
-      acc[s.health] = (acc[s.health] ?? 0) + 1;
-      return acc;
-    }, {} as Record<ServiceHealth, number>),
+  const counts = useMemo(
+    () =>
+      serviceHealthData.reduce(
+        (acc, s) => {
+          acc[s.health] = (acc[s.health] ?? 0) + 1;
+          return acc;
+        },
+        {} as Record<ServiceHealth, number>,
+      ),
     [serviceHealthData],
   );
 
   const totalServices = serviceHealthData.length;
-  const healthPercent = totalServices > 0 ? Math.round(((counts.healthy ?? 0) / totalServices) * 100) : 0;
-  const avgReadiness  = totalServices > 0 ? Math.round(serviceHealthData.reduce((s, x) => s + x.readiness, 0) / totalServices) : 0;
-  const issueCount    = (counts.critical ?? 0) + (counts.degraded ?? 0);
+  const healthPercent =
+    totalServices > 0 ? Math.round(((counts.healthy ?? 0) / totalServices) * 100) : 0;
+  const avgReadiness =
+    totalServices > 0
+      ? Math.round(serviceHealthData.reduce((s, x) => s + x.readiness, 0) / totalServices)
+      : 0;
+  const issueCount = (counts.critical ?? 0) + (counts.degraded ?? 0);
 
   return (
     <div className="flex flex-col h-full">
@@ -128,8 +160,18 @@ function InsightsPage() {
                   value: `${healthPercent}%`,
                   sub: `${counts.healthy ?? 0}/${totalServices} services healthy`,
                   barValue: healthPercent,
-                  barColor: healthPercent >= 80 ? "bg-success" : healthPercent >= 50 ? "bg-warning" : "bg-destructive",
-                  textColor: healthPercent >= 80 ? "text-success" : healthPercent >= 50 ? "text-warning" : "text-destructive",
+                  barColor:
+                    healthPercent >= 80
+                      ? "bg-success"
+                      : healthPercent >= 50
+                        ? "bg-warning"
+                        : "bg-destructive",
+                  textColor:
+                    healthPercent >= 80
+                      ? "text-success"
+                      : healthPercent >= 50
+                        ? "text-warning"
+                        : "text-destructive",
                 },
                 {
                   label: "READINESS",
@@ -159,9 +201,7 @@ function InsightsPage() {
                 <div key={label} className="glass rounded-xl p-4">
                   <div className="label-mono text-muted-foreground mb-2">{label}</div>
                   <div className={`text-3xl font-bold font-mono ${textColor}`}>{value}</div>
-                  {barValue !== null && (
-                    <ScoreBar value={barValue} color={barColor} />
-                  )}
+                  {barValue !== null && <ScoreBar value={barValue} color={barColor} />}
                   <div className="text-[10px] text-muted-foreground mt-1">{sub}</div>
                 </div>
               ))}
@@ -181,7 +221,10 @@ function InsightsPage() {
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium">{label}</div>
                         <div className="h-1 bg-secondary rounded-full mt-1.5 overflow-hidden">
-                          <div className={`h-full rounded-full ${dot}`} style={{ width: `${pct}%` }} />
+                          <div
+                            className={`h-full rounded-full ${dot}`}
+                            style={{ width: `${pct}%` }}
+                          />
                         </div>
                       </div>
                       <span className="font-mono text-sm font-medium shrink-0">{count}</span>
@@ -206,11 +249,21 @@ function InsightsPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
-                      <th className="px-5 py-3 text-left label-mono text-muted-foreground font-medium">SERVICE</th>
-                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">HEALTH</th>
-                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">READINESS</th>
-                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">RISK</th>
-                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">ENVIRONMENTS</th>
+                      <th className="px-5 py-3 text-left label-mono text-muted-foreground font-medium">
+                        SERVICE
+                      </th>
+                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">
+                        HEALTH
+                      </th>
+                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">
+                        READINESS
+                      </th>
+                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">
+                        RISK
+                      </th>
+                      <th className="px-4 py-3 text-left label-mono text-muted-foreground font-medium">
+                        ENVIRONMENTS
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -224,7 +277,10 @@ function InsightsPage() {
                       serviceHealthData.map(({ item, health, envCount, readiness, risk }) => {
                         const { icon: Icon, label, badge } = HEALTH_CONFIG[health];
                         return (
-                          <tr key={item.id} className="border-b border-border last:border-0 hover:bg-accent/40 transition-colors">
+                          <tr
+                            key={item.id}
+                            className="border-b border-border last:border-0 hover:bg-accent/40 transition-colors"
+                          >
                             <td className="px-5 py-3">
                               <Link
                                 to="/dashboard/services/$serviceName"
@@ -238,12 +294,16 @@ function InsightsPage() {
                                   <div className="font-medium text-sm group-hover:text-primary transition">
                                     {item.display_name || item.name}
                                   </div>
-                                  <div className="text-[10px] font-mono text-muted-foreground">{item.name}</div>
+                                  <div className="text-[10px] font-mono text-muted-foreground">
+                                    {item.name}
+                                  </div>
                                 </div>
                               </Link>
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border label-mono ${badge}`}>
+                              <span
+                                className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border label-mono ${badge}`}
+                              >
                                 <Icon className="size-2.5" />
                                 {label.toUpperCase()}
                               </span>
@@ -254,7 +314,13 @@ function InsightsPage() {
                             <td className="px-4 py-3 w-28">
                               <ScoreBar
                                 value={risk}
-                                color={risk >= 60 ? "bg-destructive" : risk >= 35 ? "bg-warning" : "bg-success"}
+                                color={
+                                  risk >= 60
+                                    ? "bg-destructive"
+                                    : risk >= 35
+                                      ? "bg-warning"
+                                      : "bg-success"
+                                }
                               />
                             </td>
                             <td className="px-4 py-3">

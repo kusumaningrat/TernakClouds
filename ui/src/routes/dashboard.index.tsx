@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { hasSetupBeenVisited } from "@/routes/setup";
+import { hasSetupBeenVisited } from "@/lib/setup-visited";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
 import { GettingStartedChecklist } from "@/components/GettingStartedChecklist";
 import { useWorkspaceContext } from "@/lib/workspace-context";
@@ -69,18 +69,22 @@ function formatRuntime(provider: string): string {
   if (!provider) return "—";
   const map: Record<string, string> = {
     kubernetes: "K8s",
-    nomad:      "Nomad",
-    docker:     "Docker",
+    nomad: "Nomad",
+    docker: "Docker",
   };
   return map[provider.toLowerCase()] ?? provider;
 }
 
 function statusBadge(status: string): { label: string; cls: string } {
   const s = status.toLowerCase();
-  if (s === "running")              return { label: "RUNNING", cls: "text-success bg-success/10 border-success/20" };
-  if (s === "failed" || s === "dead") return { label: "FAILED",  cls: "text-destructive bg-destructive/10 border-destructive/20" };
-  if (s === "pending")              return { label: "PENDING", cls: "text-warning bg-warning/10 border-warning/20" };
-  if (s === "stopped")              return { label: "STOPPED", cls: "text-muted-foreground bg-secondary border-border" };
+  if (s === "running")
+    return { label: "RUNNING", cls: "text-success bg-success/10 border-success/20" };
+  if (s === "failed" || s === "dead")
+    return { label: "FAILED", cls: "text-destructive bg-destructive/10 border-destructive/20" };
+  if (s === "pending")
+    return { label: "PENDING", cls: "text-warning bg-warning/10 border-warning/20" };
+  if (s === "stopped")
+    return { label: "STOPPED", cls: "text-muted-foreground bg-secondary border-border" };
   return { label: s.toUpperCase(), cls: "text-muted-foreground bg-secondary border-border" };
 }
 
@@ -102,11 +106,11 @@ function Dashboard() {
 
   const slug = workspaces?.[0]?.slug ?? "";
 
-  const { data: me, isLoading: meLoading }             = useMe();
+  const { data: me, isLoading: meLoading } = useMe();
   const { data: environments, isLoading: envsLoading } = useEnvironments(slug);
-  const { data: catalog }                              = useCatalog();
+  const { data: catalog } = useCatalog();
 
-  const envSlugs         = useMemo(() => (environments ?? []).map((e) => e.slug), [environments]);
+  const envSlugs = useMemo(() => (environments ?? []).map((e) => e.slug), [environments]);
   const deploymentQueries = useAllServiceDeployments(slug, envSlugs);
 
   const firstEnvSlug = envSlugs[0] ?? "";
@@ -118,22 +122,25 @@ function Dashboard() {
   const isPrivileged = isAdminOrManager(me?.roles);
 
   const isLoading =
-    meLoading ||
-    workspacesLoading ||
-    (!!slug && envsLoading) ||
-    (!!firstEnvSlug && capsLoading);
+    meLoading || workspacesLoading || (!!slug && envsLoading) || (!!firstEnvSlug && capsLoading);
 
   const allDeployments = useMemo(
     () => (environments ?? []).flatMap((_, i) => deploymentQueries[i]?.data ?? []),
     [environments, deploymentQueries],
   );
 
-  const hasDeployments = allDeployments.some((d) => d.status === "running" || d.status === "pending");
+  const hasDeployments = allDeployments.some(
+    (d) => d.status === "running" || d.status === "pending",
+  );
 
   useEffect(() => {
     if (isLoading || !isPrivileged) return;
     if (!hasWorkspace) {
-      try { localStorage.removeItem("tc_setup_visited"); } catch { /* ignore */ }
+      try {
+        localStorage.removeItem("tc_setup_visited");
+      } catch {
+        /* ignore */
+      }
       void navigate({ to: "/setup" });
       return;
     }
@@ -246,9 +253,21 @@ function ScenarioA({
               </Link>
               <div className="glass rounded-xl p-4 text-left space-y-2.5">
                 {[
-                  { icon: Globe,  label: "Create an environment",    desc: "Where your services will run" },
-                  { icon: Server, label: "Connect a runtime",         desc: "Kubernetes, Nomad, Docker, or ECS" },
-                  { icon: Layers, label: "Deploy your first service", desc: "From a ready-made template" },
+                  {
+                    icon: Globe,
+                    label: "Create an environment",
+                    desc: "Where your services will run",
+                  },
+                  {
+                    icon: Server,
+                    label: "Connect a runtime",
+                    desc: "Kubernetes, Nomad, Docker, or ECS",
+                  },
+                  {
+                    icon: Layers,
+                    label: "Deploy your first service",
+                    desc: "From a ready-made template",
+                  },
                 ].map(({ icon: Icon, label, desc }) => (
                   <div key={label} className="flex items-center gap-3">
                     <div className="size-7 rounded bg-secondary grid place-items-center shrink-0">
@@ -296,16 +315,41 @@ function ScenarioFirstDeploy({
   envSlugs: string[];
   hasRuntime: boolean;
 }) {
-  const { data: registries }    = useRegistries(slug);
+  const { data: registries } = useRegistries(slug);
   const { data: repoProviders } = useRepoProviders(slug);
 
   const checklistItems = [
-    { id: "env",      label: "Create an environment",        done: environments.length > 0,          link: "/dashboard/platform" },
-    { id: "registry", label: "Connect a container registry", done: (registries ?? []).length > 0,    link: "/dashboard/registries" },
-    { id: "repo",     label: "Connect a repository",         done: (repoProviders ?? []).length > 0, link: "/dashboard/repositories" },
-    { id: "service",  label: "Deploy your first service",    done: false,                            link: `/dashboard/environments/${environments[0]?.slug}/service-catalog` },
-    { id: "team",     label: "Invite a team member",         done: false,                            link: "/dashboard/teams" },
-    { id: "secret",   label: "Set up a secret",              done: false,                            link: `/dashboard/environments/${environments[0]?.slug}/secrets` },
+    {
+      id: "env",
+      label: "Create an environment",
+      done: environments.length > 0,
+      link: "/dashboard/platform",
+    },
+    {
+      id: "registry",
+      label: "Connect a container registry",
+      done: (registries ?? []).length > 0,
+      link: "/dashboard/registries",
+    },
+    {
+      id: "repo",
+      label: "Connect a repository",
+      done: (repoProviders ?? []).length > 0,
+      link: "/dashboard/repositories",
+    },
+    {
+      id: "service",
+      label: "Deploy your first service",
+      done: false,
+      link: `/dashboard/environments/${environments[0]?.slug}/service-catalog`,
+    },
+    { id: "team", label: "Invite a team member", done: false, link: "/dashboard/teams" },
+    {
+      id: "secret",
+      label: "Set up a secret",
+      done: false,
+      link: `/dashboard/environments/${environments[0]?.slug}/secrets`,
+    },
   ];
 
   return (
@@ -362,7 +406,9 @@ function ScenarioFirstDeploy({
                         </div>
                         <div className="font-medium text-sm truncate">{item.display_name}</div>
                       </div>
-                      <div className="text-xs text-muted-foreground line-clamp-2">{item.description}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-2">
+                        {item.description}
+                      </div>
                       {environments[0] && (
                         <Link
                           to="/dashboard/environments/$envId/service-catalog"
@@ -410,7 +456,14 @@ function ScenarioOperational({
   slug: string;
   me: { first_name?: string; roles?: { role?: { name?: string } }[] } | undefined;
   environments: { id: string; name: string; slug: string }[];
-  catalog: { id: string; name: string; display_name: string; description: string; default_cpu: number; default_memory: number }[];
+  catalog: {
+    id: string;
+    name: string;
+    display_name: string;
+    description: string;
+    default_cpu: number;
+    default_memory: number;
+  }[];
   deploymentQueries: ReturnType<typeof useAllServiceDeployments>;
   selectedEnvironment: { id: string; name: string; slug: string } | null;
   isPrivileged: boolean;
@@ -418,15 +471,17 @@ function ScenarioOperational({
 }) {
   const { data: pendingRequests, isLoading: pendingLoading } = useAccessRequestsPending();
   const approve = useApproveAccessRequest();
-  const deny    = useDenyAccessRequest();
+  const deny = useDenyAccessRequest();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   const pendingCount = isPrivileged ? (pendingRequests?.length ?? 0) : 0;
-  const firstName    = me?.first_name ?? "Developer";
-  const hour         = new Date().getHours();
-  const greeting     = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-  const today        = new Date().toLocaleDateString("en-US", {
-    weekday: "long", month: "short", day: "numeric",
+  const firstName = me?.first_name ?? "Developer";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const today = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
   });
 
   // All deployments enriched with env context
@@ -450,10 +505,12 @@ function ScenarioOperational({
 
   // Health counts
   const health = useMemo(() => {
-    const running  = scopedDeployments.filter((d) => d.status === "running").length;
-    const failed   = scopedDeployments.filter((d) => d.status === "failed" || d.status === "dead").length;
-    const pending  = scopedDeployments.filter((d) => d.status === "pending").length;
-    const healthy  = catalog.filter((item) => {
+    const running = scopedDeployments.filter((d) => d.status === "running").length;
+    const failed = scopedDeployments.filter(
+      (d) => d.status === "failed" || d.status === "dead",
+    ).length;
+    const pending = scopedDeployments.filter((d) => d.status === "pending").length;
+    const healthy = catalog.filter((item) => {
       const deps = scopedDeployments.filter((d) => d.catalog_name === item.name);
       return deps.length > 0 && deps.every((d) => d.status === "running");
     }).length;
@@ -500,7 +557,6 @@ function ScenarioOperational({
       {!hasRuntime && <SetupWarningBanner isAdmin={isPrivileged} />}
 
       <div className="flex flex-col h-full overflow-auto">
-
         {/* ── Header: environment context + health summary ── */}
         <div className="px-6 pt-5 pb-4 border-b border-border shrink-0">
           {/* Row 1: env badge + greeting + shortcuts */}
@@ -522,7 +578,9 @@ function ScenarioOperational({
                 </Link>
               </div>
               {/* Greeting */}
-              <h1 className="text-xl font-bold tracking-tight">{greeting}, {firstName}</h1>
+              <h1 className="text-xl font-bold tracking-tight">
+                {greeting}, {firstName}
+              </h1>
               <p className="text-[11px] label-mono text-muted-foreground mt-0.5">{today}</p>
             </div>
             <div className="flex items-center gap-2 shrink-0 pt-1">
@@ -549,32 +607,32 @@ function ScenarioOperational({
                 label: "RUNNING",
                 active: health.running > 0,
                 activeCls: "bg-success/5 border-success/20",
-                dotCls:    "bg-success",
-                textCls:   "text-success",
+                dotCls: "bg-success",
+                textCls: "text-success",
               },
               {
                 count: health.failed,
                 label: "FAILED",
                 active: health.failed > 0,
                 activeCls: "bg-destructive/5 border-destructive/20",
-                dotCls:    "bg-destructive animate-pulse",
-                textCls:   "text-destructive",
+                dotCls: "bg-destructive animate-pulse",
+                textCls: "text-destructive",
               },
               {
                 count: health.healthy,
                 label: "HEALTHY SVCS",
                 active: health.healthy > 0,
                 activeCls: "bg-success/5 border-success/20",
-                dotCls:    "bg-success",
-                textCls:   "text-success",
+                dotCls: "bg-success",
+                textCls: "text-success",
               },
               {
                 count: health.pending,
                 label: "PENDING",
                 active: health.pending > 0,
                 activeCls: "bg-warning/5 border-warning/20",
-                dotCls:    "bg-warning animate-pulse",
-                textCls:   "text-warning",
+                dotCls: "bg-warning animate-pulse",
+                textCls: "text-warning",
               },
             ].map(({ count, label, active, activeCls, dotCls, textCls }) => (
               <div
@@ -583,9 +641,13 @@ function ScenarioOperational({
                   active ? activeCls : "bg-secondary/50 border-border"
                 }`}
               >
-                <span className={`size-2.5 rounded-full shrink-0 ${active ? dotCls : "bg-muted-foreground/30"}`} />
+                <span
+                  className={`size-2.5 rounded-full shrink-0 ${active ? dotCls : "bg-muted-foreground/30"}`}
+                />
                 <div>
-                  <div className={`text-xl font-bold font-mono leading-none ${active ? textCls : "text-muted-foreground"}`}>
+                  <div
+                    className={`text-xl font-bold font-mono leading-none ${active ? textCls : "text-muted-foreground"}`}
+                  >
                     {count}
                   </div>
                   <div className="text-[9px] label-mono text-muted-foreground mt-0.5">{label}</div>
@@ -597,10 +659,8 @@ function ScenarioOperational({
 
         {/* ── Body: main content + sidebar ── */}
         <div className="flex flex-1 min-h-0 overflow-auto">
-
           {/* Main */}
           <div className="flex-1 min-w-0 p-6 space-y-6 overflow-auto">
-
             {/* ── Recent Activity ── */}
             <section>
               <div className="flex items-center justify-between mb-3">
@@ -625,34 +685,51 @@ function ScenarioOperational({
                 ) : (
                   recentActivity.map((item) => {
                     const isRunning = item.status === "running";
-                    const isFailed  = item.status === "failed" || item.status === "dead";
+                    const isFailed = item.status === "failed" || item.status === "dead";
                     const isPending = item.status === "pending";
                     return (
                       <div key={item.id} className="flex items-center gap-3 px-4 py-3">
-                        <div className={`size-7 rounded grid place-items-center shrink-0 ${
-                          isRunning ? "bg-success/10"     :
-                          isFailed  ? "bg-destructive/10" :
-                          isPending ? "bg-warning/10"     :
-                          "bg-secondary"
-                        }`}>
-                          {isRunning ? <CheckCircle2 className="size-3.5 text-success" />                :
-                           isFailed  ? <XCircle       className="size-3.5 text-destructive" />           :
-                           isPending ? <Loader2        className="size-3.5 text-warning animate-spin" /> :
-                                       <Rocket         className="size-3.5 text-muted-foreground" />}
+                        <div
+                          className={`size-7 rounded grid place-items-center shrink-0 ${
+                            isRunning
+                              ? "bg-success/10"
+                              : isFailed
+                                ? "bg-destructive/10"
+                                : isPending
+                                  ? "bg-warning/10"
+                                  : "bg-secondary"
+                          }`}
+                        >
+                          {isRunning ? (
+                            <CheckCircle2 className="size-3.5 text-success" />
+                          ) : isFailed ? (
+                            <XCircle className="size-3.5 text-destructive" />
+                          ) : isPending ? (
+                            <Loader2 className="size-3.5 text-warning animate-spin" />
+                          ) : (
+                            <Rocket className="size-3.5 text-muted-foreground" />
+                          )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold font-mono">{item.catalog_name}</span>
+                            <span className="text-sm font-semibold font-mono">
+                              {item.catalog_name}
+                            </span>
                             <span className="text-muted-foreground text-xs">in</span>
                             <span className="text-xs font-medium text-primary">{item.envName}</span>
                           </div>
                           <div className="text-[11px] text-muted-foreground mt-0.5">
-                            {isRunning ? "Deployment completed successfully" :
-                             isFailed  ? "Deployment failed" :
-                             isPending ? "Deployment in progress" :
-                             `Status: ${item.status}`}
+                            {isRunning
+                              ? "Deployment completed successfully"
+                              : isFailed
+                                ? "Deployment failed"
+                                : isPending
+                                  ? "Deployment in progress"
+                                  : `Status: ${item.status}`}
                             {" · "}
-                            <span className="label-mono text-muted-foreground/60">{formatRuntime(item.runtime_provider)}</span>
+                            <span className="label-mono text-muted-foreground/60">
+                              {formatRuntime(item.runtime_provider)}
+                            </span>
                           </div>
                         </div>
                         <span className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
@@ -669,9 +746,11 @@ function ScenarioOperational({
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-sm flex items-center gap-2">
-                  <span className={`size-1.5 rounded-full inline-block ${
-                    health.pending > 0 ? "bg-warning animate-pulse" : "bg-muted-foreground"
-                  }`} />
+                  <span
+                    className={`size-1.5 rounded-full inline-block ${
+                      health.pending > 0 ? "bg-warning animate-pulse" : "bg-muted-foreground"
+                    }`}
+                  />
                   My Deployments
                   {myDeployments.length > 0 && (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-muted-foreground label-mono">
@@ -709,8 +788,12 @@ function ScenarioOperational({
                       <span className="text-[10px] label-mono text-muted-foreground">SERVICE</span>
                       <span className="text-[10px] label-mono text-muted-foreground">STATUS</span>
                       <span className="text-[10px] label-mono text-muted-foreground">RUNTIME</span>
-                      <span className="text-[10px] label-mono text-muted-foreground">ENVIRONMENT</span>
-                      <span className="text-[10px] label-mono text-muted-foreground text-right">UPDATED</span>
+                      <span className="text-[10px] label-mono text-muted-foreground">
+                        ENVIRONMENT
+                      </span>
+                      <span className="text-[10px] label-mono text-muted-foreground text-right">
+                        UPDATED
+                      </span>
                     </div>
                     {/* Table rows */}
                     {myDeployments.map((dep) => {
@@ -725,7 +808,9 @@ function ScenarioOperational({
                               <Layers className="size-3 text-muted-foreground" />
                             </div>
                             <div className="min-w-0">
-                              <div className="text-xs font-semibold font-mono truncate">{dep.catalog_name}</div>
+                              <div className="text-xs font-semibold font-mono truncate">
+                                {dep.catalog_name}
+                              </div>
                               {dep.image && (
                                 <div className="text-[10px] text-muted-foreground font-mono truncate">
                                   {dep.image.includes(":") ? dep.image.split(":").pop() : dep.image}
@@ -733,11 +818,17 @@ function ScenarioOperational({
                               )}
                             </div>
                           </div>
-                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border label-mono w-fit ${cls}`}>
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded border label-mono w-fit ${cls}`}
+                          >
                             {label}
                           </span>
-                          <span className="text-xs text-muted-foreground font-mono">{formatRuntime(dep.runtime_provider)}</span>
-                          <span className="text-xs text-muted-foreground truncate">{dep.envName}</span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {formatRuntime(dep.runtime_provider)}
+                          </span>
+                          <span className="text-xs text-muted-foreground truncate">
+                            {dep.envName}
+                          </span>
                           <span className="text-[11px] text-muted-foreground text-right tabular-nums">
                             {formatRelative(dep.updated_at)}
                           </span>
@@ -752,7 +843,6 @@ function ScenarioOperational({
 
           {/* ── Sidebar ── */}
           <div className="w-72 shrink-0 border-l border-border p-4 space-y-4 overflow-auto">
-
             {/* Quick Actions */}
             <div className="glass rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-border">
@@ -830,12 +920,16 @@ function ScenarioOperational({
                       <div key={req.id} className="px-4 py-3 space-y-2">
                         <div className="text-[10px] label-mono text-warning">RBAC ACCESS</div>
                         <div className="text-xs">
-                          <span className="font-semibold">{req.first_name} {req.last_name}</span>
+                          <span className="font-semibold">
+                            {req.first_name} {req.last_name}
+                          </span>
                           {" — "}
                           <span className="text-muted-foreground">{req.requested_role}</span>
                         </div>
                         {req.reason && (
-                          <div className="text-[10px] text-muted-foreground italic">"{req.reason}"</div>
+                          <div className="text-[10px] text-muted-foreground italic">
+                            "{req.reason}"
+                          </div>
                         )}
                         <div className="flex items-center gap-2">
                           <button
@@ -843,9 +937,11 @@ function ScenarioOperational({
                             disabled={processingId === req.id}
                             className="flex-1 text-xs py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition text-center disabled:opacity-50"
                           >
-                            {processingId === req.id
-                              ? <Loader2 className="size-3 animate-spin mx-auto" />
-                              : "Approve"}
+                            {processingId === req.id ? (
+                              <Loader2 className="size-3 animate-spin mx-auto" />
+                            ) : (
+                              "Approve"
+                            )}
                           </button>
                           <button
                             onClick={() => void handleApproval(req.id, "deny")}
@@ -877,14 +973,18 @@ function ScenarioOperational({
               </div>
               <div className="px-4 py-3 space-y-3">
                 {[
-                  { label: "Environments",       value: environments.length },
+                  { label: "Environments", value: environments.length },
                   { label: "Services in catalog", value: catalog.length },
-                  { label: "Running",            value: health.running },
-                  { label: "Failed",             value: health.failed, highlight: health.failed > 0 },
+                  { label: "Running", value: health.running },
+                  { label: "Failed", value: health.failed, highlight: health.failed > 0 },
                 ].map(({ label, value, highlight }) => (
                   <div key={label} className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{label}</span>
-                    <span className={`font-mono font-medium ${highlight ? "text-destructive" : ""}`}>{value}</span>
+                    <span
+                      className={`font-mono font-medium ${highlight ? "text-destructive" : ""}`}
+                    >
+                      {value}
+                    </span>
                   </div>
                 ))}
               </div>

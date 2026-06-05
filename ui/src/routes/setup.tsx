@@ -1,5 +1,6 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { isAuthenticated } from "@/lib/auth";
+import { markSetupVisited } from "@/lib/setup-visited";
 import { WorkspaceProvider, useWorkspaceContext } from "@/lib/workspace-context";
 import {
   useWorkspacesMine,
@@ -25,26 +26,6 @@ import {
   Building2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-
-// ─── Setup visited flag ───────────────────────────────────────────────────────
-
-const SETUP_VISITED_KEY = "tc_setup_visited";
-
-export function markSetupVisited() {
-  try {
-    localStorage.setItem(SETUP_VISITED_KEY, "1");
-  } catch {
-    /* ignore */
-  }
-}
-
-export function hasSetupBeenVisited(): boolean {
-  try {
-    return !!localStorage.getItem(SETUP_VISITED_KEY);
-  } catch {
-    return false;
-  }
-}
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 

@@ -161,10 +161,13 @@ function EnvOverviewPage() {
   const runtimeProviders =
     (capabilities ?? []).find((c) => c.capability_name === "runtime")?.providers ?? [];
 
-  const hasNomadProvider  = !capLoading && runtimeProviders.some((p) => p.provider_name === "nomad");
-  const hasK8sProvider    = !capLoading && runtimeProviders.some((p) => p.provider_name === "kubernetes");
-  const hasDockerProvider = !capLoading && runtimeProviders.some((p) => p.provider_name === "docker");
-  const noRuntimeProvider = !capLoading && !hasNomadProvider && !hasK8sProvider && !hasDockerProvider;
+  const hasNomadProvider = !capLoading && runtimeProviders.some((p) => p.provider_name === "nomad");
+  const hasK8sProvider =
+    !capLoading && runtimeProviders.some((p) => p.provider_name === "kubernetes");
+  const hasDockerProvider =
+    !capLoading && runtimeProviders.some((p) => p.provider_name === "docker");
+  const noRuntimeProvider =
+    !capLoading && !hasNomadProvider && !hasK8sProvider && !hasDockerProvider;
 
   // Runtime data
   const { data: nomadNodes, isLoading: nomadNodesLoading } = useNomadNodes(
@@ -214,7 +217,7 @@ function EnvOverviewPage() {
   const totalK8sDeployments = (k8sDeployments ?? []).length;
 
   const runningContainers = (dockerContainers ?? []).filter((c) => c.state === "running").length;
-  const totalContainers   = (dockerContainers ?? []).length;
+  const totalContainers = (dockerContainers ?? []).length;
 
   const enabledCaps = (capabilities ?? []).filter((c) => c.is_enabled).length;
 
@@ -238,8 +241,8 @@ function EnvOverviewPage() {
 
   const activeTab: "nomad" | "kubernetes" | "docker" = (() => {
     const providers = [
-      hasNomadProvider  && "nomad",
-      hasK8sProvider    && "kubernetes",
+      hasNomadProvider && "nomad",
+      hasK8sProvider && "kubernetes",
       hasDockerProvider && "docker",
     ].filter(Boolean) as ("nomad" | "kubernetes" | "docker")[];
 
@@ -249,20 +252,23 @@ function EnvOverviewPage() {
   })();
 
   const workloadLoading =
-    activeTab === "nomad"      ? jobsLoading :
-    activeTab === "kubernetes" ? k8sDeploymentsLoading :
-    dockerLoading;
+    activeTab === "nomad"
+      ? jobsLoading
+      : activeTab === "kubernetes"
+        ? k8sDeploymentsLoading
+        : dockerLoading;
 
   const noWorkloads =
-    activeTab === "nomad"      ? recentJobs.length === 0 :
-    activeTab === "kubernetes" ? recentK8sDeployments.length === 0 :
-    recentContainers.length === 0;
+    activeTab === "nomad"
+      ? recentJobs.length === 0
+      : activeTab === "kubernetes"
+        ? recentK8sDeployments.length === 0
+        : recentContainers.length === 0;
 
   return (
     <>
       <DashboardTopbar title={envName} subtitle={`Environment overview · ${envId}`} />
       <main className="p-6 space-y-6 overflow-auto">
-
         {/* Stats — service-centric labels */}
         <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
           {hasNomadProvider && (
@@ -378,10 +384,13 @@ function EnvOverviewPage() {
                   <div className="flex rounded-md border border-border overflow-hidden text-[11px]">
                     {(
                       [
-                        hasNomadProvider  && { key: "primary"   as const, label: "Nomad" },
-                        hasK8sProvider    && { key: "secondary" as const, label: "K8s" },
-                        hasDockerProvider && { key: "tertiary"  as const, label: "Docker" },
-                      ].filter(Boolean) as { key: "primary" | "secondary" | "tertiary"; label: string }[]
+                        hasNomadProvider && { key: "primary" as const, label: "Nomad" },
+                        hasK8sProvider && { key: "secondary" as const, label: "K8s" },
+                        hasDockerProvider && { key: "tertiary" as const, label: "Docker" },
+                      ].filter(Boolean) as {
+                        key: "primary" | "secondary" | "tertiary";
+                        label: string;
+                      }[]
                     ).map(({ key, label }) => (
                       <button
                         key={key}
@@ -448,7 +457,9 @@ function EnvOverviewPage() {
                     >
                       {dep.ready}/{dep.desired} ready
                     </span>
-                    <span className="font-mono text-xs font-medium flex-1 truncate">{dep.name}</span>
+                    <span className="font-mono text-xs font-medium flex-1 truncate">
+                      {dep.name}
+                    </span>
                     <span className="text-[11px] text-muted-foreground shrink-0">
                       {dep.namespace}
                     </span>

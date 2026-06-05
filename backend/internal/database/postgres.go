@@ -367,19 +367,6 @@ func seedServiceCatalog(db *gorm.DB) error {
 			HealthCheckPath:      "/minio/health/live",
 			IsPublicImage:        true,
 		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000005"),
-			Name:                 "app",
-			DisplayName:          "Custom Application",
-			Description:          "Deploy a custom application image from a registered registry",
-			DefaultImage:         "",
-			DefaultContainerPort: 8080,
-			DefaultCPU:           256,
-			DefaultMemory:        512,
-			HealthCheckType:      "http",
-			HealthCheckPath:      "/health",
-			IsPublicImage:        false,
-		},
 	}
 	for _, item := range items {
 		if err := db.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {

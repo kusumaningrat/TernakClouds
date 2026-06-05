@@ -531,10 +531,10 @@ function EnvServicesPage() {
   const slug = selectedWorkspace?.slug ?? "";
 
   const { data: status, isLoading: capLoading } = useCapability(slug, envId, "runtime");
-  const hasNomad  = (status?.providers ?? []).some((p) => p.provider_name === "nomad");
-  const hasK8s    = (status?.providers ?? []).some((p) => p.provider_name === "kubernetes");
+  const hasNomad = (status?.providers ?? []).some((p) => p.provider_name === "nomad");
+  const hasK8s = (status?.providers ?? []).some((p) => p.provider_name === "kubernetes");
   const hasDocker = (status?.providers ?? []).some((p) => p.provider_name === "docker");
-  const hasAny    = hasNomad || hasK8s || hasDocker;
+  const hasAny = hasNomad || hasK8s || hasDocker;
 
   return (
     <>
@@ -557,7 +557,8 @@ function EnvServicesPage() {
           <div>
             <p className="font-semibold">No runtime provider configured</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Bind a Nomad, Kubernetes, or Docker provider to the Runtime capability to view services here.
+              Bind a Nomad, Kubernetes, or Docker provider to the Runtime capability to view
+              services here.
             </p>
           </div>
           <Link

@@ -87,7 +87,7 @@ clean:
 # ── Admin Linting ────────────────────────────────────────────────────────────────────
 
 lint-admin:
-	cd admin && npm run lint
+	cd ui && npm run lint
 
 lint-autofix:
-	cd admin && npm run lint -- --fix
+	cd ui && npm run lint -- --fix

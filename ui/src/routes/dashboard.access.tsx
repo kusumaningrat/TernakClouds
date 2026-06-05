@@ -62,7 +62,12 @@ function AccessPage() {
   const pendingCount = privileged ? (pendingRequests?.length ?? 0) : 0;
 
   const TABS = [
-    { id: "secrets" as Tab, label: "Secrets", icon: KeyRound, badge: undefined as number | undefined },
+    {
+      id: "secrets" as Tab,
+      label: "Secrets",
+      icon: KeyRound,
+      badge: undefined as number | undefined,
+    },
     {
       id: "requests" as Tab,
       label: privileged ? "Requests" : "My requests",
@@ -74,10 +79,7 @@ function AccessPage() {
 
   return (
     <>
-      <DashboardTopbar
-        title="Access"
-        subtitle="Secrets, access requests, and team membership."
-      />
+      <DashboardTopbar title="Access" subtitle="Secrets, access requests, and team membership." />
       <main className="p-6 space-y-4 overflow-auto">
         {/* Tab bar */}
         <div className="flex items-center gap-1 p-1 rounded-xl bg-secondary w-fit">
@@ -195,7 +197,9 @@ function PendingRequestsTab({
       <div className="glass rounded-xl p-8 text-center">
         <CheckCircle2 className="size-8 text-emerald-500 mx-auto mb-3" />
         <p className="text-sm font-medium">No pending requests</p>
-        <p className="text-xs text-muted-foreground mt-1">All access requests have been reviewed.</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          All access requests have been reviewed.
+        </p>
       </div>
     );
   }
@@ -219,7 +223,9 @@ function PendingRequestsTab({
               <span className="text-[10px] font-medium text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full">
                 {req.requested_role}
               </span>
-              <span className="text-[10px] text-muted-foreground">{formatDate(req.created_at)}</span>
+              <span className="text-[10px] text-muted-foreground">
+                {formatDate(req.created_at)}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -345,9 +351,7 @@ function MembersTab({ members, loading }: { members: Member[]; loading: boolean 
             <div className="text-sm font-medium truncate">
               {m.first_name} {m.last_name}
             </div>
-            <div className="text-xs text-muted-foreground">
-              since {formatDate(m.joined_at)}
-            </div>
+            <div className="text-xs text-muted-foreground">since {formatDate(m.joined_at)}</div>
           </div>
           {m.role === "owner" ? (
             <span className="flex items-center gap-1 text-[10px] font-medium text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded-full shrink-0">

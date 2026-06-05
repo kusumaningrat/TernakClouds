@@ -54,16 +54,16 @@ export function GettingStartedChecklist({ items }: GettingStartedChecklistProps)
         {items.map((item) => (
           <div
             key={item.id}
-            className={`flex items-center gap-3 px-4 py-2.5 ${
-              item.done ? "opacity-50" : ""
-            }`}
+            className={`flex items-center gap-3 px-4 py-2.5 ${item.done ? "opacity-50" : ""}`}
           >
             {item.done ? (
               <CheckCircle2 className="size-3.5 text-success shrink-0" />
             ) : (
               <Circle className="size-3.5 text-muted-foreground/40 shrink-0" />
             )}
-            <span className={`text-xs flex-1 ${item.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+            <span
+              className={`text-xs flex-1 ${item.done ? "line-through text-muted-foreground" : "text-foreground"}`}
+            >
               {item.label}
             </span>
             {!item.done && item.link && (
