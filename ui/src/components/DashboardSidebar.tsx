@@ -103,7 +103,10 @@ function EnvSwitcher() {
                   const match = path.match(/^\/dashboard\/environments\/[^/]+(\/.*)?$/);
                   const suffix = match?.[1] ?? "";
                   navigate({ to: `/dashboard/environments/${env.slug}${suffix}` as never });
-                } else if (path === "/dashboard/environments" || path === "/dashboard/environments/") {
+                } else if (
+                  path === "/dashboard/environments" ||
+                  path === "/dashboard/environments/"
+                ) {
                   navigate({ to: `/dashboard/environments/${env.slug}` as never });
                 }
               }}
