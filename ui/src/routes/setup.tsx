@@ -31,11 +31,19 @@ import { useState, useEffect } from "react";
 const SETUP_VISITED_KEY = "tc_setup_visited";
 
 export function markSetupVisited() {
-  try { localStorage.setItem(SETUP_VISITED_KEY, "1"); } catch { /* ignore */ }
+  try {
+    localStorage.setItem(SETUP_VISITED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
 }
 
 export function hasSetupBeenVisited(): boolean {
-  try { return !!localStorage.getItem(SETUP_VISITED_KEY); } catch { return false; }
+  try {
+    return !!localStorage.getItem(SETUP_VISITED_KEY);
+  } catch {
+    return false;
+  }
 }
 
 // ─── Route ────────────────────────────────────────────────────────────────────
@@ -69,10 +77,10 @@ function SetupShell() {
 type Step = "workspace" | "environment" | "runtime" | "service" | "done";
 
 const STEP_META: { id: Step; label: string; icon: React.ElementType }[] = [
-  { id: "workspace",   label: "Workspace",   icon: Building2 },
+  { id: "workspace", label: "Workspace", icon: Building2 },
   { id: "environment", label: "Environment", icon: Globe },
-  { id: "runtime",     label: "Runtime",     icon: Server },
-  { id: "service",     label: "Service",     icon: Layers },
+  { id: "runtime", label: "Runtime", icon: Server },
+  { id: "service", label: "Service", icon: Layers },
 ];
 
 // ─── Progress indicator ───────────────────────────────────────────────────────
@@ -94,23 +102,27 @@ function StepProgress({
     <div className="w-full max-w-lg mx-auto mb-8">
       <div className="flex items-center justify-between mb-3">
         {steps.map((s, i) => {
-          const isDone    = completed.includes(s.id);
+          const isDone = completed.includes(s.id);
           const isCurrent = s.id === current;
-          const Icon      = s.icon;
+          const Icon = s.icon;
           return (
             <div key={s.id} className="flex items-center gap-1.5">
               <div
                 className={`size-6 rounded-full grid place-items-center text-xs font-bold transition-colors ${
-                  isDone    ? "bg-success text-success-foreground"   :
-                  isCurrent ? "bg-primary text-primary-foreground"   :
-                              "bg-secondary text-muted-foreground"
+                  isDone
+                    ? "bg-success text-success-foreground"
+                    : isCurrent
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground"
                 }`}
               >
                 {isDone ? <CheckCircle2 className="size-3.5" /> : <Icon className="size-3" />}
               </div>
-              <span className={`text-xs font-medium hidden sm:block ${
-                isCurrent ? "text-foreground" : isDone ? "text-success" : "text-muted-foreground"
-              }`}>
+              <span
+                className={`text-xs font-medium hidden sm:block ${
+                  isCurrent ? "text-foreground" : isDone ? "text-success" : "text-muted-foreground"
+                }`}
+              >
                 {s.label}
               </span>
               {i < steps.length - 1 && (
@@ -125,7 +137,7 @@ function StepProgress({
           className="h-full bg-primary rounded-full transition-all duration-500"
           style={{
             width: `${Math.round(
-              ((steps.findIndex((s) => s.id === current) + 0.5) / steps.length) * 100
+              ((steps.findIndex((s) => s.id === current) + 0.5) / steps.length) * 100,
             )}%`,
           }}
         />
@@ -137,11 +149,7 @@ function StepProgress({
 // ─── Card + nav buttons ───────────────────────────────────────────────────────
 
 function Card({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="glass rounded-2xl p-8 w-full max-w-lg mx-auto">
-      {children}
-    </div>
-  );
+  return <div className="glass rounded-2xl p-8 w-full max-w-lg mx-auto">{children}</div>;
 }
 
 function NavButtons({
@@ -170,7 +178,9 @@ function NavButtons({
         >
           <ArrowLeft className="size-3.5" /> Back
         </button>
-      ) : <div />}
+      ) : (
+        <div />
+      )}
 
       <div className="flex items-center gap-3">
         {onSkip && (
@@ -189,7 +199,10 @@ function NavButtons({
           {loading ? (
             <Loader2 className="size-4 animate-spin" />
           ) : (
-            <>{nextLabel}<NextIcon className="size-4" /></>
+            <>
+              {nextLabel}
+              <NextIcon className="size-4" />
+            </>
           )}
         </button>
       </div>
@@ -200,30 +213,29 @@ function NavButtons({
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 function SetupPage() {
-  const navigate   = useNavigate();
+  const navigate = useNavigate();
   const { setSelectedWorkspace } = useWorkspaceContext();
 
   const { data: workspaces, isLoading: workspacesLoading } = useWorkspacesMine();
-  const slug          = workspaces?.[0]?.slug ?? "";
+  const slug = workspaces?.[0]?.slug ?? "";
   const { data: envs } = useEnvironments(slug);
-  const firstEnvSlug  = envs?.[0]?.slug ?? "";
+  const firstEnvSlug = envs?.[0]?.slug ?? "";
   const { data: caps, isLoading: capsLoading } = useCapabilities(slug, firstEnvSlug);
 
   const hasWorkspace = (workspaces?.length ?? 0) > 0;
-  const hasRuntime   = caps
+  const hasRuntime = caps
     ? caps.some((c) => c.capability_name === "runtime" && (c.providers ?? []).length > 0)
     : null;
 
   // The provider_name the user bound in the Runtime step (e.g. "kubernetes", "nomad", "docker").
   // Used to pass the correct runtime_provider when deploying in the Service step.
   const existingRuntimeProvider =
-    caps
-      ?.find((c) => c.capability_name === "runtime" && (c.providers ?? []).length > 0)
+    caps?.find((c) => c.capability_name === "runtime" && (c.providers ?? []).length > 0)
       ?.providers[0] ?? null;
 
   const connectedRuntimeProvider = existingRuntimeProvider?.provider_name ?? "";
 
-  const [step, setStep]           = useState<Step | null>(null); // null = detecting
+  const [step, setStep] = useState<Step | null>(null); // null = detecting
   const [completed, setCompleted] = useState<Step[]>([]);
 
   // ── Detect where to start ──────────────────────────────────────────────────
@@ -256,15 +268,21 @@ function SetupPage() {
     setCompleted((p) => (p.includes("environment") ? p : [...p, "environment"]));
     setCompleted((p) => (p.includes("runtime") ? p : [...p, "runtime"]));
     setStep("service");
-  }, [workspacesLoading, capsLoading, hasWorkspace, hasRuntime, envs, step, workspaces, setSelectedWorkspace]);
+  }, [
+    workspacesLoading,
+    capsLoading,
+    hasWorkspace,
+    hasRuntime,
+    envs,
+    step,
+    workspaces,
+    setSelectedWorkspace,
+  ]);
 
   // ── Visible steps for progress bar ────────────────────────────────────────
-  const visibleSteps: Step[] = hasWorkspace
-    ? ["environment", "runtime", "service"]
-    : ["workspace", "environment", "runtime", "service"];
+  const visibleSteps: Step[] = ["workspace", "environment", "runtime", "service"];
 
-  const markDone = (s: Step) =>
-    setCompleted((p) => (p.includes(s) ? p : [...p, s]));
+  const markDone = (s: Step) => setCompleted((p) => (p.includes(s) ? p : [...p, s]));
 
   const goToDashboard = () => {
     markSetupVisited();
@@ -359,9 +377,7 @@ function SetupPage() {
           />
         )}
 
-        {step === "done" && (
-          <DoneStep completed={completed} onGo={goToDashboard} />
-        )}
+        {step === "done" && <DoneStep completed={completed} onGo={goToDashboard} />}
       </div>
     </div>
   );
@@ -376,7 +392,7 @@ function WorkspaceStep({
   existing?: import("@/lib/types").Workspace;
   onDone: (ws: import("@/lib/types").Workspace) => void;
 }) {
-  const [name, setName]   = useState("");
+  const [name, setName] = useState("");
   const [error, setError] = useState("");
   const createWs = useCreateWorkspace();
 
@@ -400,17 +416,17 @@ function WorkspaceStep({
           </div>
         </div>
 
-        <NavButtons
-          onNext={() => onDone(existing)}
-          nextLabel="Continue"
-        />
+        <NavButtons onNext={() => onDone(existing)} nextLabel="Continue" />
       </Card>
     );
   }
 
   // ── Creation form ─────────────────────────────────────────────────────────
   const submit = async () => {
-    if (!name.trim()) { setError("Workspace name is required"); return; }
+    if (!name.trim()) {
+      setError("Workspace name is required");
+      return;
+    }
     setError("");
     try {
       const ws = await createWs.mutateAsync({ name: name.trim() });
@@ -426,8 +442,8 @@ function WorkspaceStep({
         <div className="label-mono text-muted-foreground mb-1">Step 1</div>
         <h2 className="text-xl font-bold">Create your workspace</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          A workspace contains all your services, environments, and team members.
-          This is usually your company or project name.
+          A workspace contains all your services, environments, and team members. This is usually
+          your company or project name.
         </p>
       </div>
 
@@ -476,9 +492,9 @@ function EnvironmentStep({
   onDone: (envSlug: string) => void;
   onSkip: () => void;
 }) {
-  const [name, setName]         = useState("Development");
-  const [description, setDesc]  = useState("");
-  const [error, setError]       = useState("");
+  const [name, setName] = useState("Development");
+  const [description, setDesc] = useState("");
+  const [error, setError] = useState("");
 
   const createEnv = useCreateEnvironment();
 
@@ -488,7 +504,7 @@ function EnvironmentStep({
       <Card>
         <div className="mb-6">
           <div className="label-mono text-muted-foreground mb-1">
-            Step — <span className="text-warning">Optional</span>
+            Step 2 — <span className="text-warning">Optional</span>
           </div>
           <h2 className="text-xl font-bold">Environment</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -504,18 +520,17 @@ function EnvironmentStep({
           </div>
         </div>
 
-        <NavButtons
-          onBack={onBack}
-          onNext={() => onDone(existing.slug)}
-          nextLabel="Continue"
-        />
+        <NavButtons onBack={onBack} onNext={() => onDone(existing.slug)} nextLabel="Continue" />
       </Card>
     );
   }
 
   // ── Creation form ─────────────────────────────────────────────────────────
   const submit = async () => {
-    if (!name.trim()) { setError("Name is required"); return; }
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
     setError("");
     try {
       const env = await createEnv.mutateAsync({
@@ -532,12 +547,12 @@ function EnvironmentStep({
     <Card>
       <div className="mb-6">
         <div className="label-mono text-muted-foreground mb-1">
-          Step — <span className="text-warning">Optional</span>
+          Step 2 — <span className="text-warning">Optional</span>
         </div>
         <h2 className="text-xl font-bold">Create an environment</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Environments are where your services run — Development, Staging, Production.
-          You can create more from the dashboard later.
+          Environments are where your services run — Development, Staging, Production. You can
+          create more from the dashboard later.
         </p>
       </div>
 
@@ -590,9 +605,9 @@ function EnvironmentStep({
 type RuntimeType = "kubernetes" | "nomad" | "docker";
 
 const RUNTIME_OPTIONS: { type: RuntimeType; icon: string; label: string; desc: string }[] = [
-  { type: "kubernetes", icon: "☸",  label: "Kubernetes", desc: "GKE, EKS, AKS, self-hosted" },
-  { type: "nomad",      icon: "📦", label: "Nomad",      desc: "HashiCorp Nomad cluster" },
-  { type: "docker",     icon: "🐳", label: "Docker",     desc: "Docker host or Compose" },
+  { type: "kubernetes", icon: "☸", label: "Kubernetes", desc: "GKE, EKS, AKS, self-hosted" },
+  { type: "nomad", icon: "📦", label: "Nomad", desc: "HashiCorp Nomad cluster" },
+  { type: "docker", icon: "🐳", label: "Docker", desc: "Docker host or Compose" },
 ];
 
 function RuntimeStep({
@@ -611,10 +626,10 @@ function RuntimeStep({
   onSkip: () => void;
 }) {
   const [runtimeType, setRuntimeType] = useState<RuntimeType>("kubernetes");
-  const [endpoint, setEndpoint]       = useState("");
-  const [token, setToken]             = useState("");
-  const [namespace, setNamespace]     = useState("");
-  const [error, setError]             = useState("");
+  const [endpoint, setEndpoint] = useState("");
+  const [token, setToken] = useState("");
+  const [namespace, setNamespace] = useState("");
+  const [error, setError] = useState("");
 
   const bindProvider = useBindProvider();
 
@@ -622,8 +637,8 @@ function RuntimeStep({
   if (existing) {
     const iconMap: Record<string, string> = {
       kubernetes: "☸",
-      nomad:      "📦",
-      docker:     "🐳",
+      nomad: "📦",
+      docker: "🐳",
     };
     const icon = iconMap[existing.provider_name] ?? "⚡";
 
@@ -631,7 +646,7 @@ function RuntimeStep({
       <Card>
         <div className="mb-6">
           <div className="label-mono text-muted-foreground mb-1">
-            Step 2 — <span className="text-warning">Optional</span>
+            Step 3 — <span className="text-warning">Optional</span>
           </div>
           <h2 className="text-xl font-bold">Runtime</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -644,23 +659,26 @@ function RuntimeStep({
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="text-xl">{icon}</span>
             <div className="min-w-0">
-              <div className="text-sm font-semibold">{existing.display_name || existing.provider_name}</div>
-              <div className="text-xs text-muted-foreground font-mono truncate">{existing.endpoint}</div>
+              <div className="text-sm font-semibold">
+                {existing.display_name || existing.provider_name}
+              </div>
+              <div className="text-xs text-muted-foreground font-mono truncate">
+                {existing.endpoint}
+              </div>
             </div>
           </div>
         </div>
 
-        <NavButtons
-          onBack={onBack}
-          onNext={onDone}
-          nextLabel="Continue"
-        />
+        <NavButtons onBack={onBack} onNext={onDone} nextLabel="Continue" />
       </Card>
     );
   }
 
   const submit = async () => {
-    if (!endpoint.trim()) { setError("Endpoint is required"); return; }
+    if (!endpoint.trim()) {
+      setError("Endpoint is required");
+      return;
+    }
     setError("");
     try {
       await bindProvider.mutateAsync({
@@ -676,18 +694,23 @@ function RuntimeStep({
       });
       onDone();
     } catch (e: unknown) {
-      setError((e as { message?: string })?.message ?? "Could not connect. Check your endpoint and credentials.");
+      setError(
+        (e as { message?: string })?.message ??
+          "Could not connect. Check your endpoint and credentials.",
+      );
     }
   };
 
   return (
     <Card>
       <div className="mb-6">
-        <div className="label-mono text-muted-foreground mb-1">Step 2 — <span className="text-warning">Optional</span></div>
+        <div className="label-mono text-muted-foreground mb-1">
+          Step 3 — <span className="text-warning">Optional</span>
+        </div>
         <h2 className="text-xl font-bold">Connect a runtime</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          A runtime is where your services will run. You can connect this later from
-          Platform settings if you're not ready yet.
+          A runtime is where your services will run. You can connect this later from Platform
+          settings if you're not ready yet.
         </p>
       </div>
 
@@ -695,7 +718,11 @@ function RuntimeStep({
         {RUNTIME_OPTIONS.map(({ type, icon, label, desc }) => (
           <button
             key={type}
-            onClick={() => { setRuntimeType(type); setEndpoint(""); setToken(""); }}
+            onClick={() => {
+              setRuntimeType(type);
+              setEndpoint("");
+              setToken("");
+            }}
             className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition text-center ${
               runtimeType === type
                 ? "border-primary bg-primary/10"
@@ -718,9 +745,11 @@ function RuntimeStep({
             value={endpoint}
             onChange={(e) => setEndpoint(e.target.value)}
             placeholder={
-              runtimeType === "kubernetes" ? "https://k8s.example.com" :
-              runtimeType === "nomad"      ? "http://nomad.example.com:4646" :
-              "http://localhost:2375"
+              runtimeType === "kubernetes"
+                ? "https://k8s.example.com"
+                : runtimeType === "nomad"
+                  ? "http://nomad.example.com:4646"
+                  : "http://localhost:2375"
             }
             className="w-full px-3 py-2.5 rounded-lg bg-input border border-border text-sm font-mono outline-none focus:border-primary/50 transition"
           />
@@ -728,9 +757,11 @@ function RuntimeStep({
 
         <div>
           <label className="text-sm font-medium block mb-1.5 text-muted-foreground">
-            {runtimeType === "kubernetes" ? "Service account token" :
-             runtimeType === "nomad"      ? "ACL token" :
-             "TLS certificate"}{" "}
+            {runtimeType === "kubernetes"
+              ? "Service account token"
+              : runtimeType === "nomad"
+                ? "ACL token"
+                : "TLS certificate"}{" "}
             <span className="font-normal">(optional)</span>
           </label>
           <input
@@ -757,13 +788,21 @@ function RuntimeStep({
           </div>
         )}
 
-        {runtimeType === "docker" && (
+        {/* {runtimeType === "docker" && (
           <div className="p-3 rounded-lg bg-secondary/50 text-xs text-muted-foreground space-y-1">
-            <p>💡 Docker must have its TCP socket enabled. To enable it, add the following to <span className="font-mono">/etc/docker/daemon.json</span>:</p>
-            <pre className="font-mono bg-background/60 rounded px-2 py-1 text-[11px] select-all">{"{ \"hosts\": [\"unix:///var/run/docker.sock\", \"tcp://0.0.0.0:2375\"] }"}</pre>
-            <p>Then restart Docker. Use <span className="font-mono">http://</span> (not <span className="font-mono">tcp://</span>) in the URL above.</p>
+            <p>
+              💡 Docker must have its TCP socket enabled. To enable it, add the following to{" "}
+              <span className="font-mono">/etc/docker/daemon.json</span>:
+            </p>
+            <pre className="font-mono bg-background/60 rounded px-2 py-1 text-[11px] select-all">
+              {'{ "hosts":["unix:///var/run/docker.sock", "tcp://0.0.0.0:2375"]}'}
+            </pre>
+            <p>
+              Then restart Docker. Use <span className="font-mono">http://</span> (not{" "}
+              <span className="font-mono">tcp://</span>) in the URL above.
+            </p>
           </div>
-        )}
+        )} */}
 
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>
@@ -799,8 +838,8 @@ function ServiceStep({
 }) {
   const { data: catalog, isLoading } = useCatalog();
   const [selectedService, setSelectedService] = useState("");
-  const [port, setPort]                       = useState("80");
-  const [error, setError]                     = useState("");
+  const [port, setPort] = useState("80");
+  const [error, setError] = useState("");
 
   const deployService = useDeployService(slug, envSlug);
 
@@ -812,7 +851,10 @@ function ServiceStep({
   }, [catalog, selectedService]);
 
   const submit = async () => {
-    if (!selectedService) { setError("Select a service"); return; }
+    if (!selectedService) {
+      setError("Select a service");
+      return;
+    }
     setError("");
     try {
       await deployService.mutateAsync({
@@ -823,18 +865,22 @@ function ServiceStep({
       });
       onDone();
     } catch (e: unknown) {
-      setError((e as { message?: string })?.message ?? "Deployment failed. Check your runtime connection.");
+      setError(
+        (e as { message?: string })?.message ?? "Deployment failed. Check your runtime connection.",
+      );
     }
   };
 
   return (
     <Card>
       <div className="mb-6">
-        <div className="label-mono text-muted-foreground mb-1">Step 3 — <span className="text-warning">Optional</span></div>
+        <div className="label-mono text-muted-foreground mb-1">
+          Step 4 — <span className="text-warning">Optional</span>
+        </div>
         <h2 className="text-xl font-bold">Deploy your first service</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          Deploy a service to verify your runtime connection works.
-          You can deploy anytime from the Service Catalog.
+          Deploy a service to verify your runtime connection works. You can deploy anytime from the
+          Service Catalog.
         </p>
       </div>
 
@@ -869,7 +915,9 @@ function ServiceStep({
                   </div>
                   <div className="min-w-0">
                     <div className="text-xs font-semibold truncate">{item.display_name}</div>
-                    <div className="text-[10px] text-muted-foreground font-mono truncate">{item.name}</div>
+                    <div className="text-[10px] text-muted-foreground font-mono truncate">
+                      {item.name}
+                    </div>
                   </div>
                 </button>
               ))}
@@ -899,18 +947,12 @@ function ServiceStep({
 
 // ─── Step: Done ───────────────────────────────────────────────────────────────
 
-function DoneStep({
-  completed,
-  onGo,
-}: {
-  completed: Step[];
-  onGo: () => void;
-}) {
+function DoneStep({ completed, onGo }: { completed: Step[]; onGo: () => void }) {
   const items = [
-    { step: "workspace"   as Step, label: "Workspace created" },
+    { step: "workspace" as Step, label: "Workspace created" },
     { step: "environment" as Step, label: "Environment created" },
-    { step: "runtime"     as Step, label: "Runtime connected" },
-    { step: "service"     as Step, label: "First service deployed" },
+    { step: "runtime" as Step, label: "Runtime connected" },
+    { step: "service" as Step, label: "First service deployed" },
   ];
 
   const skipped = items.filter((i) => !completed.includes(i.step));
@@ -942,9 +984,11 @@ function DoneStep({
             ) : (
               <div className="size-4 rounded-full border-2 border-border shrink-0" />
             )}
-            <span className={`text-sm font-medium flex-1 ${
-              completed.includes(step) ? "text-foreground" : "text-muted-foreground"
-            }`}>
+            <span
+              className={`text-sm font-medium flex-1 ${
+                completed.includes(step) ? "text-foreground" : "text-muted-foreground"
+              }`}
+            >
               {label}
             </span>
             {!completed.includes(step) && (

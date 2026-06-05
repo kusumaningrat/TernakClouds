@@ -9,6 +9,7 @@ import {
   useNomadJobs,
   useK8sNodes,
   useK8sDeployments,
+  useDockerContainers,
   useServiceDeployments,
   useEnvironmentRegistries,
   useRepoProviders,
@@ -160,10 +161,10 @@ function EnvOverviewPage() {
   const runtimeProviders =
     (capabilities ?? []).find((c) => c.capability_name === "runtime")?.providers ?? [];
 
-  const hasNomadProvider = !capLoading && runtimeProviders.some((p) => p.provider_name === "nomad");
-  const hasK8sProvider =
-    !capLoading && runtimeProviders.some((p) => p.provider_name === "kubernetes");
-  const noRuntimeProvider = !capLoading && !hasNomadProvider && !hasK8sProvider;
+  const hasNomadProvider  = !capLoading && runtimeProviders.some((p) => p.provider_name === "nomad");
+  const hasK8sProvider    = !capLoading && runtimeProviders.some((p) => p.provider_name === "kubernetes");
+  const hasDockerProvider = !capLoading && runtimeProviders.some((p) => p.provider_name === "docker");
+  const noRuntimeProvider = !capLoading && !hasNomadProvider && !hasK8sProvider && !hasDockerProvider;
 
   // Runtime data
   const { data: nomadNodes, isLoading: nomadNodesLoading } = useNomadNodes(
@@ -187,6 +188,11 @@ function EnvOverviewPage() {
     "default",
     hasK8sProvider,
   );
+  const { data: dockerContainers, isLoading: dockerLoading } = useDockerContainers(
+    slug,
+    envId,
+    hasDockerProvider,
+  );
 
   const { data: catalogDeployments, isLoading: catalogLoading } = useServiceDeployments(
     slug,
@@ -207,6 +213,9 @@ function EnvOverviewPage() {
   ).length;
   const totalK8sDeployments = (k8sDeployments ?? []).length;
 
+  const runningContainers = (dockerContainers ?? []).filter((c) => c.state === "running").length;
+  const totalContainers   = (dockerContainers ?? []).length;
+
   const enabledCaps = (capabilities ?? []).filter((c) => c.is_enabled).length;
 
   const recentJobs = [...(jobs ?? [])]
@@ -217,20 +226,37 @@ function EnvOverviewPage() {
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 6);
 
-  // Tab only shown when both runtimes are active
-  const [workloadTab, setWorkloadTab] = useState<"primary" | "secondary">("primary");
-  const activeTab =
-    hasNomadProvider && hasK8sProvider
-      ? workloadTab === "primary"
-        ? "nomad"
-        : "kubernetes"
-      : hasK8sProvider
-        ? "kubernetes"
-        : "nomad";
+  // Recent Docker containers (sorted by created desc)
+  const recentContainers = [...(dockerContainers ?? [])]
+    .sort((a, b) => (b.created ?? 0) - (a.created ?? 0))
+    .slice(0, 6);
 
-  const workloadLoading = activeTab === "nomad" ? jobsLoading : k8sDeploymentsLoading;
+  // Resolve which runtime tab is shown in the "Recent deployments" section
+  const multiRuntime =
+    [hasNomadProvider, hasK8sProvider, hasDockerProvider].filter(Boolean).length > 1;
+  const [workloadTab, setWorkloadTab] = useState<"primary" | "secondary" | "tertiary">("primary");
+
+  const activeTab: "nomad" | "kubernetes" | "docker" = (() => {
+    const providers = [
+      hasNomadProvider  && "nomad",
+      hasK8sProvider    && "kubernetes",
+      hasDockerProvider && "docker",
+    ].filter(Boolean) as ("nomad" | "kubernetes" | "docker")[];
+
+    if (!multiRuntime) return providers[0] ?? "nomad";
+    const idx = workloadTab === "primary" ? 0 : workloadTab === "secondary" ? 1 : 2;
+    return providers[idx] ?? providers[0] ?? "nomad";
+  })();
+
+  const workloadLoading =
+    activeTab === "nomad"      ? jobsLoading :
+    activeTab === "kubernetes" ? k8sDeploymentsLoading :
+    dockerLoading;
+
   const noWorkloads =
-    activeTab === "nomad" ? recentJobs.length === 0 : recentK8sDeployments.length === 0;
+    activeTab === "nomad"      ? recentJobs.length === 0 :
+    activeTab === "kubernetes" ? recentK8sDeployments.length === 0 :
+    recentContainers.length === 0;
 
   return (
     <>
@@ -289,6 +315,22 @@ function EnvOverviewPage() {
             </>
           )}
 
+          {hasDockerProvider && (
+            <>
+              <StatCard
+                label="Containers"
+                value={`${runningContainers} / ${totalContainers}`}
+                icon={Container}
+                loading={dockerLoading}
+                colorClass={
+                  runningContainers === totalContainers && totalContainers > 0
+                    ? "text-emerald-500"
+                    : "text-primary"
+                }
+              />
+            </>
+          )}
+
           {noRuntimeProvider && (
             <>
               <StatCard label="Nodes" value="—" icon={Server} colorClass="text-muted-foreground" />
@@ -331,21 +373,24 @@ function EnvOverviewPage() {
                 </h3>
               </div>
               <div className="flex items-center gap-2">
-                {/* Runtime toggle — only when both are present, use neutral labels */}
-                {hasNomadProvider && hasK8sProvider && (
+                {/* Runtime toggle — only when multiple providers are active */}
+                {multiRuntime && (
                   <div className="flex rounded-md border border-border overflow-hidden text-[11px]">
-                    <button
-                      onClick={() => setWorkloadTab("primary")}
-                      className={`px-2 py-0.5 transition ${workloadTab === "primary" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      Runtime A
-                    </button>
-                    <button
-                      onClick={() => setWorkloadTab("secondary")}
-                      className={`px-2 py-0.5 transition ${workloadTab === "secondary" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-                    >
-                      Runtime B
-                    </button>
+                    {(
+                      [
+                        hasNomadProvider  && { key: "primary"   as const, label: "Nomad" },
+                        hasK8sProvider    && { key: "secondary" as const, label: "K8s" },
+                        hasDockerProvider && { key: "tertiary"  as const, label: "Docker" },
+                      ].filter(Boolean) as { key: "primary" | "secondary" | "tertiary"; label: string }[]
+                    ).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => setWorkloadTab(key)}
+                        className={`px-2 py-0.5 transition ${workloadTab === key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
                 )}
                 <Link
@@ -385,7 +430,7 @@ function EnvOverviewPage() {
                   </div>
                 ))}
               </div>
-            ) : (
+            ) : activeTab === "kubernetes" ? (
               <div className="space-y-0">
                 {recentK8sDeployments.map((dep) => (
                   <div
@@ -409,6 +454,35 @@ function EnvOverviewPage() {
                     </span>
                   </div>
                 ))}
+              </div>
+            ) : (
+              /* Docker containers */
+              <div className="space-y-0">
+                {recentContainers.map((c) => {
+                  const isRunning = c.state === "running";
+                  return (
+                    <div
+                      key={c.id}
+                      className="flex items-center gap-3 py-2 border-b border-border last:border-0"
+                    >
+                      <span
+                        className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full shrink-0 ${
+                          isRunning
+                            ? "text-emerald-600 bg-emerald-500/10"
+                            : "text-gray-500 bg-gray-400/10"
+                        }`}
+                      >
+                        {c.state}
+                      </span>
+                      <span className="font-mono text-xs font-medium flex-1 truncate">
+                        {c.name.replace(/^\//, "")}
+                      </span>
+                      <span className="text-[11px] text-muted-foreground shrink-0 truncate max-w-[120px]">
+                        {c.image.split(":")[0].split("/").pop()}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

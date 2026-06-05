@@ -27,13 +27,15 @@ import {
   Plus,
   Loader2,
   ArrowRight,
-  LayoutGrid,
   BarChart3,
   Users,
   Server,
   Globe,
   Layers,
   KeyRound,
+  Clock,
+  Database,
+  Terminal,
 } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 
@@ -53,26 +55,6 @@ function isAdminOrManager(roles: { role?: { name?: string } }[] | undefined): bo
   );
 }
 
-type ServiceStatus = "healthy" | "degraded" | "stopped" | "undeployed";
-
-function deployStatus(d: ServiceDeployment | undefined): ServiceStatus {
-  if (!d) return "undeployed";
-  const s = d.status?.toLowerCase() ?? "";
-  if (s === "running") return "healthy";
-  if (s === "dead" || s === "stopped" || s === "failed") return "stopped";
-  return "degraded";
-}
-
-function StatusDot({ status }: { status: ServiceStatus }) {
-  const colors: Record<ServiceStatus, string> = {
-    healthy:    "bg-success",
-    degraded:   "bg-warning",
-    stopped:    "bg-destructive",
-    undeployed: "bg-muted-foreground/25",
-  };
-  return <span className={`inline-block size-2 rounded-full shrink-0 ${colors[status]}`} />;
-}
-
 function formatRelative(iso: string) {
   const diff = Date.now() - new Date(iso).getTime();
   const m = Math.floor(diff / 60000);
@@ -83,6 +65,25 @@ function formatRelative(iso: string) {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+function formatRuntime(provider: string): string {
+  if (!provider) return "—";
+  const map: Record<string, string> = {
+    kubernetes: "K8s",
+    nomad:      "Nomad",
+    docker:     "Docker",
+  };
+  return map[provider.toLowerCase()] ?? provider;
+}
+
+function statusBadge(status: string): { label: string; cls: string } {
+  const s = status.toLowerCase();
+  if (s === "running")              return { label: "RUNNING", cls: "text-success bg-success/10 border-success/20" };
+  if (s === "failed" || s === "dead") return { label: "FAILED",  cls: "text-destructive bg-destructive/10 border-destructive/20" };
+  if (s === "pending")              return { label: "PENDING", cls: "text-warning bg-warning/10 border-warning/20" };
+  if (s === "stopped")              return { label: "STOPPED", cls: "text-muted-foreground bg-secondary border-border" };
+  return { label: s.toUpperCase(), cls: "text-muted-foreground bg-secondary border-border" };
+}
+
 // ─── Dashboard root ────────────────────────────────────────────────────────────
 
 function Dashboard() {
@@ -90,31 +91,24 @@ function Dashboard() {
   const { selectedWorkspace, setSelectedWorkspace } = useWorkspaceContext();
   const { selectedEnvironment } = useEnvironmentContext();
 
-  // Always load the user's workspaces so we can detect "no workspace" even when
-  // the workspace context hasn't hydrated from localStorage yet.
   const { data: workspaces, isLoading: workspacesLoading } = useWorkspacesMine();
   const hasWorkspace = (workspaces?.length ?? 0) > 0;
 
-  // Keep context in sync with fresh API data.
   useEffect(() => {
     if (workspaces?.length && !selectedWorkspace) {
       setSelectedWorkspace(workspaces[0]);
     }
   }, [workspaces, selectedWorkspace, setSelectedWorkspace]);
 
-  // Derive slug only from the live API response. Do NOT fall back to localStorage
-  // — a stale cached slug (e.g. "platform" from a wiped DB) causes spurious 404s
-  // and prevents the "no workspace" detection from triggering.
   const slug = workspaces?.[0]?.slug ?? "";
 
-  const { data: me, isLoading: meLoading } = useMe();
+  const { data: me, isLoading: meLoading }             = useMe();
   const { data: environments, isLoading: envsLoading } = useEnvironments(slug);
-  const { data: catalog } = useCatalog();
+  const { data: catalog }                              = useCatalog();
 
-  const envSlugs = useMemo(() => (environments ?? []).map((e) => e.slug), [environments]);
+  const envSlugs         = useMemo(() => (environments ?? []).map((e) => e.slug), [environments]);
   const deploymentQueries = useAllServiceDeployments(slug, envSlugs);
 
-  // Check if any environment has a runtime provider connected.
   const firstEnvSlug = envSlugs[0] ?? "";
   const { data: firstEnvCaps, isLoading: capsLoading } = useCapabilities(slug, firstEnvSlug);
   const hasRuntime = firstEnvCaps
@@ -123,8 +117,6 @@ function Dashboard() {
 
   const isPrivileged = isAdminOrManager(me?.roles);
 
-  // Loading is done when: user loaded + workspaces resolved +
-  // environments resolved (if we have a workspace) + caps resolved (if we have an env).
   const isLoading =
     meLoading ||
     workspacesLoading ||
@@ -138,30 +130,18 @@ function Dashboard() {
 
   const hasDeployments = allDeployments.some((d) => d.status === "running" || d.status === "pending");
 
-  // Redirect to /setup when the platform needs configuration.
-  // Two distinct cases with different rules:
-  //
-  // 1. No workspace at all → ALWAYS redirect (even if localStorage flag is set,
-  //    because the DB was wiped and the flag is stale).
-  //
-  // 2. Workspace exists but no runtime → redirect only on the first visit.
-  //    After the user visits /setup (even skipping), the flag suppresses this.
   useEffect(() => {
     if (isLoading || !isPrivileged) return;
-
     if (!hasWorkspace) {
-      // DB is empty — clear any stale visited flag so setup shows correctly.
       try { localStorage.removeItem("tc_setup_visited"); } catch { /* ignore */ }
       void navigate({ to: "/setup" });
       return;
     }
-
     if (hasRuntime === false && !hasSetupBeenVisited()) {
       void navigate({ to: "/setup" });
     }
   }, [isLoading, isPrivileged, hasWorkspace, hasRuntime, navigate]);
 
-  // ── Scenario detection ──────────────────────────────────────────────────────
   if (isLoading) {
     return (
       <>
@@ -173,7 +153,6 @@ function Dashboard() {
     );
   }
 
-  // Scenario between A and B: has environments but nothing deployed yet
   if (!hasDeployments) {
     return (
       <ScenarioFirstDeploy
@@ -189,7 +168,6 @@ function Dashboard() {
     );
   }
 
-  // Scenario B/C: fully operational (may still show setup banner if runtime missing)
   return (
     <ScenarioOperational
       slug={slug}
@@ -209,14 +187,12 @@ function Dashboard() {
 function SetupWarningBanner({ isAdmin }: { isAdmin: boolean }) {
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
-
   return (
     <div className="mx-6 mt-4 flex items-center gap-3 px-4 py-3 rounded-lg border border-warning/30 bg-warning/8 text-warning text-sm">
       <AlertTriangle className="size-4 shrink-0" />
       <span className="flex-1">
         <span className="font-semibold">Runtime not connected</span>
-        {" — "}services cannot be deployed until a runtime is configured.
-        {" "}
+        {" — "}services cannot be deployed until a runtime is configured.{" "}
         {isAdmin && (
           <Link to="/setup" className="underline underline-offset-2 hover:no-underline">
             Complete setup →
@@ -233,7 +209,7 @@ function SetupWarningBanner({ isAdmin }: { isAdmin: boolean }) {
   );
 }
 
-// ─── Scenario A: No environments (platform not set up) ────────────────────────
+// ─── Scenario A: No environments ──────────────────────────────────────────────
 
 function ScenarioA({
   slug,
@@ -252,18 +228,14 @@ function ScenarioA({
           <div className="size-20 rounded-2xl bg-[image:var(--gradient-primary)] grid place-items-center mx-auto">
             <Rocket className="size-10 text-white" />
           </div>
-
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
-              Welcome, {firstName}
-            </h1>
+            <h1 className="text-2xl font-bold tracking-tight">Welcome, {firstName}</h1>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
               {isAdmin
                 ? "Your platform isn't configured yet. Complete setup to start deploying services in about 3 minutes."
                 : "Your platform is being set up by an admin. Check back soon or ask your platform engineer to complete the configuration."}
             </p>
           </div>
-
           {isAdmin ? (
             <div className="space-y-3">
               <Link
@@ -272,8 +244,6 @@ function ScenarioA({
               >
                 <Rocket className="size-4" /> Start platform setup
               </Link>
-
-              {/* What you'll configure */}
               <div className="glass rounded-xl p-4 text-left space-y-2.5">
                 {[
                   { icon: Globe,  label: "Create an environment",    desc: "Where your services will run" },
@@ -305,7 +275,7 @@ function ScenarioA({
   );
 }
 
-// ─── Scenario between A and B: Environments exist, nothing deployed ────────────
+// ─── Scenario: Environments exist, nothing deployed yet ───────────────────────
 
 function ScenarioFirstDeploy({
   slug,
@@ -326,16 +296,16 @@ function ScenarioFirstDeploy({
   envSlugs: string[];
   hasRuntime: boolean;
 }) {
-  const { data: registries } = useRegistries(slug);
+  const { data: registries }    = useRegistries(slug);
   const { data: repoProviders } = useRepoProviders(slug);
 
   const checklistItems = [
-    { id: "env",      label: "Create an environment",     done: environments.length > 0,   link: "/dashboard/platform" },
-    { id: "registry", label: "Connect a container registry", done: (registries ?? []).length > 0, link: "/dashboard/registries" },
-    { id: "repo",     label: "Connect a repository provider", done: (repoProviders ?? []).length > 0, link: "/dashboard/repositories" },
-    { id: "service",  label: "Deploy your first service",  done: false,                     link: `/dashboard/environments/${environments[0]?.slug}/service-catalog` },
-    { id: "team",     label: "Invite a team member",       done: false,                     link: "/dashboard/teams" },
-    { id: "secret",   label: "Set up a secret",            done: false,                     link: `/dashboard/environments/${environments[0]?.slug}/secrets` },
+    { id: "env",      label: "Create an environment",        done: environments.length > 0,          link: "/dashboard/platform" },
+    { id: "registry", label: "Connect a container registry", done: (registries ?? []).length > 0,    link: "/dashboard/registries" },
+    { id: "repo",     label: "Connect a repository",         done: (repoProviders ?? []).length > 0, link: "/dashboard/repositories" },
+    { id: "service",  label: "Deploy your first service",    done: false,                            link: `/dashboard/environments/${environments[0]?.slug}/service-catalog` },
+    { id: "team",     label: "Invite a team member",         done: false,                            link: "/dashboard/teams" },
+    { id: "secret",   label: "Set up a secret",              done: false,                            link: `/dashboard/environments/${environments[0]?.slug}/secrets` },
   ];
 
   return (
@@ -344,22 +314,16 @@ function ScenarioFirstDeploy({
       {!hasRuntime && <SetupWarningBanner isAdmin={isAdmin} />}
       <div className="flex flex-col h-full overflow-auto">
         <div className="px-6 pt-5 pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Good to go, {firstName}
-          </h1>
+          <h1 className="text-2xl font-bold tracking-tight">Good to go, {firstName}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Your platform is set up. Time to deploy your first service.
           </p>
         </div>
-
         <div className="flex flex-1 min-h-0">
-          {/* Main */}
           <div className="flex-1 p-6 space-y-6 overflow-auto">
-            {/* Environments */}
             <section>
               <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <Globe className="size-3.5 text-muted-foreground" />
-                Environments ready
+                <Globe className="size-3.5 text-muted-foreground" /> Environments ready
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {environments.map((env) => (
@@ -384,28 +348,21 @@ function ScenarioFirstDeploy({
               </div>
             </section>
 
-            {/* Service catalog preview */}
             {catalog.length > 0 && (
               <section>
                 <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Layers className="size-3.5 text-muted-foreground" />
-                  Available services
+                  <Layers className="size-3.5 text-muted-foreground" /> Available services
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {catalog.slice(0, 3).map((item) => (
-                    <div
-                      key={item.id}
-                      className="glass rounded-xl p-4 space-y-2"
-                    >
+                    <div key={item.id} className="glass rounded-xl p-4 space-y-2">
                       <div className="flex items-center gap-2">
                         <div className="size-7 rounded bg-secondary grid place-items-center shrink-0">
                           <Layers className="size-3.5 text-muted-foreground" />
                         </div>
                         <div className="font-medium text-sm truncate">{item.display_name}</div>
                       </div>
-                      <div className="text-xs text-muted-foreground line-clamp-2">
-                        {item.description}
-                      </div>
+                      <div className="text-xs text-muted-foreground line-clamp-2">{item.description}</div>
                       {environments[0] && (
                         <Link
                           to="/dashboard/environments/$envId/service-catalog"
@@ -427,8 +384,6 @@ function ScenarioFirstDeploy({
               </section>
             )}
           </div>
-
-          {/* Checklist sidebar */}
           <div className="w-72 shrink-0 border-l border-border p-4 space-y-4 overflow-auto">
             <GettingStartedChecklist items={checklistItems} />
           </div>
@@ -438,134 +393,9 @@ function ScenarioFirstDeploy({
   );
 }
 
-// ─── Scenario B/C: Operational home ───────────────────────────────────────────
+// ─── Scenario: Fully operational home ─────────────────────────────────────────
 
-type ServiceCardData = {
-  name: string;
-  displayName: string;
-  type: string;
-  overallStatus: ServiceStatus;
-  envStatuses: { label: string; status: ServiceStatus }[];
-  lastDeployedAt?: string;
-};
-
-function ServiceCard({ s }: { s: ServiceCardData }) {
-  const statusConfig: Record<ServiceStatus, { label: string; cls: string }> = {
-    healthy:    { label: "HEALTHY",  cls: "text-success bg-success/10 border-success/20" },
-    degraded:   { label: "DEGRADED", cls: "text-warning bg-warning/10 border-warning/20" },
-    stopped:    { label: "FAILED",   cls: "text-destructive bg-destructive/10 border-destructive/20" },
-    undeployed: { label: "IDLE",     cls: "text-muted-foreground bg-secondary border-border" },
-  };
-  const { label: statusLabel, cls: statusCls } = statusConfig[s.overallStatus];
-
-  return (
-    <Link
-      to="/dashboard/services/$serviceName"
-      params={{ serviceName: s.name }}
-      className={`glass rounded-lg p-4 hover:border-primary/40 transition-colors flex flex-col gap-3 group ${
-        s.overallStatus === "degraded" ? "border-warning/30" :
-        s.overallStatus === "stopped"  ? "border-destructive/30" : ""
-      }`}
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="size-8 rounded bg-secondary grid place-items-center shrink-0">
-            <LayoutGrid className="size-4 text-muted-foreground" />
-          </div>
-          <div className="min-w-0">
-            <div className="font-semibold text-sm font-mono truncate">{s.name}</div>
-            <div className="text-[10px] text-muted-foreground label-mono">{s.type}</div>
-          </div>
-        </div>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded border label-mono shrink-0 ${statusCls}`}>
-          {statusLabel}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        {s.envStatuses.map(({ label, status }) => (
-          <div key={label} className="flex flex-col items-center gap-0.5">
-            <StatusDot status={status} />
-            <span className="label-mono text-muted-foreground" style={{ fontSize: "9px" }}>
-              {label.slice(0, 3).toUpperCase()}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between">
-        <span className="text-[11px] text-muted-foreground">
-          {s.lastDeployedAt ? `Last deployed ${formatRelative(s.lastDeployedAt)}` : "Never deployed"}
-        </span>
-        <ChevronRight className="size-3.5 text-muted-foreground group-hover:text-primary transition-colors" />
-      </div>
-    </Link>
-  );
-}
-
-function ActiveDeploymentRow({
-  dep,
-}: {
-  dep: ServiceDeployment & { envName: string };
-}) {
-  const isRunning = dep.status === "running";
-  const isFailed  = dep.status === "failed" || dep.status === "dead";
-
-  return (
-    <div className="flex items-center gap-3 py-3 border-b border-border last:border-0">
-      <div className="size-7 rounded bg-secondary grid place-items-center shrink-0">
-        <Rocket className={`size-3.5 ${isRunning ? "text-success" : isFailed ? "text-destructive" : "text-warning animate-pulse"}`} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-sm font-medium font-mono">{dep.catalog_name}</span>
-          <span className="text-muted-foreground text-xs">→</span>
-          <span className={`text-xs font-medium ${isRunning ? "text-success" : isFailed ? "text-destructive" : "text-warning"}`}>
-            {dep.envName}
-          </span>
-        </div>
-        <div className="text-[10px] text-muted-foreground font-mono truncate">{dep.image}</div>
-      </div>
-      <div className="shrink-0 flex flex-col items-end gap-1">
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded label-mono border ${
-          isRunning  ? "text-success bg-success/10 border-success/20" :
-          isFailed   ? "text-destructive bg-destructive/10 border-destructive/20" :
-          "text-warning bg-warning/10 border-warning/20"
-        }`}>
-          {dep.status.toUpperCase()}
-        </span>
-        <span className="text-[10px] text-muted-foreground">{formatRelative(dep.updated_at)}</span>
-      </div>
-    </div>
-  );
-}
-
-function QuickAction({
-  icon: Icon,
-  label,
-  desc,
-  to,
-}: {
-  icon: React.ElementType;
-  label: string;
-  desc: string;
-  to: string;
-}) {
-  return (
-    <Link
-      to={to as never}
-      className="flex items-start gap-3 px-4 py-3 hover:bg-accent rounded transition-colors group"
-    >
-      <div className="size-8 rounded bg-secondary grid place-items-center shrink-0 group-hover:bg-primary/10 transition-colors">
-        <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
-      </div>
-      <div>
-        <div className="text-sm font-medium">{label}</div>
-        <div className="text-xs text-muted-foreground mt-0.5">{desc}</div>
-      </div>
-    </Link>
-  );
-}
+type RichDeployment = ServiceDeployment & { envName: string; envSlug: string };
 
 function ScenarioOperational({
   slug,
@@ -599,67 +429,60 @@ function ScenarioOperational({
     weekday: "long", month: "short", day: "numeric",
   });
 
-  // Build service cards
-  const serviceCards: ServiceCardData[] = useMemo(() => {
-    const visibleEnvs = selectedEnvironment
-      ? [selectedEnvironment]
-      : environments.slice(0, 4);
+  // All deployments enriched with env context
+  const allDeployments = useMemo<RichDeployment[]>(
+    () =>
+      (environments ?? []).flatMap((env, i) =>
+        (deploymentQueries[i]?.data ?? []).map((d) => ({
+          ...d,
+          envName: env.name,
+          envSlug: env.slug,
+        })),
+      ),
+    [environments, deploymentQueries],
+  );
 
-    return catalog.slice(0, 6).map((item) => {
-      const envStatuses = visibleEnvs.map((env) => {
-        const globalIdx = environments.findIndex((e) => e.id === env.id);
-        const deps = deploymentQueries[globalIdx]?.data ?? [];
-        const dep  = deps.find((d) => d.catalog_name === item.name);
-        return { label: env.slug, status: deployStatus(dep) };
-      });
+  // Scope to selected env when set
+  const scopedDeployments = useMemo<RichDeployment[]>(() => {
+    if (!selectedEnvironment) return allDeployments;
+    return allDeployments.filter((d) => d.envSlug === selectedEnvironment.slug);
+  }, [allDeployments, selectedEnvironment]);
 
-      const overallStatus: ServiceStatus =
-        envStatuses.some((s) => s.status === "stopped")    ? "stopped"    :
-        envStatuses.some((s) => s.status === "degraded")   ? "degraded"   :
-        envStatuses.some((s) => s.status === "healthy")    ? "healthy"    :
-        "undeployed";
+  // Health counts
+  const health = useMemo(() => {
+    const running  = scopedDeployments.filter((d) => d.status === "running").length;
+    const failed   = scopedDeployments.filter((d) => d.status === "failed" || d.status === "dead").length;
+    const pending  = scopedDeployments.filter((d) => d.status === "pending").length;
+    const healthy  = catalog.filter((item) => {
+      const deps = scopedDeployments.filter((d) => d.catalog_name === item.name);
+      return deps.length > 0 && deps.every((d) => d.status === "running");
+    }).length;
+    return { running, failed, pending, healthy };
+  }, [scopedDeployments, catalog]);
 
-      const allDeps   = environments.flatMap((_, i) => deploymentQueries[i]?.data ?? []);
-      const myDeps    = allDeps.filter((d) => d.catalog_name === item.name);
-      const lastAt    = myDeps.map((d) => d.updated_at).sort().pop();
+  // Recent activity — chronological, most recent first
+  const recentActivity = useMemo<RichDeployment[]>(
+    () =>
+      [...scopedDeployments]
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 6),
+    [scopedDeployments],
+  );
 
-      return {
-        name: item.name,
-        displayName: item.display_name,
-        type: "microservice",
-        overallStatus,
-        envStatuses,
-        lastDeployedAt: lastAt,
-      };
-    });
-  }, [catalog, environments, selectedEnvironment, deploymentQueries]);
-
-  // Active deployments
-  const activeDeployments = useMemo(() => {
-    const visibleEnvs = selectedEnvironment ? [selectedEnvironment] : environments;
-    return visibleEnvs
-      .flatMap((env) => {
-        const globalIdx = environments.findIndex((e) => e.id === env.id);
-        const deps = deploymentQueries[globalIdx]?.data ?? [];
-        return deps
-          .filter((d) => d.status === "running" || d.status === "pending" || d.status === "failed")
-          .map((d) => ({ ...d, envName: env.name }));
+  // My deployments — failures first, then pending, then running
+  const myDeployments = useMemo<RichDeployment[]>(() => {
+    const priority = (s: string) =>
+      s === "failed" || s === "dead" ? 0 : s === "pending" ? 1 : s === "running" ? 2 : 3;
+    return [...scopedDeployments]
+      .sort((a, b) => {
+        const pp = priority(a.status) - priority(b.status);
+        if (pp !== 0) return pp;
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
       })
-      .slice(0, 5);
-  }, [environments, selectedEnvironment, deploymentQueries]);
+      .slice(0, 8);
+  }, [scopedDeployments]);
 
-  // Health summary
-  const healthSummary = useMemo(() => {
-    return serviceCards.reduce(
-      (acc, s) => {
-        if (s.overallStatus === "healthy")    acc.healthy++;
-        else if (s.overallStatus === "stopped" || s.overallStatus === "degraded") acc.issues++;
-        else acc.undeployed++;
-        return acc;
-      },
-      { healthy: 0, issues: 0, undeployed: 0 },
-    );
-  }, [serviceCards]);
+  const currentEnv = selectedEnvironment ?? environments[0] ?? null;
 
   const handleApproval = async (id: string, action: "approve" | "deny") => {
     setProcessingId(id);
@@ -675,26 +498,34 @@ function ScenarioOperational({
     <>
       <DashboardTopbar />
       {!hasRuntime && <SetupWarningBanner isAdmin={isPrivileged} />}
+
       <div className="flex flex-col h-full overflow-auto">
-        {/* Page header */}
-        <div className="px-6 pt-5 pb-4 border-b border-border">
-          <div className="flex items-center justify-between">
+
+        {/* ── Header: environment context + health summary ── */}
+        <div className="px-6 pt-5 pb-4 border-b border-border shrink-0">
+          {/* Row 1: env badge + greeting + shortcuts */}
+          <div className="flex items-start justify-between gap-4 mb-4">
             <div>
-              <div className="text-xs text-muted-foreground label-mono mb-1">{today}</div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                {greeting}, {firstName}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {activeDeployments.filter((d) => d.status === "running").length} running
-                {activeDeployments.some((d) => d.status === "failed") && (
-                  <span className="text-destructive"> · {activeDeployments.filter((d) => d.status === "failed").length} failed</span>
-                )}
-                {pendingCount > 0 && (
-                  <span className="text-warning"> · {pendingCount} pending approval{pendingCount !== 1 ? "s" : ""}</span>
-                )}
-              </p>
+              {/* Environment context */}
+              <div className="flex items-center gap-2 mb-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 border border-primary/20">
+                  <Globe className="size-3 text-primary" />
+                  <span className="text-xs font-semibold text-primary">
+                    {currentEnv?.name ?? "All Environments"}
+                  </span>
+                </div>
+                <Link
+                  to="/dashboard/environments"
+                  className="text-[11px] label-mono text-muted-foreground hover:text-primary transition"
+                >
+                  SWITCH →
+                </Link>
+              </div>
+              {/* Greeting */}
+              <h1 className="text-xl font-bold tracking-tight">{greeting}, {firstName}</h1>
+              <p className="text-[11px] label-mono text-muted-foreground mt-0.5">{today}</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 pt-1">
               <Link
                 to="/dashboard/insights"
                 className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded border border-border hover:bg-accent transition text-muted-foreground"
@@ -710,114 +541,270 @@ function ScenarioOperational({
             </div>
           </div>
 
-          {/* Workspace health summary */}
-          <div className="grid grid-cols-3 gap-2 mt-4">
+          {/* Health summary — 4 stat chips */}
+          <div className="grid grid-cols-4 gap-2">
             {[
-              { label: "HEALTHY",     value: healthSummary.healthy,    dot: "bg-success",             text: "text-success" },
-              { label: "ISSUES",      value: healthSummary.issues,     dot: "bg-warning",             text: healthSummary.issues > 0 ? "text-warning" : "text-muted-foreground" },
-              { label: "NOT DEPLOYED", value: healthSummary.undeployed, dot: "bg-muted-foreground/30", text: "text-muted-foreground" },
-            ].map(({ label, value, dot, text }) => (
-              <Link
+              {
+                count: health.running,
+                label: "RUNNING",
+                active: health.running > 0,
+                activeCls: "bg-success/5 border-success/20",
+                dotCls:    "bg-success",
+                textCls:   "text-success",
+              },
+              {
+                count: health.failed,
+                label: "FAILED",
+                active: health.failed > 0,
+                activeCls: "bg-destructive/5 border-destructive/20",
+                dotCls:    "bg-destructive animate-pulse",
+                textCls:   "text-destructive",
+              },
+              {
+                count: health.healthy,
+                label: "HEALTHY SVCS",
+                active: health.healthy > 0,
+                activeCls: "bg-success/5 border-success/20",
+                dotCls:    "bg-success",
+                textCls:   "text-success",
+              },
+              {
+                count: health.pending,
+                label: "PENDING",
+                active: health.pending > 0,
+                activeCls: "bg-warning/5 border-warning/20",
+                dotCls:    "bg-warning animate-pulse",
+                textCls:   "text-warning",
+              },
+            ].map(({ count, label, active, activeCls, dotCls, textCls }) => (
+              <div
                 key={label}
-                to="/dashboard/insights"
-                className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-secondary/50 hover:bg-secondary transition"
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-lg border transition ${
+                  active ? activeCls : "bg-secondary/50 border-border"
+                }`}
               >
-                <span className={`size-2 rounded-full shrink-0 ${dot}`} />
-                <div className="min-w-0">
-                  <div className={`text-xl font-bold font-mono leading-none ${text}`}>{value}</div>
+                <span className={`size-2.5 rounded-full shrink-0 ${active ? dotCls : "bg-muted-foreground/30"}`} />
+                <div>
+                  <div className={`text-xl font-bold font-mono leading-none ${active ? textCls : "text-muted-foreground"}`}>
+                    {count}
+                  </div>
                   <div className="text-[9px] label-mono text-muted-foreground mt-0.5">{label}</div>
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Two-column layout */}
+        {/* ── Body: main content + sidebar ── */}
         <div className="flex flex-1 min-h-0 overflow-auto">
+
           {/* Main */}
           <div className="flex-1 min-w-0 p-6 space-y-6 overflow-auto">
-            {/* My Services */}
+
+            {/* ── Recent Activity ── */}
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-sm flex items-center gap-2">
                   <span className="size-1.5 rounded-full bg-primary inline-block" />
-                  Services
+                  Recent Activity
                 </h2>
                 <Link
-                  to="/dashboard/services"
+                  to="/dashboard/deployments"
                   className="text-xs text-muted-foreground hover:text-primary transition flex items-center gap-1"
                 >
                   View all <ArrowRight className="size-3" />
                 </Link>
               </div>
 
-              {serviceCards.length === 0 ? (
-                <div className="glass rounded-lg p-8 text-center">
-                  <Layers className="size-8 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-sm font-medium">No services yet</p>
-                  <p className="text-xs text-muted-foreground mt-1">Deploy a service to see it here.</p>
-                  {environments[0] && (
-                    <Link
-                      to="/dashboard/environments/$envId/service-catalog"
-                      params={{ envId: environments[0].slug }}
-                      className="inline-flex items-center gap-1.5 mt-3 text-xs text-primary hover:underline"
-                    >
-                      <Plus className="size-3" /> Deploy first service
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {serviceCards.map((s) => (
-                    <ServiceCard key={s.name} s={s} />
-                  ))}
-                </div>
-              )}
+              <div className="glass rounded-lg divide-y divide-border">
+                {recentActivity.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Clock className="size-7 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No recent activity.</p>
+                  </div>
+                ) : (
+                  recentActivity.map((item) => {
+                    const isRunning = item.status === "running";
+                    const isFailed  = item.status === "failed" || item.status === "dead";
+                    const isPending = item.status === "pending";
+                    return (
+                      <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                        <div className={`size-7 rounded grid place-items-center shrink-0 ${
+                          isRunning ? "bg-success/10"     :
+                          isFailed  ? "bg-destructive/10" :
+                          isPending ? "bg-warning/10"     :
+                          "bg-secondary"
+                        }`}>
+                          {isRunning ? <CheckCircle2 className="size-3.5 text-success" />                :
+                           isFailed  ? <XCircle       className="size-3.5 text-destructive" />           :
+                           isPending ? <Loader2        className="size-3.5 text-warning animate-spin" /> :
+                                       <Rocket         className="size-3.5 text-muted-foreground" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold font-mono">{item.catalog_name}</span>
+                            <span className="text-muted-foreground text-xs">in</span>
+                            <span className="text-xs font-medium text-primary">{item.envName}</span>
+                          </div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">
+                            {isRunning ? "Deployment completed successfully" :
+                             isFailed  ? "Deployment failed" :
+                             isPending ? "Deployment in progress" :
+                             `Status: ${item.status}`}
+                            {" · "}
+                            <span className="label-mono text-muted-foreground/60">{formatRuntime(item.runtime_provider)}</span>
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground shrink-0 tabular-nums">
+                          {formatRelative(item.updated_at)}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </section>
 
-            {/* Active Deployments */}
+            {/* ── My Deployments ── */}
             <section>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="font-semibold text-sm flex items-center gap-2">
                   <span className={`size-1.5 rounded-full inline-block ${
-                    activeDeployments.some((d) => d.status === "pending") ? "bg-warning animate-pulse" : "bg-muted-foreground"
+                    health.pending > 0 ? "bg-warning animate-pulse" : "bg-muted-foreground"
                   }`} />
-                  Recent Deployments
-                  {activeDeployments.length > 0 && (
+                  My Deployments
+                  {myDeployments.length > 0 && (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-secondary text-muted-foreground label-mono">
-                      {activeDeployments.length}
+                      {myDeployments.length}
                     </span>
                   )}
                 </h2>
+                <Link
+                  to="/dashboard/deployments"
+                  className="text-xs text-muted-foreground hover:text-primary transition flex items-center gap-1"
+                >
+                  View all <ArrowRight className="size-3" />
+                </Link>
               </div>
 
               <div className="glass rounded-lg overflow-hidden">
-                {activeDeployments.length === 0 ? (
-                  <div className="p-6 text-center">
-                    <p className="text-sm text-muted-foreground">No recent deployments.</p>
+                {myDeployments.length === 0 ? (
+                  <div className="p-8 text-center">
+                    <Rocket className="size-7 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No active deployments.</p>
+                    {currentEnv && (
+                      <Link
+                        to="/dashboard/environments/$envId/service-catalog"
+                        params={{ envId: currentEnv.slug }}
+                        className="inline-flex items-center gap-1.5 mt-3 text-xs text-primary hover:underline"
+                      >
+                        <Plus className="size-3" /> Deploy a service
+                      </Link>
+                    )}
                   </div>
                 ) : (
-                  <div className="px-4">
-                    {activeDeployments.map((dep) => (
-                      <ActiveDeploymentRow key={dep.id} dep={dep} />
-                    ))}
-                  </div>
+                  <>
+                    {/* Table header */}
+                    <div className="grid grid-cols-[1fr_76px_64px_80px_72px] gap-3 px-4 py-2 border-b border-border bg-secondary/30">
+                      <span className="text-[10px] label-mono text-muted-foreground">SERVICE</span>
+                      <span className="text-[10px] label-mono text-muted-foreground">STATUS</span>
+                      <span className="text-[10px] label-mono text-muted-foreground">RUNTIME</span>
+                      <span className="text-[10px] label-mono text-muted-foreground">ENVIRONMENT</span>
+                      <span className="text-[10px] label-mono text-muted-foreground text-right">UPDATED</span>
+                    </div>
+                    {/* Table rows */}
+                    {myDeployments.map((dep) => {
+                      const { label, cls } = statusBadge(dep.status);
+                      return (
+                        <div
+                          key={dep.id}
+                          className="grid grid-cols-[1fr_76px_64px_80px_72px] gap-3 px-4 py-2.5 border-b border-border last:border-0 hover:bg-accent/40 transition-colors items-center"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="size-6 rounded bg-secondary grid place-items-center shrink-0">
+                              <Layers className="size-3 text-muted-foreground" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="text-xs font-semibold font-mono truncate">{dep.catalog_name}</div>
+                              {dep.image && (
+                                <div className="text-[10px] text-muted-foreground font-mono truncate">
+                                  {dep.image.includes(":") ? dep.image.split(":").pop() : dep.image}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border label-mono w-fit ${cls}`}>
+                            {label}
+                          </span>
+                          <span className="text-xs text-muted-foreground font-mono">{formatRuntime(dep.runtime_provider)}</span>
+                          <span className="text-xs text-muted-foreground truncate">{dep.envName}</span>
+                          <span className="text-[11px] text-muted-foreground text-right tabular-nums">
+                            {formatRelative(dep.updated_at)}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </>
                 )}
               </div>
             </section>
           </div>
 
-          {/* Right sidebar */}
+          {/* ── Sidebar ── */}
           <div className="w-72 shrink-0 border-l border-border p-4 space-y-4 overflow-auto">
+
             {/* Quick Actions */}
             <div className="glass rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-border">
-                <h3 className="text-sm font-semibold text-primary">Quick Actions</h3>
+                <h3 className="text-sm font-semibold">Quick Actions</h3>
               </div>
               <div className="divide-y divide-border">
-                <QuickAction icon={Plus}       label="Create Service"   desc="From pre-approved blueprints" to="/dashboard/services" />
-                <QuickAction icon={Rocket}     label="Deploy Service"   desc="Pick a service and environment" to="/dashboard/services" />
-                <QuickAction icon={KeyRound}   label="Manage Secrets"   desc="View and update service secrets" to="/dashboard/access" />
+                {[
+                  {
+                    icon: Rocket,
+                    label: "Deploy Service",
+                    desc: "Pick a service and environment",
+                    to: currentEnv
+                      ? `/dashboard/environments/${currentEnv.slug}/service-catalog`
+                      : "/dashboard/services",
+                  },
+                  {
+                    icon: Database,
+                    label: "Create from Blueprint",
+                    desc: "Databases, queues, pipelines",
+                    to: currentEnv
+                      ? `/dashboard/environments/${currentEnv.slug}/blueprints`
+                      : "/dashboard/services",
+                  },
+                  {
+                    icon: Terminal,
+                    label: "View Logs",
+                    desc: "Stream and search service logs",
+                    to: "/dashboard/logs",
+                  },
+                  {
+                    icon: KeyRound,
+                    label: "Manage Secrets",
+                    desc: "View and update service secrets",
+                    to: currentEnv
+                      ? `/dashboard/environments/${currentEnv.slug}/secrets`
+                      : "/dashboard/access",
+                  },
+                ].map(({ icon: Icon, label, desc, to }) => (
+                  <Link
+                    key={label}
+                    to={to as never}
+                    className="flex items-start gap-3 px-4 py-3 hover:bg-accent transition-colors group"
+                  >
+                    <div className="size-8 rounded bg-secondary grid place-items-center shrink-0 mt-0.5 group-hover:bg-primary/10 transition-colors">
+                      <Icon className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium">{label}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{desc}</div>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
 
@@ -856,7 +843,9 @@ function ScenarioOperational({
                             disabled={processingId === req.id}
                             className="flex-1 text-xs py-1 rounded bg-primary/10 text-primary hover:bg-primary/20 transition text-center disabled:opacity-50"
                           >
-                            {processingId === req.id ? <Loader2 className="size-3 animate-spin mx-auto" /> : "Approve"}
+                            {processingId === req.id
+                              ? <Loader2 className="size-3 animate-spin mx-auto" />
+                              : "Approve"}
                           </button>
                           <button
                             onClick={() => void handleApproval(req.id, "deny")}
@@ -881,20 +870,21 @@ function ScenarioOperational({
               </div>
             )}
 
-            {/* Platform summary */}
+            {/* Platform overview */}
             <div className="glass rounded-lg overflow-hidden">
               <div className="px-4 py-3 border-b border-border">
-                <h3 className="text-xs font-medium label-mono text-muted-foreground">PLATFORM SUMMARY</h3>
+                <h3 className="text-xs font-medium label-mono text-muted-foreground">PLATFORM</h3>
               </div>
               <div className="px-4 py-3 space-y-3">
                 {[
-                  { label: "Environments", value: environments.length },
+                  { label: "Environments",       value: environments.length },
                   { label: "Services in catalog", value: catalog.length },
-                  { label: "Active deployments", value: activeDeployments.filter((d) => d.status === "running").length },
-                ].map(({ label, value }) => (
+                  { label: "Running",            value: health.running },
+                  { label: "Failed",             value: health.failed, highlight: health.failed > 0 },
+                ].map(({ label, value, highlight }) => (
                   <div key={label} className="flex items-center justify-between text-xs">
                     <span className="text-muted-foreground">{label}</span>
-                    <span className="font-mono font-medium">{value}</span>
+                    <span className={`font-mono font-medium ${highlight ? "text-destructive" : ""}`}>{value}</span>
                   </div>
                 ))}
               </div>
