@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "./api";
 import { clearTokens, getRefreshToken, storeTokens } from "./auth";
 import type {
@@ -1808,5 +1808,22 @@ export function useAppDeployments(
     staleTime: 30_000,
     retry: false,
     refetchOnWindowFocus: false,
+  });
+}
+
+// GET service deployments for multiple environments in parallel
+export function useAllServiceDeployments(slug: string, envSlugs: string[]) {
+  return useQueries({
+    queries: envSlugs.map((envSlug) => ({
+      queryKey: catalogKeys.deployments(slug, envSlug),
+      queryFn: () =>
+        api.get<ServiceDeployment[]>(
+          `/api/v1/workspaces/${slug}/environments/${envSlug}/service-deployments`,
+        ),
+      enabled: !!slug && !!envSlug,
+      staleTime: 15_000,
+      refetchInterval: 10_000,
+      refetchIntervalInBackground: true,
+    })),
   });
 }

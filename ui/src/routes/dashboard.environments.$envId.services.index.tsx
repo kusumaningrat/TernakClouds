@@ -531,8 +531,10 @@ function EnvServicesPage() {
   const slug = selectedWorkspace?.slug ?? "";
 
   const { data: status, isLoading: capLoading } = useCapability(slug, envId, "runtime");
-  const hasNomad = (status?.providers ?? []).some((p) => p.provider_name === "nomad");
-  const hasK8s = (status?.providers ?? []).some((p) => p.provider_name === "kubernetes");
+  const hasNomad  = (status?.providers ?? []).some((p) => p.provider_name === "nomad");
+  const hasK8s    = (status?.providers ?? []).some((p) => p.provider_name === "kubernetes");
+  const hasDocker = (status?.providers ?? []).some((p) => p.provider_name === "docker");
+  const hasAny    = hasNomad || hasK8s || hasDocker;
 
   return (
     <>
@@ -547,7 +549,7 @@ function EnvServicesPage() {
         </main>
       )}
 
-      {!capLoading && !hasNomad && !hasK8s && (
+      {!capLoading && !hasAny && (
         <main className="p-6 flex flex-col items-center justify-center py-32 text-center gap-4">
           <div className="size-12 rounded-2xl bg-secondary grid place-items-center">
             <Server className="size-6 text-muted-foreground" />
@@ -555,7 +557,7 @@ function EnvServicesPage() {
           <div>
             <p className="font-semibold">No runtime provider configured</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Bind a Nomad or Kubernetes provider to the Runtime capability to view services here.
+              Bind a Nomad, Kubernetes, or Docker provider to the Runtime capability to view services here.
             </p>
           </div>
           <Link
@@ -563,6 +565,26 @@ function EnvServicesPage() {
             className="text-sm text-primary hover:underline"
           >
             Configure Runtime →
+          </Link>
+        </main>
+      )}
+
+      {!capLoading && hasDocker && !hasNomad && !hasK8s && (
+        <main className="p-6 flex flex-col items-center justify-center py-32 text-center gap-4">
+          <div className="size-12 rounded-2xl bg-secondary grid place-items-center">
+            <Server className="size-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-semibold">Docker runtime configured</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xs">
+              View running containers in the Deployments page.
+            </p>
+          </div>
+          <Link
+            to={`/dashboard/environments/${envId}/deployments` as never}
+            className="text-sm text-primary hover:underline"
+          >
+            View Deployments →
           </Link>
         </main>
       )}

@@ -75,7 +75,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	roleService := role.NewRoleService(roleRepo)
 	authService := auth.NewAuthService(userService, deptService, tokenRepo, cfg.JWT)
 	envService := environment.NewService(envRepo)
-	wsService := workspace.NewService(wsRepo, roleService, envService)
+	wsService := workspace.NewService(wsRepo, roleService)
 	capService := capability.NewService(capRepo, vc)
 	arService := accessrequest.NewService(arRepo, wsService, roleService)
 	nomadService := nomad.NewService(capRepo, vc)

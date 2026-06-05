@@ -24,11 +24,17 @@ type Client struct {
 }
 
 func NewClient(address, token string) *Client {
+	address = strings.TrimRight(address, "/")
+	// Docker daemon TCP endpoints are plain HTTP. Users sometimes write tcp://
+	// (which is the Docker CLI convention) but Go's net/http only understands
+	// http:// and https://.
+	address = strings.Replace(address, "tcp://", "http://", 1)
+
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
 	}
 	return &Client{
-		address: strings.TrimRight(address, "/"),
+		address: address,
 		token:   token,
 		http:    &http.Client{Timeout: 10 * time.Second, Transport: transport},
 	}
