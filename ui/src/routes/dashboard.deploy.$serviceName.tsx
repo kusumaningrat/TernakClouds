@@ -178,6 +178,7 @@ function DeployForm({
   const [datacenter, setDatacenter] = useState("");
   const [namespace, setNamespace] = useState("default");
   const [workerName, setWorkerName] = useState("");
+  const [nomadHostNetwork, setNomadHostNetwork] = useState<"private" | "public">("private");
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
   const [k8sNodeName, setK8sNodeName] = useState("");
@@ -270,6 +271,7 @@ function DeployForm({
         datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
         namespace: runtimeProvider === "nomad" ? namespace : undefined,
         worker_name: runtimeProvider === "nomad" ? workerName : undefined,
+        nomad_host_network: runtimeProvider === "nomad" ? nomadHostNetwork : undefined,
         k8s_namespace: runtimeProvider === "kubernetes" ? k8sNamespace : undefined,
         replicas: runtimeProvider === "kubernetes" && replicas ? parseInt(replicas, 10) : undefined,
         k8s_node_name: runtimeProvider === "kubernetes" && k8sNodeName ? k8sNodeName : undefined,
@@ -428,6 +430,29 @@ function DeployForm({
                 <option value="default">default</option>
               )}
             </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground">Host network</label>
+            <div className="mt-1.5 flex rounded-md overflow-hidden border border-border text-sm">
+              {(["private", "public"] as const).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setNomadHostNetwork(opt)}
+                  className={`flex-1 py-2 capitalize transition ${
+                    nomadHostNetwork === opt
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-secondary text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Use <span className="font-mono">public</span> to bind ports on the host's public interface.
+            </p>
           </div>
         </>
       )}

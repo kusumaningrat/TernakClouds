@@ -41,7 +41,7 @@ const hclTemplate = `job "[[.JobName]]-App" {
         static       = [[.ExposedPort]]
         [[- end]]
         to           = [[.ContainerPort]]
-        host_network = "private"
+        host_network = "[[.HostNetwork]]"
       }
       [[- end]]
     }
@@ -124,6 +124,7 @@ type nomadTemplateVars struct {
 	WorkerName       string
 	Ports            []nomadPort
 	PrimaryPortName  string
+	HostNetwork      string
 	CPU              int
 	Memory           int
 	Image            string
@@ -521,6 +522,11 @@ func (s *Service) deployNomad(
 		}
 	}
 
+	hostNetwork := input.NomadHostNetwork
+	if hostNetwork != "public" {
+		hostNetwork = "private"
+	}
+
 	vars := nomadTemplateVars{
 		JobName:          input.JobName,
 		Datacenter:       input.Datacenter,
@@ -528,6 +534,7 @@ func (s *Service) deployNomad(
 		WorkerName:       input.WorkerName,
 		Ports:            toNomadPorts(portMappings),
 		PrimaryPortName:  primPortName,
+		HostNetwork:      hostNetwork,
 		CPU:              cpu,
 		Memory:           memory,
 		Image:            image,
