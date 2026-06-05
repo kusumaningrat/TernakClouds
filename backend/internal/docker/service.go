@@ -12,7 +12,10 @@ import (
 	"github.com/kusumaningrat/ternakclouds/internal/vault"
 )
 
-var ErrNoDockerProvider = errors.New("No Docker provider is configured for this environment. Please bind a provider in the Capabilities settings.")
+var (
+	ErrNoDockerProvider      = errors.New("No Docker provider is configured for this environment. Please bind a provider in the Capabilities settings.")
+	ErrContainerNameConflict = errors.New("A container with that name already exists. Choose a different job name or stop the existing container first.")
+)
 
 type Service struct {
 	capRepo *capability.Repository

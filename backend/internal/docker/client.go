@@ -152,9 +152,16 @@ func (c *Client) CreateContainer(ctx context.Context, cfg ContainerRunConfig) (s
 		ID string `json:"Id"`
 	}
 	if err := c.postJSON(ctx, path, body, &result); err != nil {
+		if isDockerConflict(err) {
+			return "", ErrContainerNameConflict
+		}
 		return "", err
 	}
 	return result.ID, nil
+}
+
+func isDockerConflict(err error) bool {
+	return err != nil && strings.Contains(err.Error(), " 409:")
 }
 
 // post sends a POST with no body. Docker action endpoints return 204 on success

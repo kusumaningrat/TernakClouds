@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kusumaningrat/ternakclouds/internal/docker"
 	"github.com/kusumaningrat/ternakclouds/internal/kubernetes"
 	"github.com/kusumaningrat/ternakclouds/internal/middleware"
 	"github.com/kusumaningrat/ternakclouds/internal/nomad"
@@ -59,6 +60,8 @@ func (h *Handler) Deploy(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
 		case errors.Is(err, ErrUnsupportedRuntime), errors.Is(err, ErrInvalidPortBinding):
 			pkg.RespondErr(c, http.StatusBadRequest, err.Error())
+		case errors.Is(err, docker.ErrContainerNameConflict):
+			pkg.RespondErr(c, http.StatusConflict, err.Error())
 		case errors.Is(err, nomad.ErrNoNomadProvider),
 			errors.Is(err, kubernetes.ErrNoK8sProvider):
 			pkg.RespondErr(c, http.StatusServiceUnavailable, err.Error())
