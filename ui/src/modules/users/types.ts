@@ -51,7 +51,7 @@ export interface UserWorkspaceSummary {
   workspace_id: string;
   workspace_name: string;
   workspace_slug: string;
-  role: 'owner' | 'member';
+  role: "owner" | "member";
   joined_at: string;
 }
 
@@ -80,7 +80,7 @@ export interface UserListParams {
   workspace?: string;
   department_id?: string;
   role_id?: string;
-  status?: 'active' | 'inactive' | '';
+  status?: "active" | "inactive" | "";
   page?: number;
   limit?: number;
 }

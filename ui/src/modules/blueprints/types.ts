@@ -3,7 +3,7 @@ export interface Blueprint {
   name: string;
   display_name: string;
   description: string;
-  category: 'application' | 'infrastructure';
+  category: "application" | "infrastructure";
   version: string;
   supported_runtimes: string[];
   is_public: boolean;

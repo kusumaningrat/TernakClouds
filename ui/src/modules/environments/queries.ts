@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
-import { workspaceKeys } from '../workspaces/queries';
-import type { CreateEnvironmentInput, UpdateEnvironmentInput, WorkspaceEnvironment } from './types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
+import { workspaceKeys } from "../workspaces/queries";
+import type { CreateEnvironmentInput, UpdateEnvironmentInput, WorkspaceEnvironment } from "./types";
 
 export function useEnvironments(slug: string) {
   return useQuery<WorkspaceEnvironment[], ApiError>({

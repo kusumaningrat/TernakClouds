@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type {
   CreateRegistryBindingInput,
   CreateRegistryProviderInput,
@@ -8,24 +8,31 @@ import type {
   RegistryRepo,
   RegistryTag,
   UpdateRegistryProviderInput,
-} from './types';
+} from "./types";
 
 export const registryKeys = {
-  all: (slug: string) => ['workspaces', slug, 'registries'] as const,
-  list: (slug: string) => ['workspaces', slug, 'registries', 'list'] as const,
-  detail: (slug: string, id: string) => ['workspaces', slug, 'registries', id] as const,
+  all: (slug: string) => ["workspaces", slug, "registries"] as const,
+  list: (slug: string) => ["workspaces", slug, "registries", "list"] as const,
+  detail: (slug: string, id: string) => ["workspaces", slug, "registries", id] as const,
   repos: (slug: string, id: string) =>
-    ['workspaces', slug, 'registries', id, 'repositories'] as const,
+    ["workspaces", slug, "registries", id, "repositories"] as const,
   tags: (slug: string, id: string, repo: string) =>
-    ['workspaces', slug, 'registries', id, 'repositories', repo, 'tags'] as const,
+    ["workspaces", slug, "registries", id, "repositories", repo, "tags"] as const,
   bindings: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'registries'] as const,
+    ["workspaces", slug, "environments", envSlug, "registries"] as const,
   boundRepos: (slug: string, envSlug: string, id: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'registries', id, 'repositories'] as const,
+    ["workspaces", slug, "environments", envSlug, "registries", id, "repositories"] as const,
   boundTags: (slug: string, envSlug: string, id: string, repo: string) =>
     [
-      'workspaces', slug, 'environments', envSlug, 'registries', id,
-      'repositories', repo, 'tags',
+      "workspaces",
+      slug,
+      "environments",
+      envSlug,
+      "registries",
+      id,
+      "repositories",
+      repo,
+      "tags",
     ] as const,
 };
 
@@ -57,7 +64,11 @@ export function useCreateRegistry(slug: string) {
 
 export function useUpdateRegistry(slug: string) {
   const queryClient = useQueryClient();
-  return useMutation<RegistryProvider, ApiError, { id: string; input: UpdateRegistryProviderInput }>({
+  return useMutation<
+    RegistryProvider,
+    ApiError,
+    { id: string; input: UpdateRegistryProviderInput }
+  >({
     mutationFn: ({ id, input }) => api.put(`/api/v1/workspaces/${slug}/registries/${id}`, input),
     onSuccess: (_, { id }) => {
       void queryClient.invalidateQueries({ queryKey: registryKeys.all(slug) });
@@ -124,9 +135,7 @@ export function useDeleteBinding(slug: string, envSlug: string) {
   const queryClient = useQueryClient();
   return useMutation<void, ApiError, string>({
     mutationFn: (bindingId) =>
-      api.delete(
-        `/api/v1/workspaces/${slug}/environments/${envSlug}/registries/${bindingId}`,
-      ),
+      api.delete(`/api/v1/workspaces/${slug}/environments/${envSlug}/registries/${bindingId}`),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: registryKeys.bindings(slug, envSlug) });
     },

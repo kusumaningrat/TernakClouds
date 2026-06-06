@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type {
   NomadAllocationDetail,
   NomadAllocationStub,
@@ -10,25 +10,65 @@ import type {
   NomadJobStub,
   NomadNamespace,
   NomadNodeStub,
-} from './types';
+} from "./types";
 
 export const nomadKeys = {
   nodes: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'nodes'] as const,
+    ["workspaces", slug, "environments", envSlug, "nomad", "nodes"] as const,
   namespaces: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'namespaces'] as const,
+    ["workspaces", slug, "environments", envSlug, "nomad", "namespaces"] as const,
   jobs: (slug: string, envSlug: string, namespace: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'jobs', namespace] as const,
+    ["workspaces", slug, "environments", envSlug, "nomad", "jobs", namespace] as const,
   job: (slug: string, envSlug: string, namespace: string, jobID: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'jobs', namespace, jobID, 'detail'] as const,
+    [
+      "workspaces",
+      slug,
+      "environments",
+      envSlug,
+      "nomad",
+      "jobs",
+      namespace,
+      jobID,
+      "detail",
+    ] as const,
   allocations: (slug: string, envSlug: string, jobID: string, namespace: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'jobs', namespace, jobID, 'allocations'] as const,
+    [
+      "workspaces",
+      slug,
+      "environments",
+      envSlug,
+      "nomad",
+      "jobs",
+      namespace,
+      jobID,
+      "allocations",
+    ] as const,
   evaluations: (slug: string, envSlug: string, jobID: string, namespace: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'jobs', namespace, jobID, 'evaluations'] as const,
+    [
+      "workspaces",
+      slug,
+      "environments",
+      envSlug,
+      "nomad",
+      "jobs",
+      namespace,
+      jobID,
+      "evaluations",
+    ] as const,
   deployments: (slug: string, envSlug: string, jobID: string, namespace: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'jobs', namespace, jobID, 'deployments'] as const,
+    [
+      "workspaces",
+      slug,
+      "environments",
+      envSlug,
+      "nomad",
+      "jobs",
+      namespace,
+      jobID,
+      "deployments",
+    ] as const,
   allocation: (slug: string, envSlug: string, allocID: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'nomad', 'allocations', allocID] as const,
+    ["workspaces", slug, "environments", envSlug, "nomad", "allocations", allocID] as const,
 };
 
 export function useNomadNodes(slug: string, envSlug: string, enabled = true) {
@@ -43,8 +83,7 @@ export function useNomadNodes(slug: string, envSlug: string, enabled = true) {
 export function useNomadNamespaces(slug: string, envSlug: string, enabled = true) {
   return useQuery<NomadNamespace[], ApiError>({
     queryKey: nomadKeys.namespaces(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/nomad/namespaces`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/nomad/namespaces`),
     enabled: !!slug && !!envSlug && enabled,
     staleTime: 30_000,
   });

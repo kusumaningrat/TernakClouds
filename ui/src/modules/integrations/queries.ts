@@ -1,13 +1,12 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
-import { workspaceKeys } from '../workspaces/queries';
-import type { AddIntegrationInput, Integration } from './types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
+import { workspaceKeys } from "../workspaces/queries";
+import type { AddIntegrationInput, Integration } from "./types";
 
 export function useIntegrations(slug: string, envSlug: string) {
   return useQuery<Integration[], ApiError>({
     queryKey: workspaceKeys.integrations(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/integrations`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/integrations`),
     enabled: !!slug && !!envSlug,
   });
 }
@@ -31,11 +30,7 @@ export function useAddIntegration() {
 
 export function useDeleteIntegration() {
   const queryClient = useQueryClient();
-  return useMutation<
-    { message: string },
-    ApiError,
-    { slug: string; envSlug: string; id: string }
-  >({
+  return useMutation<{ message: string }, ApiError, { slug: string; envSlug: string; id: string }>({
     mutationFn: ({ slug, envSlug, id }) =>
       api.delete(`/api/v1/workspaces/${slug}/environments/${envSlug}/integrations/${id}`),
     onSuccess: (_, { slug, envSlug }) => {

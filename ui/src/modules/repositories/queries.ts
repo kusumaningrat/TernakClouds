@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type {
   CommitFilesInput,
   CommitResult,
@@ -12,20 +12,20 @@ import type {
   SCMContentEntry,
   SCMRepo,
   UpdateRepoProviderInput,
-} from './types';
+} from "./types";
 
 export const repoProviderKeys = {
-  all: (slug: string) => ['workspaces', slug, 'repo-providers'] as const,
-  list: (slug: string) => ['workspaces', slug, 'repo-providers', 'list'] as const,
-  detail: (slug: string, id: string) => ['workspaces', slug, 'repo-providers', id] as const,
+  all: (slug: string) => ["workspaces", slug, "repo-providers"] as const,
+  list: (slug: string) => ["workspaces", slug, "repo-providers", "list"] as const,
+  detail: (slug: string, id: string) => ["workspaces", slug, "repo-providers", id] as const,
   repos: (slug: string, id: string) =>
-    ['workspaces', slug, 'repo-providers', id, 'repositories'] as const,
+    ["workspaces", slug, "repo-providers", id, "repositories"] as const,
   branches: (slug: string, id: string, repo: string) =>
-    ['workspaces', slug, 'repo-providers', id, 'branches', repo] as const,
+    ["workspaces", slug, "repo-providers", id, "branches", repo] as const,
   contents: (slug: string, id: string, repo: string, branch: string, path: string) =>
-    ['workspaces', slug, 'repo-providers', id, 'contents', repo, branch, path] as const,
+    ["workspaces", slug, "repo-providers", id, "contents", repo, branch, path] as const,
   capabilities: (slug: string, id: string) =>
-    ['workspaces', slug, 'repo-providers', id, 'capabilities'] as const,
+    ["workspaces", slug, "repo-providers", id, "capabilities"] as const,
 };
 
 export function useRepoProviders(slug: string) {
@@ -70,8 +70,7 @@ export function useDeleteRepoProvider(slug: string) {
 
 export function useValidateRepoProvider(slug: string) {
   return useMutation<{ status: string }, ApiError, string>({
-    mutationFn: (id) =>
-      api.post(`/api/v1/workspaces/${slug}/repo-providers/${id}/validate`, {}),
+    mutationFn: (id) => api.post(`/api/v1/workspaces/${slug}/repo-providers/${id}/validate`, {}),
   });
 }
 
@@ -103,16 +102,16 @@ export function useRepoProviderContents(
   slug: string,
   id: string,
   repoFullName: string,
-  branch = '',
-  path = '',
+  branch = "",
+  path = "",
   enabled = true,
 ) {
   return useQuery<SCMContentEntry[], ApiError>({
     queryKey: repoProviderKeys.contents(slug, id, repoFullName, branch, path),
     queryFn: () => {
       const params = new URLSearchParams({ repo: repoFullName });
-      if (branch) params.set('branch', branch);
-      if (path) params.set('path', path);
+      if (branch) params.set("branch", branch);
+      if (path) params.set("path", path);
       return api.get(
         `/api/v1/workspaces/${slug}/repo-providers/${id}/contents?${params.toString()}`,
       );
@@ -138,8 +137,7 @@ export function useCreatePullRequest(slug: string) {
 export function useRepoProviderCapabilities(slug: string, id: string, enabled = true) {
   return useQuery<ProviderCapabilities, ApiError>({
     queryKey: repoProviderKeys.capabilities(slug, id),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/repo-providers/${id}/capabilities`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/repo-providers/${id}/capabilities`),
     enabled: !!slug && !!id && enabled,
   });
 }

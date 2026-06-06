@@ -1,4 +1,4 @@
-export type RegistryProviderType = 'harbor' | 'dockerhub' | 'ghcr' | 'ecr' | 'gcr';
+export type RegistryProviderType = "harbor" | "dockerhub" | "ghcr" | "ecr" | "gcr";
 
 export interface RegistryProvider {
   id: string;

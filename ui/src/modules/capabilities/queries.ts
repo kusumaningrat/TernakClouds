@@ -1,25 +1,24 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type {
   BindProviderInput,
   CapabilityProvider,
   CapabilityStatusResponse,
   UpdateProviderInput,
-} from './types';
+} from "./types";
 
 export const capabilityKeys = {
   all: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'capabilities'] as const,
+    ["workspaces", slug, "environments", envSlug, "capabilities"] as const,
   detail: (slug: string, envSlug: string, cap: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'capabilities', cap] as const,
-  providers: (cap: string) => ['capabilities', cap, 'providers'] as const,
+    ["workspaces", slug, "environments", envSlug, "capabilities", cap] as const,
+  providers: (cap: string) => ["capabilities", cap, "providers"] as const,
 };
 
 export function useCapabilities(slug: string, envSlug: string) {
   return useQuery<CapabilityStatusResponse[], ApiError>({
     queryKey: capabilityKeys.all(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/capabilities`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/capabilities`),
     enabled: !!slug && !!envSlug,
     retry: false,
     refetchOnWindowFocus: false,
@@ -43,9 +42,7 @@ export function useCapabilityProviders(slug: string, envSlug: string, cap: strin
   return useQuery<CapabilityProvider[], ApiError>({
     queryKey: capabilityKeys.providers(cap),
     queryFn: () =>
-      api.get(
-        `/api/v1/workspaces/${slug}/environments/${envSlug}/capabilities/${cap}/providers`,
-      ),
+      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/capabilities/${cap}/providers`),
     enabled: !!slug && !!envSlug && !!cap,
     retry: false,
     refetchOnWindowFocus: false,

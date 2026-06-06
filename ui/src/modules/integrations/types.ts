@@ -1,4 +1,4 @@
-export type IntegrationType = 'nomad' | 'vault';
+export type IntegrationType = "nomad" | "vault";
 
 export interface Integration {
   id: string;

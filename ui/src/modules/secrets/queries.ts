@@ -1,18 +1,18 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type {
   CreateSecretGrantInput,
   SecretGrant,
   SecretGrantAdminView,
   SecretValueResponse,
   UpdateSecretGrantInput,
-} from './types';
+} from "./types";
 
 export const secretKeys = {
   list: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'secrets'] as const,
+    ["workspaces", slug, "environments", envSlug, "secrets"] as const,
   value: (slug: string, envSlug: string, id: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'secrets', id, 'value'] as const,
+    ["workspaces", slug, "environments", envSlug, "secrets", id, "value"] as const,
 };
 
 export function useSecretGrants(slug: string, envSlug: string) {
@@ -83,7 +83,7 @@ export function useWriteSecretValue() {
     ApiError,
     { slug: string; envSlug: string; id: string; path?: string; data: Record<string, string> }
   >({
-    mutationFn: ({ slug, envSlug, id, path = '', data }) =>
+    mutationFn: ({ slug, envSlug, id, path = "", data }) =>
       api.put(`/api/v1/workspaces/${slug}/environments/${envSlug}/secrets/${id}/value`, {
         path,
         data,

@@ -14,7 +14,7 @@ export interface SecretGrantAdminView extends SecretGrantMemberView {
 export type SecretGrant = SecretGrantAdminView | SecretGrantMemberView;
 
 export function isAdminGrant(g: SecretGrant): g is SecretGrantAdminView {
-  return 'vault_path' in g;
+  return "vault_path" in g;
 }
 
 export interface SecretEntry {

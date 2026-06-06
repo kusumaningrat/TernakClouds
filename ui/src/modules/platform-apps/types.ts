@@ -4,7 +4,7 @@ export interface PlatformServiceSpec {
 }
 
 export interface PlatformRuntimeSpec {
-  provider: 'nomad' | 'kubernetes' | 'docker';
+  provider: "nomad" | "kubernetes" | "docker";
   variant?: string;
   datacenter?: string;
   namespace?: string;
@@ -25,7 +25,7 @@ export interface PlatformContainerSpec {
 }
 
 export interface PlatformDeploymentSpec {
-  strategy: 'rolling' | 'recreate' | 'canary';
+  strategy: "rolling" | "recreate" | "canary";
 }
 
 export interface PlatformRegistrySpec {
@@ -74,7 +74,7 @@ export interface PlatformApp {
   blueprint_name: string;
   name: string;
   runtime_provider: string;
-  status: 'pending' | 'provisioned' | 'failed' | 'stopped';
+  status: "pending" | "provisioned" | "failed" | "stopped";
   generated_manifest?: string;
   runtime_job_id?: string;
   provisioned_by: string;
@@ -122,7 +122,7 @@ export interface DeploymentRecord {
   id: string;
   platform_app_id: string;
   triggered_by: string;
-  status: 'pending' | 'provisioned' | 'failed' | 'stopped';
+  status: "pending" | "provisioned" | "failed" | "stopped";
   runtime_job_id?: string;
   repo_name?: string;
   repo_branch?: string;

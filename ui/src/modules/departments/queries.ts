@@ -1,11 +1,16 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
-import type { CreateDepartmentInput, Department, DepartmentList, UpdateDepartmentInput } from './types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
+import type {
+  CreateDepartmentInput,
+  Department,
+  DepartmentList,
+  UpdateDepartmentInput,
+} from "./types";
 
 export const departmentKeys = {
-  all: ['departments'] as const,
-  list: (page: number, limit: number) => ['departments', 'list', page, limit] as const,
-  detail: (id: string) => ['departments', 'detail', id] as const,
+  all: ["departments"] as const,
+  list: (page: number, limit: number) => ["departments", "list", page, limit] as const,
+  detail: (id: string) => ["departments", "detail", id] as const,
 };
 
 export function useDepartments(page = 1, limit = 20) {
@@ -27,7 +32,7 @@ export function useDepartment(id: string) {
 export function useCreateDepartment() {
   const queryClient = useQueryClient();
   return useMutation<Department, ApiError, CreateDepartmentInput>({
-    mutationFn: (input) => api.post('/api/v1/departments', input),
+    mutationFn: (input) => api.post("/api/v1/departments", input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: departmentKeys.all });
     },

@@ -1,4 +1,4 @@
-export type RepoProviderType = 'github' | 'gitlab';
+export type RepoProviderType = "github" | "gitlab";
 
 export interface RepoProvider {
   id: string;
@@ -47,7 +47,7 @@ export interface SCMBranch {
 export interface SCMContentEntry {
   name: string;
   path: string;
-  type: 'dir' | 'file';
+  type: "dir" | "file";
 }
 
 export interface CommitFilesInput {

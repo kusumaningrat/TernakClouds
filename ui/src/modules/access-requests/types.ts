@@ -9,7 +9,7 @@ export interface AccessRequest {
   workspace_slug: string;
   requested_role: string;
   reason: string;
-  status: 'pending' | 'approved' | 'denied';
+  status: "pending" | "approved" | "denied";
   reviewed_by?: string;
   reviewed_at?: string;
   created_at: string;

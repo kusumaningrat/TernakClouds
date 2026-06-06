@@ -12,7 +12,7 @@ export interface WorkspaceMember {
   user_id: string;
   first_name: string;
   last_name: string;
-  role: 'owner' | 'member';
+  role: "owner" | "member";
   joined_at: string;
 }
 

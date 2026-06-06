@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type {
   DeploymentHistoryPage,
   GeneratedResources,
@@ -7,15 +7,15 @@ import type {
   PlatformAppPage,
   PreviewAppInput,
   ProvisionAppInput,
-} from './types';
+} from "./types";
 
 export const platformAppKeys = {
   list: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'platform-apps'] as const,
+    ["workspaces", slug, "environments", envSlug, "platform-apps"] as const,
   detail: (slug: string, envSlug: string, id: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'platform-apps', id] as const,
+    ["workspaces", slug, "environments", envSlug, "platform-apps", id] as const,
   deployments: (slug: string, envSlug: string, id: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'platform-apps', id, 'deployments'] as const,
+    ["workspaces", slug, "environments", envSlug, "platform-apps", id, "deployments"] as const,
 };
 
 export function usePlatformApps(slug: string, envSlug: string, page = 1, limit = 5) {
@@ -47,10 +47,7 @@ export function usePlatformApp(slug: string, envSlug: string, id: string) {
 export function usePreviewApp(slug: string, envSlug: string) {
   return useMutation<GeneratedResources, ApiError, PreviewAppInput>({
     mutationFn: (input) =>
-      api.post(
-        `/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/preview`,
-        input,
-      ),
+      api.post(`/api/v1/workspaces/${slug}/environments/${envSlug}/platform-apps/preview`, input),
   });
 }
 

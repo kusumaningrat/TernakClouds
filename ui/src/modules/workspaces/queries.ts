@@ -1,43 +1,43 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
 import type {
   CreateWorkspaceInput,
   UpdateWorkspaceInput,
   Workspace,
   WorkspaceDirectoryEntry,
   WorkspaceMember,
-} from './types';
+} from "./types";
 
 export const workspaceKeys = {
-  all: ['workspaces'] as const,
-  list: () => ['workspaces', 'list'] as const,
-  detail: (slug: string) => ['workspaces', 'detail', slug] as const,
-  members: (slug: string) => ['workspaces', slug, 'members'] as const,
-  environments: (slug: string) => ['workspaces', slug, 'environments'] as const,
+  all: ["workspaces"] as const,
+  list: () => ["workspaces", "list"] as const,
+  detail: (slug: string) => ["workspaces", "detail", slug] as const,
+  members: (slug: string) => ["workspaces", slug, "members"] as const,
+  environments: (slug: string) => ["workspaces", slug, "environments"] as const,
   integrations: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'integrations'] as const,
+    ["workspaces", slug, "environments", envSlug, "integrations"] as const,
 };
 
 export function useWorkspaces() {
   return useQuery<Workspace[], ApiError>({
     queryKey: workspaceKeys.list(),
-    queryFn: () => api.get('/api/v1/workspaces'),
+    queryFn: () => api.get("/api/v1/workspaces"),
     staleTime: 5 * 60_000,
   });
 }
 
 export function useWorkspacesMine() {
   return useQuery<Workspace[], ApiError>({
-    queryKey: ['workspaces', 'mine'],
-    queryFn: () => api.get('/api/v1/workspaces/mine'),
+    queryKey: ["workspaces", "mine"],
+    queryFn: () => api.get("/api/v1/workspaces/mine"),
     staleTime: 5 * 60_000,
   });
 }
 
 export function useWorkspaceDirectory() {
   return useQuery<WorkspaceDirectoryEntry[], ApiError>({
-    queryKey: ['workspaces', 'directory'],
-    queryFn: () => api.get('/api/v1/workspaces/directory'),
+    queryKey: ["workspaces", "directory"],
+    queryFn: () => api.get("/api/v1/workspaces/directory"),
     staleTime: 5 * 60_000,
   });
 }
@@ -53,7 +53,7 @@ export function useWorkspace(slug: string) {
 export function useCreateWorkspace() {
   const queryClient = useQueryClient();
   return useMutation<Workspace, ApiError, CreateWorkspaceInput>({
-    mutationFn: (input) => api.post('/api/v1/workspaces', input),
+    mutationFn: (input) => api.post("/api/v1/workspaces", input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: workspaceKeys.all });
     },

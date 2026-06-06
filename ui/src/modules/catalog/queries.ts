@@ -1,19 +1,19 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/lib/api';
-import type { CatalogItem, DeployServiceInput, ServiceDeployment } from './types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, ApiError } from "@/lib/api";
+import type { CatalogItem, DeployServiceInput, ServiceDeployment } from "./types";
 
 export const catalogKeys = {
-  catalog: () => ['service-catalog'] as const,
+  catalog: () => ["service-catalog"] as const,
   deployments: (slug: string, envSlug: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'service-deployments'] as const,
+    ["workspaces", slug, "environments", envSlug, "service-deployments"] as const,
   deployment: (slug: string, envSlug: string, id: string) =>
-    ['workspaces', slug, 'environments', envSlug, 'service-deployments', id] as const,
+    ["workspaces", slug, "environments", envSlug, "service-deployments", id] as const,
 };
 
 export function useCatalog() {
   return useQuery<CatalogItem[], ApiError>({
     queryKey: catalogKeys.catalog(),
-    queryFn: () => api.get('/api/v1/service-catalog'),
+    queryFn: () => api.get("/api/v1/service-catalog"),
     staleTime: 60_000,
   });
 }
