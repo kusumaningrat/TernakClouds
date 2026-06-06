@@ -1647,9 +1647,17 @@ function EnvDeploymentsPage() {
   const hasAny = hasNomad || hasK8s || hasDocker;
 
   type Tab = "nomad" | "k8s" | "docker";
-  const [activeTab, setActiveTab] = useState<Tab>(() =>
-    hasNomad ? "nomad" : hasK8s ? "k8s" : "docker",
-  );
+  const [activeTab, setActiveTab] = useState<Tab>("nomad");
+
+  useEffect(() => {
+    if (capLoading) return;
+    setActiveTab((prev) => {
+      if (prev === "nomad" && hasNomad) return prev;
+      if (prev === "k8s" && hasK8s) return prev;
+      if (prev === "docker" && hasDocker) return prev;
+      return hasNomad ? "nomad" : hasK8s ? "k8s" : "docker";
+    });
+  }, [hasNomad, hasK8s, hasDocker, capLoading]);
 
   const tabs: { key: Tab; label: string; enabled: boolean }[] = [
     { key: "nomad", label: "Nomad", enabled: hasNomad },
@@ -1710,10 +1718,14 @@ function EnvDeploymentsPage() {
             </div>
           )}
 
-          {activeTab === "nomad" && hasNomad && <JobsListView slug={slug} envId={envId} />}
-          {activeTab === "k8s" && hasK8s && <K8sDeploymentsListView slug={slug} envId={envId} />}
+          {activeTab === "nomad" && hasNomad && (
+            <JobsListView key={envId} slug={slug} envId={envId} />
+          )}
+          {activeTab === "k8s" && hasK8s && (
+            <K8sDeploymentsListView key={envId} slug={slug} envId={envId} />
+          )}
           {activeTab === "docker" && hasDocker && (
-            <DockerContainersListView slug={slug} envId={envId} />
+            <DockerContainersListView key={envId} slug={slug} envId={envId} />
           )}
         </main>
       )}
