@@ -1,5 +1,5 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { CapabilityPage } from "@/components/CapabilityPage";
+import { CapabilityPage } from "@/modules/platform/pages/capability-page";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 import { useCapabilities, useCapability } from "@/lib/queries";
 import { ScrollText } from "lucide-react";

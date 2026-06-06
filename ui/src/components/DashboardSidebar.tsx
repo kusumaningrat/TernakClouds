@@ -14,28 +14,9 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAccessRequestsPending, useMe, useEnvironments } from "@/lib/queries";
+import { useRbac } from "@/modules/auth/hooks/use-rbac";
 import { useEnvironmentContext } from "@/lib/environment-context";
 import { useWorkspaceContext } from "@/lib/workspace-context";
-
-// ─── Role helpers ─────────────────────────────────────────────────────────────
-
-function isAdminOrManager(roles: { role?: { name?: string } }[] | undefined): boolean {
-  return (
-    roles?.some((ur) => {
-      const n = (ur.role?.name ?? "").toLowerCase();
-      return n === "admin" || n === "manager";
-    }) ?? false
-  );
-}
-
-function isPlatformEngineer(roles: { role?: { name?: string } }[] | undefined): boolean {
-  return (
-    roles?.some((ur) => {
-      const n = (ur.role?.name ?? "").toLowerCase();
-      return n === "admin" || n === "platform_engineer" || n === "manager";
-    }) ?? false
-  );
-}
 
 // ─── Environment switcher ─────────────────────────────────────────────────────
 
@@ -191,9 +172,8 @@ export function DashboardSidebar() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const { selectedEnvironment } = useEnvironmentContext();
 
-  const { data: me } = useMe();
-  const privileged = isAdminOrManager(me?.roles);
-  const isPlatformEng = isPlatformEngineer(me?.roles);
+  useMe(); // keep me in query cache for useRbac
+  const { isAdminOrManager: privileged, isPlatformEngineer: isPlatformEng } = useRbac();
 
   const { data: pendingRequests } = useAccessRequestsPending();
   const pendingCount = privileged ? (pendingRequests?.length ?? 0) : 0;
@@ -208,8 +188,8 @@ export function DashboardSidebar() {
   const deploymentsTo = envBase ? `${envBase}/deployments` : "/dashboard/deployments";
   const deploymentsActive = active(envBase ? `${envBase}/deployments` : "/dashboard/deployments");
 
-  const secretsTo = envBase ? `${envBase}/secrets` : "/dashboard/environments";
-  const secretsActive = envBase ? active(`${envBase}/secrets`) : active("/dashboard/environments");
+  // const secretsTo = envBase ? `${envBase}/secrets` : "/dashboard/environments";
+  // const secretsActive = envBase ? active(`${envBase}/secrets`) : active("/dashboard/environments");
 
   // Overview: env home but not any sub-path (deployments, secrets, etc.)
   const overviewTo = envBase ?? "/dashboard/environments";
@@ -266,7 +246,7 @@ export function DashboardSidebar() {
             label="Logs"
             active={active("/dashboard/logs")}
           /> */}
-          <NavItem to={secretsTo} icon={KeyRound} label="Secrets" active={secretsActive} />
+          {/* <NavItem to={secretsTo} icon={KeyRound} label="Secrets" active={secretsActive} /> */}
         </NavSection>
 
         {/* Catalog */}

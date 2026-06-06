@@ -1,5 +1,5 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { CapabilityPage } from "@/components/CapabilityPage";
+import { CapabilityPage } from "@/modules/platform/pages/capability-page";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 import { useCapability, useNomadNodes, useK8sNodes, useDockerContainers } from "@/lib/queries";
 import { Loader2, AlertTriangle, RefreshCw, Server, Layers, Box } from "lucide-react";

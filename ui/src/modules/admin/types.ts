@@ -1,0 +1,119 @@
+// ─── Roles & Permissions ─────────────────────────────────────────────────────
+
+export interface Permission {
+  id: string;
+  name: string;
+  resource: string;
+  action: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RolePermission {
+  role_id: string;
+  permission_id: string;
+  permission?: Permission;
+}
+
+export interface Role {
+  id: string;
+  name: string;
+  description?: string;
+  role_permissions?: RolePermission[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserRole {
+  user_id: string;
+  role_id: string;
+  assigned_at: string;
+  role?: Role;
+}
+
+export interface AssignRoleInput {
+  role_id: string;
+}
+
+export interface PermissionCheck {
+  user_id: string;
+  permission: string;
+  has_permission: boolean;
+}
+
+// ─── Departments ─────────────────────────────────────────────────────────────
+
+export interface Department {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DepartmentList {
+  items: Department[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CreateDepartmentInput {
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+export interface UpdateDepartmentInput {
+  name?: string;
+  description?: string;
+}
+
+// ─── Users (admin list) ───────────────────────────────────────────────────────
+
+export interface UserRoleSummary {
+  role_id: string;
+  role_name: string;
+  description?: string;
+  assigned_at: string;
+}
+
+export interface UserWorkspaceSummary {
+  workspace_id: string;
+  workspace_name: string;
+  workspace_slug: string;
+  role: "owner" | "member";
+  joined_at: string;
+}
+
+export interface UserSummary {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  department_id: string;
+  department_name: string;
+  created_at: string;
+  updated_at: string;
+  roles: UserRoleSummary[];
+  workspaces: UserWorkspaceSummary[];
+}
+
+export interface UserListResponse {
+  items: UserSummary[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface UserListParams {
+  workspace?: string;
+  department_id?: string;
+  role_id?: string;
+  status?: "active" | "inactive" | "";
+  page?: number;
+  limit?: number;
+}

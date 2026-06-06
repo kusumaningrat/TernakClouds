@@ -1,5 +1,5 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
-import { CapabilityPage } from "@/components/CapabilityPage";
+import { CapabilityPage } from "@/modules/platform/pages/capability-page";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/platform/networking")({
   head: () => ({ meta: [{ title: "Networking · TernakClouds" }] }),

@@ -8,18 +8,14 @@ import {
   useApproveAccessRequest,
   useDenyAccessRequest,
   useWorkspaceMembers,
-  useEnvironments,
 } from "@/lib/queries";
-import type { WorkspaceEnvironment } from "@/lib/types";
 import {
-  KeyRound,
   InboxIcon,
   Users,
   Clock,
   CheckCircle2,
   Loader2,
   Crown,
-  ChevronRight,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -45,7 +41,7 @@ function formatDate(iso: string) {
   });
 }
 
-type Tab = "secrets" | "requests" | "members";
+type Tab = "requests" | "members";
 
 function AccessPage() {
   const { selectedWorkspace } = useWorkspaceContext();
@@ -53,21 +49,14 @@ function AccessPage() {
   const { data: me } = useMe();
   const privileged = isAdminOrManager(me?.roles);
 
-  const [tab, setTab] = useState<Tab>(privileged ? "requests" : "secrets");
+  const [tab, setTab] = useState<Tab>("requests");
 
   const { data: pendingRequests, isLoading: pendingLoading } = useAccessRequestsPending();
-  const { data: environments } = useEnvironments(slug);
   const { data: members, isLoading: membersLoading } = useWorkspaceMembers(slug);
 
   const pendingCount = privileged ? (pendingRequests?.length ?? 0) : 0;
 
   const TABS = [
-    {
-      id: "secrets" as Tab,
-      label: "Secrets",
-      icon: KeyRound,
-      badge: undefined as number | undefined,
-    },
     {
       id: "requests" as Tab,
       label: privileged ? "Requests" : "My requests",
@@ -105,7 +94,6 @@ function AccessPage() {
         </div>
 
         {/* Tab content */}
-        {tab === "secrets" && <SecretsTab environments={environments ?? []} />}
         {tab === "requests" && privileged && (
           <PendingRequestsTab requests={pendingRequests ?? []} loading={pendingLoading} />
         )}
@@ -113,41 +101,6 @@ function AccessPage() {
         {tab === "members" && <MembersTab members={members ?? []} loading={membersLoading} />}
       </main>
     </>
-  );
-}
-
-// ─── Secrets tab ──────────────────────────────────────────────────────────────
-
-function SecretsTab({ environments }: { environments: WorkspaceEnvironment[] }) {
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Secret access grants are scoped per environment.
-      </p>
-      {environments.length === 0 ? (
-        <div className="glass rounded-xl p-6 text-center">
-          <p className="text-sm text-muted-foreground">No environments configured.</p>
-        </div>
-      ) : (
-        environments.map((env) => (
-          <Link
-            key={env.id}
-            to="/dashboard/environments/$envId/secrets"
-            params={{ envId: env.slug }}
-            className="glass rounded-xl p-4 flex items-center gap-3 hover:bg-accent/50 transition group"
-          >
-            <div className="size-8 rounded-lg bg-secondary grid place-items-center shrink-0">
-              <KeyRound className="size-4 text-muted-foreground group-hover:text-primary transition" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm">{env.name}</div>
-              <div className="text-xs text-muted-foreground font-mono">{env.slug}</div>
-            </div>
-            <ChevronRight className="size-4 text-muted-foreground" />
-          </Link>
-        ))
-      )}
-    </div>
   );
 }
 
