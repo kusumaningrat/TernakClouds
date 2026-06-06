@@ -1718,8 +1718,12 @@ function EnvDeploymentsPage() {
             </div>
           )}
 
-          {activeTab === "nomad" && hasNomad && <JobsListView key={envId} slug={slug} envId={envId} />}
-          {activeTab === "k8s" && hasK8s && <K8sDeploymentsListView key={envId} slug={slug} envId={envId} />}
+          {activeTab === "nomad" && hasNomad && (
+            <JobsListView key={envId} slug={slug} envId={envId} />
+          )}
+          {activeTab === "k8s" && hasK8s && (
+            <K8sDeploymentsListView key={envId} slug={slug} envId={envId} />
+          )}
           {activeTab === "docker" && hasDocker && (
             <DockerContainersListView key={envId} slug={slug} envId={envId} />
           )}
