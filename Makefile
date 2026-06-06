@@ -1,13 +1,13 @@
 # Structure:
 #   /           Public website (docs + platform intro) — Vite + React
 #   backend/    Go/Gin REST API
-#   admin/   Admin dashboard — TanStack Start + React
+#   ui/   Admin dashboard — TanStack Start + React
 #
 # Usage:
-#   make install       Install all npm dependencies (root + admin/)
-#   make dev           Start backend + admin dashboard concurrently
+#   make install       Install all npm dependencies (root + ui/)
+#   make dev           Start backend + ui dashboard concurrently
 #   make dev-backend   Start backend only
-#   make dev-admin  Start admin dashboard only
+#   make dev-ui  Start ui dashboard only
 #   make dev-site      Start public website only
 #   make build         Build everything
 #   make test          Run all tests
@@ -16,8 +16,8 @@
 #   make fmt           Format all code
 # ─────────────────────────────────────────────────────────────────────────────
 
-.PHONY: install dev dev-backend dev-admin dev-site \
-        build build-backend build-admin build-site \
+.PHONY: install dev dev-backend dev-ui dev-site \
+        build build-backend build-ui build-site \
         test docker-up docker-down fmt clean
 
 # ── Dependencies ─────────────────────────────────────────────────────────────
@@ -25,35 +25,35 @@
 prepare:
 	cd backend && go mod tidy
 	npm install
-	cd admin && npm install
+	cd ui && npm install
 
 # ── Development ──────────────────────────────────────────────────────────────
 
 dev:
-	@echo "Starting backend (:8022) and admin dashboard (:3000)…"
+	@echo "Starting backend (:8022) and ui dashboard (:3000)…"
 	@trap 'kill 0' SIGINT; \
 	  $(MAKE) dev-backend & \
-	  $(MAKE) dev-admin & \
+	  $(MAKE) dev-ui & \
 	  wait
 
 dev-backend:
 	cd backend && go run ./cmd/api
 
-dev-admin:
-	cd admin && npm run dev
+dev-ui:
+	cd ui && npm run dev
 
 dev-site:
 	npm run dev
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
-build: build-backend build-admin build-site
+build: build-backend build-ui build-site
 
 build-backend:
 	cd backend && go build -o bin/api ./cmd/api
 
-build-admin:
-	cd admin && npm run build
+build-ui:
+	cd ui && npm run build
 
 build-site:
 	npm run build
@@ -75,19 +75,19 @@ docker-down:
 
 fmt:
 	cd backend && go fmt ./...
-	cd admin && npm run format
+	cd ui && npm run format
 
 # ── Clean ────────────────────────────────────────────────────────────────────
 
 clean:
 	rm -rf backend/bin
-	rm -rf admin/dist admin/.tanstack admin/.wrangler
+	rm -rf ui/dist ui/.tanstack ui/.wrangler
 	rm -rf dist
 
-# ── Admin Linting ────────────────────────────────────────────────────────────────────
+# ── ui Linting ────────────────────────────────────────────────────────────────────
 
-lint-admin:
-	cd admin && npm run lint
+lint-ui:
+	cd ui && npm run lint
 
 lint-autofix:
-	cd admin && npm run lint -- --fix
+	cd ui && npm run lint -- --fix
