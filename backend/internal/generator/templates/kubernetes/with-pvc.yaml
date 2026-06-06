@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{.ServiceName}}-data
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.ServiceName}}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{.StorageClass}}
+  resources:
+    requests:
+      storage: {{.StorageSize}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.ServiceName}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.ServiceName}}
+    blueprint: {{.BlueprintType}}
+    {{- if .WorkspaceLabel}}
+    ternak.io/workspace: {{.WorkspaceLabel}}
+    {{- end}}
+    {{- if .EnvironmentLabel}}
+    ternak.io/environment: {{.EnvironmentLabel}}
+    {{- end}}
+spec:
+  replicas: {{.Replicas}}
+  selector:
+    matchLabels:
+      app: {{.ServiceName}}
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: {{.ServiceName}}
+        blueprint: {{.BlueprintType}}
+    spec:
+      {{- if .RegistrySecret}}
+      imagePullSecrets:
+        - name: {{.RegistrySecret}}
+      {{- end}}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{.ServiceName}}-data
+      containers:
+        - name: {{.ServiceName}}
+          image: {{.Image}}
+          ports:
+            - containerPort: {{.ContainerPort}}
+              protocol: TCP
+          volumeMounts:
+            - name: data
+              mountPath: {{.PVCMountPath}}
+          resources:
+            requests:
+              cpu: "{{.CPURequest}}m"
+              memory: "{{.MemoryMB}}Mi"
+            limits:
+              cpu: "{{.CPULimit}}m"
+              memory: "{{.MemoryLimitMB}}Mi"
+          {{- if .VaultAnnotations}}
+          envFrom:
+            - secretRef:
+                name: {{.ServiceName}}-secrets
+                optional: true
+          {{- end}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.ServiceName}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.ServiceName}}
+spec:
+  selector:
+    app: {{.ServiceName}}
+  ports:
+    - protocol: TCP
+      port: {{.ContainerPort}}
+      targetPort: {{.ContainerPort}}
+  type: ClusterIP

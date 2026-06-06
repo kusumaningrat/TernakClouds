@@ -1,0 +1,113 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{.ServiceName}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.ServiceName}}
+    blueprint: {{.BlueprintType}}
+    {{- if .WorkspaceLabel}}
+    ternak.io/workspace: {{.WorkspaceLabel}}
+    {{- end}}
+    {{- if .EnvironmentLabel}}
+    ternak.io/environment: {{.EnvironmentLabel}}
+    {{- end}}
+spec:
+  replicas: {{.Replicas}}
+  selector:
+    matchLabels:
+      app: {{.ServiceName}}
+  strategy:
+    {{- if eq .Strategy "rolling"}}
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    {{- else if eq .Strategy "recreate"}}
+    type: Recreate
+    {{- else}}
+    type: RollingUpdate
+    {{- end}}
+  template:
+    metadata:
+      labels:
+        app: {{.ServiceName}}
+        blueprint: {{.BlueprintType}}
+    spec:
+      {{- if .RegistrySecret}}
+      imagePullSecrets:
+        - name: {{.RegistrySecret}}
+      {{- end}}
+      containers:
+        - name: {{.ServiceName}}
+          image: {{.Image}}
+          ports:
+            - containerPort: {{.ContainerPort}}
+              protocol: TCP
+          resources:
+            requests:
+              cpu: "{{.CPURequest}}m"
+              memory: "{{.MemoryMB}}Mi"
+            limits:
+              cpu: "{{.CPULimit}}m"
+              memory: "{{.MemoryLimitMB}}Mi"
+          {{- if ne .BlueprintType "worker"}}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{.ContainerPort}}
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: {{.ContainerPort}}
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          {{- end}}
+          {{- if .VaultAnnotations}}
+          envFrom:
+            - secretRef:
+                name: {{.ServiceName}}-secrets
+                optional: true
+          {{- end}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.ServiceName}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.ServiceName}}
+spec:
+  selector:
+    app: {{.ServiceName}}
+  ports:
+    - protocol: TCP
+      port: {{.ContainerPort}}
+      targetPort: {{.ContainerPort}}
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{.ServiceName}}
+  namespace: {{.Namespace}}
+  labels:
+    app: {{.ServiceName}}
+  annotations:
+    kubernetes.io/ingress.class: {{.IngressClass}}
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  ingressClassName: {{.IngressClass}}
+  rules:
+    - host: {{.IngressHost}}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{.ServiceName}}
+                port:
+                  number: {{.ContainerPort}}
