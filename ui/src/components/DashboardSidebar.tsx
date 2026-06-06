@@ -454,7 +454,7 @@ export function DashboardSidebar() {
               <nav className="flex flex-col gap-0.5">
                 <NavLink
                   to={`/dashboard/environments/${activeEnvId}/platform/runtime`}
-                  label="Runtime"
+                  label="Infrastructure"
                   icon={Server}
                   active={envActive("platform/runtime")}
                   badge={providerBadge("runtime")}
