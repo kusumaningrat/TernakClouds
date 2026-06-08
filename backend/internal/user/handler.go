@@ -16,13 +16,19 @@ type RoleAssigner interface {
 	AssignRoleByName(userID uuid.UUID, roleName string) error
 }
 
+// WorkspaceAdder is satisfied by workspace.Service.
+type WorkspaceAdder interface {
+	AddMemberDirect(workspaceID, userID uuid.UUID) error
+}
+
 type Handler struct {
 	svc     *UserService
 	roleSvc RoleAssigner
+	wsSvc   WorkspaceAdder
 }
 
-func NewHandler(svc *UserService, roleSvc RoleAssigner) *Handler {
-	return &Handler{svc: svc, roleSvc: roleSvc}
+func NewHandler(svc *UserService, roleSvc RoleAssigner, wsSvc WorkspaceAdder) *Handler {
+	return &Handler{svc: svc, roleSvc: roleSvc, wsSvc: wsSvc}
 }
 
 // GET /api/v1/users
@@ -79,7 +85,13 @@ func (h *Handler) Create(c *gin.Context) {
 		return
 	}
 
-	u, err := h.svc.Register(input.Email, input.Password, input.FirstName, input.LastName, deptID)
+	wsID, err := uuid.Parse(input.WorkspaceID)
+	if err != nil {
+		pkg.RespondErr(c, http.StatusBadRequest, "invalid workspace_id")
+		return
+	}
+
+	u, err := h.svc.Register(input.Email, input.Password, input.FirstName, input.LastName, deptID, true)
 	if errors.Is(err, ErrEmailTaken) {
 		pkg.RespondErr(c, http.StatusConflict, "email already in use")
 		return
@@ -91,6 +103,13 @@ func (h *Handler) Create(c *gin.Context) {
 
 	if h.roleSvc != nil && input.Role != "" {
 		_ = h.roleSvc.AssignRoleByName(u.ID, input.Role)
+	}
+
+	if h.wsSvc != nil {
+		if err := h.wsSvc.AddMemberDirect(wsID, u.ID); err != nil {
+			pkg.RespondErr(c, http.StatusInternalServerError, "user created but failed to assign to workspace")
+			return
+		}
 	}
 
 	pkg.RespondOK(c, http.StatusCreated, u)

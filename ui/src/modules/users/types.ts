@@ -83,6 +83,7 @@ export interface CreateUserInput {
   last_name: string;
   department_id: string;
   role: string;
+  workspace_id: string;
 }
 
 export interface UserListParams {

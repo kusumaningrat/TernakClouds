@@ -1,9 +1,12 @@
 import { createFileRoute, Link, redirect, useNavigate } from "@tanstack/react-router";
 import { Shield, Layers, Users, GitBranch, AlertCircle } from "lucide-react";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { isAuthenticated } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { useLogin } from "@/lib/queries";
 import { hasSetupBeenVisited } from "@/lib/setup-visited";
+import type { MeResponse } from "@/lib/types";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => {
@@ -39,13 +42,22 @@ function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const login = useLogin();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
       await login.mutateAsync({ email, password });
-      void navigate({ to: "/setup" });
+      const me = await queryClient.fetchQuery<MeResponse>({
+        queryKey: ["me"],
+        queryFn: () => api.get("/api/v1/auth/me"),
+      });
+      if (me.must_change_password) {
+        void navigate({ to: "/change-password" });
+      } else {
+        void navigate({ to: "/setup" });
+      }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Incorrect email or password.");
     }

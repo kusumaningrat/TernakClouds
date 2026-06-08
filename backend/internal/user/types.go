@@ -20,6 +20,7 @@ type CreateUserInput struct {
 	LastName     string `json:"last_name"     binding:"required"`
 	DepartmentID string `json:"department_id" binding:"required"`
 	Role         string `json:"role"          binding:"required"`
+	WorkspaceID  string `json:"workspace_id"  binding:"required"`
 }
 
 // ListFilters holds optional query-param filters for the user list endpoint.

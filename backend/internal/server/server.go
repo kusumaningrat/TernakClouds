@@ -94,7 +94,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	authHandler := auth.NewAuthHandler(authService, roleService)
 	deptHandler := department.NewDepartmentHandler(deptService)
 	roleHandler := role.NewRoleHandler(roleService)
-	userHandler := user.NewHandler(userService, roleService)
+	userHandler := user.NewHandler(userService, roleService, wsService)
 	wsHandler := workspace.NewHandler(wsService)
 	envHandler := environment.NewHandler(envService)
 	capHandler := capability.NewHandler(capService)
