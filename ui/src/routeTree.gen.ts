@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SetupRouteImport } from './routes/setup'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
@@ -62,6 +63,11 @@ import { Route as DashboardEnvironmentsEnvIdPodsNamespaceNameRouteImport } from 
 import { Route as DashboardEnvironmentsEnvIdServicesK8sNamespaceNameRouteImport } from './routes/dashboard.environments.$envId.services.k8s.$namespace.$name'
 import { Route as DashboardEnvironmentsEnvIdDeploymentsK8sNamespaceNameRouteImport } from './routes/dashboard.environments.$envId.deployments.k8s.$namespace.$name'
 
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -361,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
@@ -414,6 +421,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
@@ -464,6 +472,7 @@ export interface FileRoutesById {
   '/dashboard': typeof DashboardRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/setup': typeof SetupRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
@@ -520,6 +529,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/register'
+    | '/setup'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
@@ -573,6 +583,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/register'
+    | '/setup'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
@@ -622,6 +633,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/login'
     | '/register'
+    | '/setup'
     | '/dashboard/access-requests'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
@@ -677,11 +689,19 @@ export interface RootRouteChildren {
   DashboardRoute: typeof DashboardRouteWithChildren
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  SetupRoute: typeof SetupRoute
   EnvironmentsEnvIdRoute: typeof EnvironmentsEnvIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/register': {
       id: '/register'
       path: '/register'
@@ -1265,6 +1285,7 @@ const rootRouteChildren: RootRouteChildren = {
   DashboardRoute: DashboardRouteWithChildren,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  SetupRoute: SetupRoute,
   EnvironmentsEnvIdRoute: EnvironmentsEnvIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
