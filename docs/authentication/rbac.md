@@ -8,24 +8,30 @@ TernakClouds uses JWT-based authentication with short-lived access tokens and lo
 
 ### Token Lifecycle
 
-```
-POST /api/v1/auth/login
-  → access_token  (15m, JWT signed with JWT_SECRET)
-  → refresh_token (168h, stored in database)
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API
+    participant DB as Database
 
-Client stores both in localStorage.
+    C->>API: POST /api/v1/auth/login {email, password}
+    API->>DB: Lookup user, verify bcrypt hash
+    API->>DB: Insert refresh token (hashed)
+    API-->>C: access_token (15m JWT) + refresh_token (168h)
+    Note over C: Store both in localStorage
 
-On API request:
-  Authorization: Bearer <access_token>
+    C->>API: GET /api/... Authorization: Bearer access_token
+    API->>API: Validate JWT signature + expiry
+    API-->>C: 200 OK
 
-When access_token expires:
-  POST /api/v1/auth/refresh { refresh_token }
-  → new access_token + new refresh_token (rotation)
+    Note over C,API: access_token expires
+    C->>API: POST /api/v1/auth/refresh {refresh_token}
+    API->>DB: Verify token, rotate to new value
+    API-->>C: new access_token + new refresh_token
 
-On logout:
-  POST /api/v1/auth/logout { refresh_token }
-  → refresh_token deleted from database
-  → client clears localStorage
+    C->>API: POST /api/v1/auth/logout {refresh_token}
+    API->>DB: Delete refresh token
+    Note over C: Clear localStorage
 ```
 
 Access tokens are stateless JWTs — validated by signature and expiry only, with no database lookup on each request. Refresh tokens are persisted and can be revoked.
@@ -99,18 +105,17 @@ Sensitive configuration operations require **both layers**:
 - Binding a capability provider: `environments:write` platform permission **AND** workspace `owner`
 - Updating or removing a provider: same
 
-```
-Operation: bind runtime provider
-    │
-    ├── Check: platform permission environments:write
-    │   → admin and manager roles have this
-    │   → developer and viewer do NOT
-    │
-    └── Check: workspace owner
-        → user must be owner of this specific workspace
-        → being admin globally is not sufficient
+```mermaid
+flowchart TD
+    REQ["Incoming Request"] --> L1{"Layer 1\nPlatform RBAC\nRequirePermission"}
+    L1 -->|"❌ missing permission"| DENY1["403 Forbidden"]
+    L1 -->|"✅ permission OK"| L2{"Layer 2\nWorkspace Role\nRequireWorkspaceOwner"}
+    L2 -->|"❌ not workspace owner"| DENY2["403 Forbidden"]
+    L2 -->|"✅ is owner"| RUN["Handler executes"]
 
-Both must pass → operation allowed
+    style DENY1 fill:#ef4444,color:#fff,stroke:#dc2626
+    style DENY2 fill:#ef4444,color:#fff,stroke:#dc2626
+    style RUN fill:#22c55e,color:#fff,stroke:#16a34a
 ```
 
 This two-layer design prevents privilege escalation: an admin cannot modify a workspace they are not an owner of, and a developer who happens to be a workspace owner cannot configure capabilities they lack platform permission for.
@@ -161,20 +166,22 @@ Fields required at creation:
 
 Admin-created users are flagged `must_change_password = true`. On their first login, they are automatically redirected to the password change page. After a successful password change, the flag is cleared and they land in their assigned workspace dashboard.
 
-```
-Admin creates user (POST /api/v1/users)
-    │  workspace_id required
-    │  must_change_password = true
-    ▼
-User added as workspace member (AddMemberDirect)
-    │
-    ▼
-User logs in → must_change_password check
-    │
-    ├── true  → redirect to /change-password
-    │            on success → redirect to /dashboard
-    │
-    └── false → normal login flow → /setup or /dashboard
+```mermaid
+flowchart TD
+    ADMIN["Admin creates user\nPOST /api/v1/users"] --> CREATE["User record created\nmust_change_password = true"]
+    CREATE --> ASSIGN["AddMemberDirect\nUser added to workspace"]
+    ASSIGN --> LOGIN["User logs in"]
+    LOGIN --> CHECK{"must_change_password?"}
+    CHECK -->|"true"| CHPW["/change-password page"]
+    CHPW --> SUCCESS["Password updated\nmust_change_password = false"]
+    SUCCESS --> DASH["/dashboard"]
+    CHECK -->|"false"| SETUP{"Setup visited?"}
+    SETUP -->|"no"| WIZARD["/setup wizard"]
+    SETUP -->|"yes"| DASH
+
+    style CHPW fill:#f59e0b,color:#fff,stroke:#d97706
+    style DASH fill:#22c55e,color:#fff,stroke:#16a34a
+    style WIZARD fill:#3b82f6,color:#fff,stroke:#2563eb
 ```
 
 Self-service registration is not available. All user accounts are created by administrators.

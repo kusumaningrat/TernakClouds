@@ -13,20 +13,18 @@ The frontend and API never communicate directly with Kubernetes, Nomad, or Docke
 3. Translates the platform request into a runtime-specific API call
 4. Normalizes the response into a platform model
 
-```
-Developer requests workload list
-           │
-           ▼
- TernakClouds API (/kubernetes/pods, /nomad/jobs, /docker/containers)
-           │
-           │  1. Resolve provider from CapabilityBinding
-           │  2. Retrieve token from Vault
-           │  3. Forward to runtime API
-           ▼
-  Kubernetes API server / Nomad HTTP API / Docker daemon
-           │
-           ▼
-  Normalized response → developer
+```mermaid
+flowchart TD
+    DEV["Developer\nbrowser"] -->|"Platform API request"| API["TernakClouds API\nGo / Gin :8022"]
+    API -->|"1. Resolve CapabilityBinding"| DB[("PostgreSQL")]
+    API -->|"2. Retrieve credential"| VAULT[("Vault KV v2")]
+    API -->|"3. Forward + normalize"| K8S["Kubernetes API server"]
+    API -->|"3. Forward + normalize"| NOMAD["Nomad HTTP API :4646"]
+    API -->|"3. Forward + normalize"| DOCKER["Docker daemon"]
+    K8S -->|"4. Normalized response"| API
+    NOMAD -->|"4. Normalized response"| API
+    DOCKER -->|"4. Normalized response"| API
+    API -->|"Platform model"| DEV
 ```
 
 This means:

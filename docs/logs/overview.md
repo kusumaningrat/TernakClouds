@@ -6,17 +6,28 @@ TernakClouds provides centralized, runtime-agnostic log streaming. Developers ca
 
 ## Architecture
 
-```
-Runtime Workloads (pods / allocations / containers)
-            │
-            │  Runtime native log API
-            ▼
- TernakClouds Backend (proxy + SSE)
-            │
-            │  Server-Sent Events
-            ▼
-   Admin Dashboard (Logs page)
-   live tail · search · filter · highlight
+```mermaid
+graph TD
+    subgraph Runtimes["Runtime Clusters"]
+        K8S["Kubernetes\nPod logs"]
+        NOMAD["Nomad\nAllocation logs"]
+        DOCKER["Docker\nContainer logs"]
+    end
+
+    subgraph Backend["TernakClouds Backend"]
+        PROXY["SSE Proxy\nGo handler"]
+        VAULT[("Vault\ncredentials")]
+        PROXY -->|"retrieve token"| VAULT
+    end
+
+    subgraph Frontend["Admin Dashboard"]
+        LOGS["Logs Page\nlive tail · search · filter · highlight"]
+    end
+
+    K8S -->|"native log API"| PROXY
+    NOMAD -->|"native log API"| PROXY
+    DOCKER -->|"native log API"| PROXY
+    PROXY -->|"Server-Sent Events"| LOGS
 ```
 
 The backend proxies directly to runtime log APIs (Kubernetes pod logs, Nomad client allocation logs, Docker container logs) and re-emits them as SSE events. As long as a runtime provider is bound to the environment, live log streaming is available — no additional configuration required.
@@ -77,20 +88,28 @@ Search is purely client-side — it filters the lines already received in the br
 
 ## SSE Protocol
 
-The backend uses Server-Sent Events for all log streaming. Event format:
+The backend uses Server-Sent Events for all log streaming.
 
-```
-event: connected
-data: {}
+```mermaid
+sequenceDiagram
+    participant BR as Browser
+    participant BE as Backend SSE handler
+    participant RT as Runtime (K8s / Nomad / Docker)
 
-event: log
-data: 2026-05-26T10:00:00Z INFO starting server port=8080
-
-event: log
-data: 2026-05-26T10:00:01Z INFO request path=/health status=200
-
-event: error
-data: connection refused
+    BR->>BE: GET /kubernetes/pods/{ns}/{name}/logs?follow=true
+    BE->>RT: Open streaming connection (credential from Vault)
+    BE-->>BR: event: connected / data: {}
+    loop log lines arrive
+        RT-->>BE: log frame / line
+        BE-->>BR: event: log / data: 2026-05-26T10:00:00Z INFO ...
+    end
+    alt runtime error
+        RT-->>BE: connection refused / timeout
+        BE-->>BR: event: error / data: connection refused
+    end
+    Note over BR: User clicks Stop (AbortController)
+    BR--xBE: abort signal
+    BE->>RT: Close upstream connection (Go context cancel)
 ```
 
 ---

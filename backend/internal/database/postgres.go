@@ -334,7 +334,10 @@ func seedCatalog(db *gorm.DB) error {
 	all = append(all, seeds.Messaging...)
 	all = append(all, seeds.Networking...)
 	for _, item := range all {
-		if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&item).Error; err != nil {
+		if err := db.Clauses(clause.OnConflict{
+			Columns:   []clause.Column{{Name: "name"}},
+			DoUpdates: clause.AssignmentColumns([]string{"display_name", "description", "category", "default_image", "default_container_port", "default_cpu", "default_memory", "health_check_type", "health_check_path", "is_public_image"}),
+		}).Create(&item).Error; err != nil {
 			return err
 		}
 	}
