@@ -11,6 +11,7 @@ type CatalogItem struct {
 	Name                 string    `gorm:"uniqueIndex;not null"   json:"name"`
 	DisplayName          string    `gorm:"not null"               json:"display_name"`
 	Description          string    `                              json:"description"`
+	Category             string    `gorm:"not null;default:''"    json:"category"`
 	DefaultImage         string    `gorm:"not null"               json:"default_image"`
 	DefaultContainerPort int       `gorm:"not null"               json:"default_container_port"`
 	DefaultCPU           int       `gorm:"not null"               json:"default_cpu"`

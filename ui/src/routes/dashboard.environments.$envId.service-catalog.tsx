@@ -32,7 +32,15 @@ import {
   Eye,
   EyeOff,
   Server,
+  Database,
+  Zap,
+  HardDrive,
+  Radio,
+  Network,
+  Box,
+  Search,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import type { CatalogItem, ServiceDeployment } from "@/lib/types";
 import type { ApiError } from "@/lib/api";
@@ -96,6 +104,40 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+// ─── Category filter ───────────────────────────────────────────────────────────
+
+const ALL_CATEGORIES = [
+  "All",
+  "Application",
+  "Database",
+  "Cache",
+  "Storage",
+  "Messaging",
+  "Networking",
+] as const;
+
+type Category = (typeof ALL_CATEGORIES)[number];
+
+const KNOWN_CATEGORIES = new Set<string>(ALL_CATEGORIES.filter((c) => c !== "All"));
+
+function inferCategory(item: CatalogItem): Exclude<Category, "All"> {
+  if (item.category && KNOWN_CATEGORIES.has(item.category)) {
+    return item.category as Exclude<Category, "All">;
+  }
+  return "Application";
+}
+
+type CategoryConfig = { icon: LucideIcon; color: string; bg: string };
+
+const CATEGORY_CONFIG: Record<Exclude<Category, "All">, CategoryConfig> = {
+  Application: { icon: Box, color: "text-primary", bg: "bg-primary/10" },
+  Database: { icon: Database, color: "text-blue-600", bg: "bg-blue-500/10" },
+  Cache: { icon: Zap, color: "text-amber-600", bg: "bg-amber-500/10" },
+  Storage: { icon: HardDrive, color: "text-teal-600", bg: "bg-teal-500/10" },
+  Messaging: { icon: Radio, color: "text-purple-600", bg: "bg-purple-500/10" },
+  Networking: { icon: Network, color: "text-slate-600", bg: "bg-slate-500/10" },
+};
+
 // Fetches live Nomad status — only rendered for Nomad deployments.
 function NomadLiveStatus({
   workspaceSlug,
@@ -144,14 +186,17 @@ function CatalogCard({
   item: CatalogItem;
   onDeploy: (item: CatalogItem) => void;
 }) {
+  const cat = inferCategory(item);
+  const { icon: Icon, color, bg } = CATEGORY_CONFIG[cat];
+
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden flex flex-col">
       <div className="h-1.5 w-full bg-[image:var(--gradient-primary)]" />
       <div className="p-4 flex flex-col flex-1">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex items-center gap-2">
-            <div className="size-8 rounded-lg bg-secondary grid place-items-center shrink-0">
-              <Package className="size-4 text-muted-foreground" />
+            <div className={`size-8 rounded-lg grid place-items-center shrink-0 ${bg}`}>
+              <Icon className={`size-4 ${color}`} />
             </div>
             <div>
               <div className="font-semibold text-sm">{item.display_name}</div>
@@ -974,6 +1019,19 @@ function ServiceCatalogPage() {
   const [deployingItem, setDeployingItem] = useState<CatalogItem | null>(null);
   const [stopping, setStopping] = useState<ServiceDeployment | null>(null);
   const [viewingDefinition, setViewingDefinition] = useState<ServiceDeployment | null>(null);
+  const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<Category>("All");
+
+  const filteredCatalog = (catalog ?? []).filter((item) => {
+    const matchesCategory = activeCategory === "All" || inferCategory(item) === activeCategory;
+    const q = search.toLowerCase();
+    const matchesSearch =
+      !q ||
+      item.display_name.toLowerCase().includes(q) ||
+      item.name.toLowerCase().includes(q) ||
+      item.description.toLowerCase().includes(q);
+    return matchesCategory && matchesSearch;
+  });
 
   const handleStop = async () => {
     if (!stopping) return;
@@ -1001,6 +1059,46 @@ function ServiceCatalogPage() {
             Select a service template to deploy it to this environment.
           </p>
 
+          {/* Search + category filter */}
+          {!catalogLoading && !catalogError && (
+            <div className="mb-4 space-y-3">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-secondary">
+                <Search className="size-3.5 text-muted-foreground shrink-0" />
+                <input
+                  className="bg-transparent outline-none flex-1 text-sm placeholder:text-muted-foreground/60"
+                  placeholder="Search catalog…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+                {search && (
+                  <button
+                    type="button"
+                    onClick={() => setSearch("")}
+                    className="p-0.5 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition"
+                  >
+                    <X className="size-3.5" />
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {ALL_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition ${
+                      activeCategory === cat
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-muted-foreground hover:bg-accent hover:text-foreground"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {catalogLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" /> Loading catalog…
@@ -1009,9 +1107,19 @@ function ServiceCatalogPage() {
             <div className="flex items-center gap-2 text-sm text-destructive">
               <AlertCircle className="size-4" /> {catalogError.message}
             </div>
+          ) : filteredCatalog.length === 0 ? (
+            <div className="rounded-xl border border-border bg-card p-8 flex flex-col items-center text-center">
+              <div className="size-12 rounded-xl bg-secondary grid place-items-center mb-3">
+                <Search className="size-6 text-muted-foreground" />
+              </div>
+              <div className="font-medium text-sm">No services found</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Try a different search term or category.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {(catalog ?? []).map((item) => (
+              {filteredCatalog.map((item) => (
                 <CatalogCard key={item.id} item={item} onDeploy={setDeployingItem} />
               ))}
             </div>

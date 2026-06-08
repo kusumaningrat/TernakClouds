@@ -3,6 +3,7 @@ export interface CatalogItem {
   name: string;
   display_name: string;
   description: string;
+  category: string;
   default_image: string;
   default_container_port: number;
   default_cpu: number;

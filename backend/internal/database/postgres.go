@@ -15,12 +15,14 @@ import (
 	"github.com/kusumaningrat/ternakclouds/internal/repository"
 	"github.com/kusumaningrat/ternakclouds/internal/role"
 	"github.com/kusumaningrat/ternakclouds/internal/secret"
+	"github.com/kusumaningrat/ternakclouds/internal/database/seeds"
 	"github.com/kusumaningrat/ternakclouds/internal/servicecatalog"
 	"github.com/kusumaningrat/ternakclouds/internal/user"
 	"github.com/kusumaningrat/ternakclouds/internal/workspace"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 )
 
@@ -90,7 +92,7 @@ func Seed(db *gorm.DB, cfg *config.Config) error {
 	if err := seedCapabilityCatalogue(db); err != nil {
 		return err
 	}
-	if err := seedServiceCatalog(db); err != nil {
+	if err := seedCatalog(db); err != nil {
 		return err
 	}
 	if err := seedBlueprints(db); err != nil {
@@ -373,74 +375,16 @@ func seedCapabilityCatalogue(db *gorm.DB) error {
 	return nil
 }
 
-func seedServiceCatalog(db *gorm.DB) error {
-	items := []servicecatalog.CatalogItem{
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000001"),
-			Name:                 "redis",
-			DisplayName:          "Redis",
-			Description:          "In-memory data structure store (cache, message broker)",
-			DefaultImage:         "redis:7-alpine",
-			DefaultContainerPort: 6379,
-			DefaultCPU:           100,
-			DefaultMemory:        256,
-			HealthCheckType:      "tcp",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000002"),
-			Name:                 "postgres",
-			DisplayName:          "PostgreSQL",
-			Description:          "Open source relational database",
-			DefaultImage:         "postgres:16-alpine",
-			DefaultContainerPort: 5432,
-			DefaultCPU:           200,
-			DefaultMemory:        512,
-			HealthCheckType:      "tcp",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000003"),
-			Name:                 "nginx",
-			DisplayName:          "Nginx",
-			Description:          "High-performance web server and reverse proxy",
-			DefaultImage:         "nginx:alpine",
-			DefaultContainerPort: 80,
-			DefaultCPU:           100,
-			DefaultMemory:        128,
-			HealthCheckType:      "http",
-			HealthCheckPath:      "/",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000004"),
-			Name:                 "minio",
-			DisplayName:          "MinIO",
-			Description:          "S3-compatible object storage",
-			DefaultImage:         "minio/minio:latest",
-			DefaultContainerPort: 9000,
-			DefaultCPU:           200,
-			DefaultMemory:        512,
-			HealthCheckType:      "http",
-			HealthCheckPath:      "/minio/health/live",
-			IsPublicImage:        true,
-		},
-		{
-			ID:                   uuid.MustParse("00000010-0000-0000-0000-000000000005"),
-			Name:                 "app",
-			DisplayName:          "Custom Application",
-			Description:          "Deploy a custom application image from a registered registry",
-			DefaultImage:         "",
-			DefaultContainerPort: 8080,
-			DefaultCPU:           256,
-			DefaultMemory:        512,
-			HealthCheckType:      "http",
-			HealthCheckPath:      "/health",
-			IsPublicImage:        false,
-		},
-	}
-	for _, item := range items {
-		if err := db.Where("name = ?", item.Name).FirstOrCreate(&item).Error; err != nil {
+func seedCatalog(db *gorm.DB) error {
+	all := make([]servicecatalog.CatalogItem, 0)
+	all = append(all, seeds.Applications...)
+	all = append(all, seeds.Databases...)
+	all = append(all, seeds.Cache...)
+	all = append(all, seeds.Storage...)
+	all = append(all, seeds.Messaging...)
+	all = append(all, seeds.Networking...)
+	for _, item := range all {
+		if err := db.Clauses(clause.OnConflict{DoNothing: true}).Create(&item).Error; err != nil {
 			return err
 		}
 	}
