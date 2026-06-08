@@ -24,7 +24,6 @@ import {
   Database,
   Server,
   InboxIcon,
-  Clock,
   Container,
   Package,
   Blocks,
@@ -33,7 +32,6 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { tokenTTLSeconds } from "@/lib/auth";
 import {
-  useAccessRequestsPending,
   useCapabilities,
   useEnvironmentRegistries,
   useLogout,
@@ -249,9 +247,6 @@ export function DashboardSidebar() {
   const { data: me } = useMe();
   const logout = useLogout();
   const privileged = isAdminOrManager(me?.roles);
-
-  const { data: pendingRequests } = useAccessRequestsPending();
-  const pendingCount = privileged ? (pendingRequests?.length ?? 0) : 0;
 
   const { data: myWorkspaces } = useWorkspacesMine();
   const { data: allWorkspaces } = useWorkspaces();
@@ -587,7 +582,6 @@ export function DashboardSidebar() {
                 </nav>
               </div>
             )}
-
           </>
         )}
 
