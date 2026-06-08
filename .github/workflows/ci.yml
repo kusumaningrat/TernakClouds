@@ -37,6 +37,9 @@ jobs:
   public:
     name: public site
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs-site
     steps:
       - uses: actions/checkout@v4
 
@@ -44,6 +47,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: docs-site/package-lock.json
 
       - name: Install
         run: npm ci
