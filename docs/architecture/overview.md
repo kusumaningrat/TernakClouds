@@ -4,40 +4,34 @@
 
 ## System Components
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                       Client Layer                          │
-│                                                             │
-│   ┌─────────────────────┐   ┌─────────────────────────┐    │
-│   │   Admin Dashboard   │   │    Public Docs Site      │    │
-│   │   TanStack + React  │   │    Docusaurus            │    │
-│   │   :3000             │   │    :4000                 │    │
-│   └──────────┬──────────┘   └─────────────────────────┘    │
-└──────────────┼──────────────────────────────────────────────┘
-               │ /api/* (Bearer JWT)
-               ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       API Layer                             │
-│                                                             │
-│               Go / Gin REST API   :8022                     │
-│               JWT auth middleware                           │
-│               Permission + workspace resolvers              │
-└──────────────┬──────────────────────────────────────────────┘
-               │
-   ┌───────────┼────────────────────────────────┐
-   ▼           ▼                                ▼
-┌──────┐  ┌─────────┐       ┌──────────────────────────────────┐
-│  PG  │  │  Vault  │       │         Runtime Clusters          │
-│:5432 │  │  :8200  │       │                                  │
-└──────┘  └─────────┘       │  ┌───────┐ ┌───────┐ ┌────────┐ │
-                             │  │  K8s  │ │ Nomad │ │ Docker │ │
-Platform state               │  │  API  │ │ :4646 │ │ daemon │ │
-(users, workspaces,          │  └───────┘ └───────┘ └────────┘ │
- environments,               └──────────────────────────────────┘
- capabilities,
- bindings,                   Credentials only         Proxied through
- blueprints,                 (never in PG)            backend — never
- deployments)                                         exposed to client
+```mermaid
+graph TD
+    subgraph Client["Client Layer"]
+        UI["Admin Dashboard\nTanStack Router + React\n:3000"]
+        DOCS["Docs Site\nDocusaurus\n:4000"]
+    end
+
+    subgraph API["API Layer"]
+        GIN["Go / Gin REST API :8022\nJWT auth middleware\nPermission + workspace resolvers"]
+    end
+
+    subgraph Storage["Storage"]
+        PG[("PostgreSQL :5432\nPlatform state\nusers · workspaces · environments\ncapabilities · blueprints")]
+        VAULT[("HashiCorp Vault :8200\nCredentials only\nnever stored in PG")]
+    end
+
+    subgraph Runtimes["Runtime Clusters"]
+        K8S["Kubernetes API"]
+        NOMAD["Nomad :4646"]
+        DOCKER["Docker daemon"]
+    end
+
+    UI -->|"/api/* Bearer JWT"| GIN
+    GIN --> PG
+    GIN --> VAULT
+    GIN -->|"Proxied — never exposed to client"| K8S
+    GIN -->|"Proxied — never exposed to client"| NOMAD
+    GIN -->|"Proxied — never exposed to client"| DOCKER
 ```
 
 ---
@@ -115,128 +109,127 @@ internal/
 
 ### Authentication
 
-```
-Client
-  │  POST /api/v1/auth/login {email, password}
-  ▼
-auth.Handler.Login
-  │  Verifies password (bcrypt)
-  │  Issues access token (15m JWT) + refresh token (168h, stored in DB)
-  ▼
-Client stores tokens in localStorage
-  │
-  │  Subsequent requests: Authorization: Bearer <access_token>
-  ▼
-middleware.RequireAuth
-  │  Validates JWT signature + expiry
-  │  Sets user_id in Gin context
-  ▼
-Handler
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as Go API
+    participant DB as PostgreSQL
+
+    C->>API: POST /api/v1/auth/login {email, password}
+    API->>DB: Lookup user by email
+    DB-->>API: User record
+    API->>API: bcrypt.Compare(password, hash)
+    API->>DB: Insert refresh token (hashed, 168h)
+    API-->>C: access_token (15m JWT) + refresh_token
+
+    Note over C: Stores tokens in localStorage
+
+    C->>API: GET /api/v1/... Authorization: Bearer access_token
+    API->>API: Validate JWT signature + expiry
+    API-->>C: 200 Response
+
+    Note over C,API: On access_token expiry
+    C->>API: POST /api/v1/auth/refresh {refresh_token}
+    API->>DB: Verify + rotate refresh token
+    API-->>C: new access_token + new refresh_token
 ```
 
-### Capability binding (provider configuration)
+### Capability Binding (provider configuration)
 
-```
-Client
-  │  POST /capabilities/runtime/provider
-  │  {provider_name: "nomad", endpoint: "...", token: "..."}
-  ▼
-middleware.RequireAuth
-  │
-middleware.RequirePermission("environments:write")   ← platform role check
-  │
-middleware.RequireWorkspaceOwner                     ← workspace role check
-  │
-capability.Handler.BindProvider
-  │
-capability.Service.BindProvider
-  │  1. Validates capability exists in catalogue
-  │  2. Upserts CapabilityBinding row (env ↔ capability)
-  │  3. If token provided: vault.StoreToken(path, token)
-  │     path = idp/capabilities/{envID}/{cap}/{providerName}/token
-  │  4. Creates ProviderConfig row (endpoint, region, namespace, vaultPath)
-  ▼
-Returns updated capability status (no token in response)
-```
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant MW as Middleware
+    participant H as capability.Handler
+    participant S as capability.Service
+    participant V as Vault
+    participant DB as PostgreSQL
 
-### Blueprint deployment (Platform Application provisioning)
-
-```
-Client
-  │  POST /platform-apps
-  │  {blueprint_id, runtime, workspace_id, environment_id, ...}
-  ▼
-platformapp.Handler.Provision
-  │
-platformapp.Service.Provision
-  │  1. Loads blueprint spec
-  │  2. Calls generator.Generate(spec, runtime)
-  │     → renders Nomad HCL, Kubernetes YAML, or Docker compose
-  │  3. Stores manifest + PlatformApp row (status: pending)
-  │  4. If repo provider configured:
-  │     a. Commits manifest to repository
-  │     b. Opens pull request
-  │  5. Updates status: provisioned
-  ▼
-Returns PlatformApp with generated manifest
+    C->>MW: POST /capabilities/runtime/provider
+    MW->>MW: RequireAuth (JWT)
+    MW->>MW: RequirePermission(environments:write)
+    MW->>MW: RequireWorkspaceOwner
+    MW->>H: BindProvider(req)
+    H->>S: BindProvider(ctx, input)
+    S->>DB: Validate capability in catalogue
+    S->>DB: Upsert CapabilityBinding (env ↔ capability)
+    alt token provided
+        S->>V: StoreToken(idp/capabilities/{envID}/{cap}/{provider}/token)
+    end
+    S->>DB: Create ProviderConfig (endpoint, namespace, vaultPath)
+    S-->>C: Updated capability status (token never in response)
 ```
 
-### Runtime log streaming
+### Blueprint Deployment (Platform Application provisioning)
 
-```
-Client
-  │  GET /kubernetes/pods/{ns}/{name}/logs?container=app&follow=true
-  │  Authorization: Bearer <token>
-  ▼
-middleware.RequireAuth + middleware.RequireWorkspaceMember
-  │
-kubernetes.Handler.StreamPodLogs
-  │
-kubernetes.Service.StreamPodLogs
-  │  1. Retrieves cluster token from Vault
-  │  2. Opens streaming request to Kubernetes API server
-  │     GET /api/v1/namespaces/{ns}/pods/{name}/log?follow=true
-  │  3. Reads line-by-line with bufio.Scanner
-  ▼
-SSE stream → Client
-  event: connected
-  event: log
-  data: <log line>
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant H as platformapp.Handler
+    participant S as platformapp.Service
+    participant G as generator
+    participant DB as PostgreSQL
+    participant R as RepoProvider
+
+    C->>H: POST /platform-apps {blueprint_id, runtime, ...}
+    H->>S: Provision(ctx, input)
+    S->>DB: Load blueprint spec
+    S->>G: Generate(spec, runtime)
+    G-->>S: Nomad HCL / K8s YAML / Docker Compose
+    S->>DB: Store manifest + PlatformApp (status: pending)
+    alt repo provider configured
+        S->>R: Commit manifest to repository
+        S->>R: Open pull request
+    end
+    S->>DB: Update status → provisioned
+    S-->>C: PlatformApp with generated manifest
 ```
 
-The same SSE pattern applies to Nomad allocation logs and Docker container logs.
+### Runtime Log Streaming
+
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant API as Backend SSE Handler
+    participant V as Vault
+    participant RT as Runtime (K8s / Nomad / Docker)
+
+    B->>API: GET /kubernetes/pods/{ns}/{name}/logs?follow=true
+    API->>API: RequireAuth + RequireWorkspaceMember
+    API->>V: RetrieveToken(capability path)
+    V-->>API: cluster credential
+    API->>RT: Open streaming log request
+    RT-->>API: Log stream (chunked / frames)
+    loop For each log line
+        API-->>B: event: log\ndata: line content
+    end
+    Note over B,API: Browser AbortController → Go context cancel → closes RT connection
+```
 
 ---
 
 ## Data Model
 
-```
-User ──────────────────── RefreshToken (1:N)
- │
- ├── UserRole (M:N) ────── Role ─── Permission
- │
- └── WorkspaceMember (M:N) ── Workspace
-                                 │
-                                 ├── RegistryProvider (1:N)
-                                 │     └── RegistryBinding (per Environment)
-                                 │
-                                 ├── RepoProvider (1:N)
-                                 │
-                                 ├── Blueprint (1:N, custom)
-                                 │
-                                 └── Environment (1:N)
-                                       │
-                                       ├── CapabilityBinding (1:N per capability)
-                                       │     └── ProviderConfig (1:N)
-                                       │           └── (VaultPath → Vault KV)
-                                       │
-                                       ├── SecretGrant (1:N)
-                                       │
-                                       ├── ServiceDeployment (1:N)
-                                       │
-                                       └── PlatformApp (1:N)
-                                             ├── Blueprint (ref)
-                                             └── DeploymentRecord (1:N)
+```mermaid
+erDiagram
+    User ||--o{ RefreshToken : has
+    User ||--o{ UserRole : has
+    UserRole }o--|| Role : references
+    Role ||--o{ RolePermission : has
+    User ||--o{ WorkspaceMember : "member of"
+    WorkspaceMember }o--|| Workspace : "belongs to"
+    Workspace ||--o{ Environment : contains
+    Workspace ||--o{ RegistryProvider : has
+    Workspace ||--o{ RepoProvider : has
+    Workspace ||--o{ Blueprint : "custom blueprints"
+    RegistryProvider ||--o{ RegistryBinding : "bound to env"
+    Environment ||--o{ CapabilityBinding : has
+    Environment ||--o{ SecretGrant : has
+    Environment ||--o{ ServiceDeployment : has
+    Environment ||--o{ PlatformApp : has
+    CapabilityBinding ||--o{ ProviderConfig : has
+    PlatformApp }o--|| Blueprint : "based on"
+    PlatformApp ||--o{ DeploymentRecord : has
 ```
 
 **Key invariants:**
@@ -253,19 +246,17 @@ User ──────────────────── RefreshToken (
 
 Two independent layers must both pass for sensitive operations:
 
-```
-Request
-  │
-  ├── Layer 1: Platform RBAC
-  │   middleware.RequirePermission("environments:write")
-  │   Checks: user has role with this permission globally
-  │
-  └── Layer 2: Workspace ownership
-      middleware.RequireWorkspaceOwner
-      Checks: user is an owner of this specific workspace
+```mermaid
+flowchart TD
+    REQ["Incoming Request"] --> L1{"Layer 1\nPlatform RBAC\nRequirePermission"}
+    L1 -->|"❌ missing permission"| DENY1["403 Forbidden"]
+    L1 -->|"✅ permission OK"| L2{"Layer 2\nWorkspace Role\nRequireWorkspaceOwner"}
+    L2 -->|"❌ not workspace owner"| DENY2["403 Forbidden"]
+    L2 -->|"✅ is owner"| RUN["Handler executes"]
 
-Both must pass → handler runs
-Either fails → 403 Forbidden
+    style DENY1 fill:#ef4444,color:#fff,stroke:#dc2626
+    style DENY2 fill:#ef4444,color:#fff,stroke:#dc2626
+    style RUN fill:#22c55e,color:#fff,stroke:#16a34a
 ```
 
 This means a `developer` role user who is set as workspace owner **still cannot** bind capability providers — they lack `environments:write`. And an `admin` who is not a workspace member cannot modify workspace resources — they lack workspace ownership.
@@ -276,27 +267,26 @@ This means a `developer` role user who is set as workspace owner **still cannot*
 
 Log streaming uses Server-Sent Events (SSE) over HTTP. The backend acts as a proxy:
 
-```
-Browser
-  │  fetch(url, {signal: abortController.signal})
-  │  reads response body as stream
-  ▼
-Backend SSE handler
-  │  sets Content-Type: text/event-stream
-  │  opens streaming connection to runtime (K8s, Nomad, or Docker)
-  │  reads frames/lines and re-emits as SSE events
-  │
-  │  event: connected
-  │  data: {}
-  │
-  │  event: log
-  │  data: <line>
-  │
-  │  event: error
-  │  data: <message>
-  ▼
-Browser EventSource parser
-  │  dispatches to React state → rendered in terminal
+```mermaid
+sequenceDiagram
+    participant BR as Browser
+    participant BE as Backend SSE handler
+    participant RT as Runtime cluster
+
+    BR->>BE: fetch(url, {signal: abortSignal})
+    BE->>RT: Open streaming connection
+    BE-->>BR: event: connected / data: {}
+    loop log lines arrive
+        RT-->>BE: log frame / line
+        BE-->>BR: event: log / data: line
+    end
+    alt stream error
+        RT-->>BE: connection error
+        BE-->>BR: event: error / data: message
+    end
+    Note over BR: User cancels (AbortController)
+    BR--xBE: abort signal fires
+    BE->>RT: Close connection (context cancel)
 ```
 
 The abort signal from the browser propagates as context cancellation in Go, closing the upstream runtime connection cleanly.
@@ -305,23 +295,21 @@ The abort signal from the browser propagates as context cancellation in Go, clos
 
 ## Vault Integration
 
-```
-BindProvider / StoreRepoToken / StoreRegistryCredential (write path)
-  │
-  vault.StoreToken(ctx, path, token)
-  │  PUT {vault}/v1/{mount}/data/{path}
-  │  {"data": {"token": "<value>"}}
+```mermaid
+flowchart LR
+    subgraph Write["Write Path"]
+        WOP["BindProvider\nStoreRepoToken\nStoreRegistryCredential"]
+    end
+    subgraph Read["Read Path"]
+        ROP["VerifyProvider\nStreamLogs\nRepoAccess"]
+    end
+    subgraph Delete["Delete Path"]
+        DOP["UnbindProvider\nRemoveRepo"]
+    end
 
-VerifyProvider / StreamLogs / RepoAccess (read path)
-  │
-  vault.RetrieveToken(ctx, path)
-  │  GET {vault}/v1/{mount}/data/{path}
-  │  → credentials["token"]
-
-UnbindProvider / RemoveRepo (delete path)
-  │
-  vault.DeleteToken(ctx, path)
-  │  DELETE {vault}/v1/{mount}/metadata/{path}
+    WOP -->|"PUT /v1/{mount}/data/{path}"| VAULT[("HashiCorp Vault\nKV v2")]
+    ROP -->|"GET /v1/{mount}/data/{path}"| VAULT
+    DOP -->|"DELETE /v1/{mount}/metadata/{path}"| VAULT
 ```
 
 Vault paths follow a consistent scheme:
