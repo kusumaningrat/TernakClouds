@@ -147,34 +147,37 @@ POST /api/v1/workspaces/:slug/members
 { "user_id": "<uuid>" }
 ```
 
-### Self-Service Access Requests
+### Admin User Creation
 
-Users who are not workspace members can submit access requests:
+Admins and managers can create new users directly from the dashboard (**Admin → Members → Create user**). Creating a user requires selecting a workspace — the new user is automatically added as a member of that workspace at creation time.
 
-1. User navigates to **Request Access** (sidebar, developer/viewer role)
-2. Selects a workspace and optionally states a reason
-3. Admin or manager reviews the request in **Access Requests**
-4. On approval: user is automatically added as a workspace member
+Fields required at creation:
+- First name, last name
+- Email address
+- Initial password
+- Workspace (required — user is immediately assigned as a member)
+- Department (optional)
+- Platform role (optional — defaults to developer)
+
+Admin-created users are flagged `must_change_password = true`. On their first login, they are automatically redirected to the password change page. After a successful password change, the flag is cleared and they land in their assigned workspace dashboard.
 
 ```
-User submits request
+Admin creates user (POST /api/v1/users)
+    │  workspace_id required
+    │  must_change_password = true
+    ▼
+User added as workspace member (AddMemberDirect)
     │
     ▼
-POST /api/v1/access-requests
-  { workspace_id, requested_role, reason }
+User logs in → must_change_password check
     │
-    ▼
-Admin reviews (GET /api/v1/access-requests)
+    ├── true  → redirect to /change-password
+    │            on success → redirect to /dashboard
     │
-    ├── Approve → PUT .../approve
-    │   → user added as workspace member
-    │   → request marked approved
-    │
-    └── Deny → PUT .../deny
-        → request marked denied
+    └── false → normal login flow → /setup or /dashboard
 ```
 
-Duplicate pending requests for the same workspace are rejected.
+Self-service registration is not available. All user accounts are created by administrators.
 
 ---
 

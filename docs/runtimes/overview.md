@@ -38,14 +38,14 @@ This means:
 
 ## Binding a Runtime Provider
 
-Runtime providers are bound per-environment through **Platform → Runtime**.
+Runtime providers are bound per-environment through **Platform → Infrastructure**.
 
 Requirements:
 - Platform role: `admin` or `manager` (requires `environments:write` permission)
 - Workspace role: `owner`
 
 Steps:
-1. Navigate to your environment → **Platform → Runtime**
+1. Navigate to your environment → **Platform → Infrastructure**
 2. Click **Add provider**
 3. Select the provider (`Kubernetes`, `Nomad`, or `Docker`)
 4. Enter the API endpoint
@@ -227,11 +227,11 @@ The frontend works with `RuntimeWorkload` objects and never needs to handle runt
 
 To add a new runtime provider:
 
-1. Create a package under `server/internal/<runtime>/`
+1. Create a package under `backend/internal/<runtime>/`
 2. Implement handler functions that proxy the runtime's API
-3. Register routes under the environment group in `server/internal/server/server.go`
-4. Add the provider to the seeded catalogue in `server/internal/providers/`
-5. Add workload fetching logic to `useLogsWorkloads` in `admin/src/lib/queries.ts`
+3. Register routes under the environment group in `backend/internal/server/server.go`
+4. Add the provider to the seeded catalogue in `backend/internal/providers/`
+5. Add workload fetching logic to `useLogsWorkloads` in `ui/src/lib/queries.ts`
 6. Handle the new runtime in `useLogsStream` for log streaming
 
 The UI will automatically show the new runtime as a selectable option in the Logs page once the provider is bound to an environment.

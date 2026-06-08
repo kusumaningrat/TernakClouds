@@ -53,11 +53,11 @@ TernakClouds/
 │   ├── internal/           Domain packages
 │   └── pkg/                Shared utilities (JWT, responses, pagination)
 │
-├── ui/                     Admin dashboard (TanStack Start + React)
+├── ui/                     Admin dashboard (TanStack Router + React)
 │   └── src/
 │       ├── routes/         File-based routing (TanStack Router)
-│       ├── modules/        Feature modules (runtime, capabilities, deployments…)
-│       ├── components/     Shared UI components
+│       ├── modules/        Feature modules (users, capabilities, deployments…)
+│       ├── components/     Shared UI components (DashboardSidebar, DashboardTopbar…)
 │       └── lib/            API client, auth helpers, workspace context
 │
 ├── docs-site/              Public documentation site (Docusaurus)
@@ -78,8 +78,8 @@ The Go backend is organized around domain packages under `internal/`. Each packa
 
 ```
 internal/
-├── accessrequest/    Self-service workspace access request workflow
-├── auth/             JWT login/logout/refresh, /me endpoint
+├── accessrequest/    Workspace access request API (backend only; no UI workflow)
+├── auth/             JWT login/logout/refresh, /me endpoint, must_change_password check
 ├── blueprint/        Reusable deployment templates (system + custom)
 ├── bootstrap/        Startup sequencing: migrate → seed → serve
 ├── capability/       Capability catalogue + per-environment provider bindings
@@ -104,9 +104,9 @@ internal/
 ├── secret/           Vault-backed secret grants and environment access
 ├── server/           Gin router wiring and middleware composition
 ├── servicecatalog/   Service deployment templates + execution
-├── user/             User CRUD, role assignment, refresh tokens
+├── user/             User CRUD, role assignment, refresh tokens, forced password change
 ├── vault/            Vault AppRole HTTP client (KV v2)
-└── workspace/        Workspace and membership management
+└── workspace/        Workspace and membership management, AddMemberDirect
 ```
 
 ---
