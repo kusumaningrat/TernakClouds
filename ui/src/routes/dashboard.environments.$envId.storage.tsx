@@ -103,7 +103,11 @@ function CreateBucketDialog({ onClose, onCreate, isPending, error }: CreateBucke
             disabled={isPending || !name.trim()}
             className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:bg-primary/90 transition disabled:opacity-50 flex items-center gap-1.5"
           >
-            {isPending ? <Loader2 className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+            {isPending ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Plus className="size-3.5" />
+            )}
             Create
           </button>
         </div>
@@ -120,8 +124,17 @@ function StorageBucketsPage() {
   const slug = selectedWorkspace?.slug ?? "";
 
   const { data: me } = useMe();
-  const { data: provider, isLoading: providerLoading, error: providerError } = useStorageProvider(slug, envId);
-  const { data: buckets, isLoading: bucketsLoading, error: bucketsError, refetch } = useStorageBuckets(slug, envId);
+  const {
+    data: provider,
+    isLoading: providerLoading,
+    error: providerError,
+  } = useStorageProvider(slug, envId);
+  const {
+    data: buckets,
+    isLoading: bucketsLoading,
+    error: bucketsError,
+    refetch,
+  } = useStorageBuckets(slug, envId);
   const createBucket = useCreateBucket(slug, envId);
   const deleteBucket = useDeleteBucket(slug, envId);
 
@@ -158,7 +171,9 @@ function StorageBucketsPage() {
     <div className="flex flex-col h-full">
       <DashboardTopbar
         title="Storage"
-        subtitle={provider ? `${provider.display_name} · ${provider.endpoint}` : "Object storage buckets"}
+        subtitle={
+          provider ? `${provider.display_name} · ${provider.endpoint}` : "Object storage buckets"
+        }
       />
 
       <div className="flex-1 overflow-auto p-6 space-y-6">
@@ -185,7 +200,9 @@ function StorageBucketsPage() {
               className="p-1.5 rounded hover:bg-accent transition disabled:opacity-50"
               title="Refresh buckets"
             >
-              <RefreshCw className={`size-4 text-muted-foreground ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`size-4 text-muted-foreground ${isLoading ? "animate-spin" : ""}`}
+              />
             </button>
           </div>
         )}

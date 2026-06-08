@@ -12,8 +12,7 @@ const storageKeys = {
 export function useStorageProvider(slug: string, envSlug: string) {
   return useQuery<StorageProviderInfo, ApiError>({
     queryKey: storageKeys.provider(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/storage/provider`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/storage/provider`),
     enabled: !!slug && !!envSlug,
     retry: false,
     refetchOnWindowFocus: false,
@@ -24,8 +23,7 @@ export function useStorageProvider(slug: string, envSlug: string) {
 export function useStorageBuckets(slug: string, envSlug: string) {
   return useQuery<Bucket[], ApiError>({
     queryKey: storageKeys.buckets(slug, envSlug),
-    queryFn: () =>
-      api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/storage/buckets`),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/environments/${envSlug}/storage/buckets`),
     enabled: !!slug && !!envSlug,
     retry: false,
     refetchOnWindowFocus: false,

@@ -185,7 +185,8 @@ function AddProviderForm({
           placeholder={
             isTokenOptional
               ? "Leave blank for unauthenticated access"
-              : (selectedProvider && tokenPlaceholders?.[selectedProvider.name]) ?? "••••••••••••••••"
+              : ((selectedProvider && tokenPlaceholders?.[selectedProvider.name]) ??
+                "••••••••••••••••")
           }
           value={form.token}
           onChange={(e) => setForm((f) => ({ ...f, token: e.target.value }))}
