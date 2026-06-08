@@ -3,7 +3,6 @@ import { Shield, KeyRound, Eye, EyeOff, Loader2, AlertCircle } from "lucide-reac
 import { useState } from "react";
 import { isAuthenticated } from "@/lib/auth";
 import { useChangePassword } from "@/lib/queries";
-import { markSetupVisited } from "@/lib/setup-visited";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/change-password")({
@@ -41,8 +40,7 @@ function ChangePasswordPage() {
     try {
       await changePassword.mutateAsync({ current_password: current, new_password: next });
       toast.success("Password updated. Welcome!");
-      markSetupVisited();
-      void navigate({ to: "/setup" });
+      void navigate({ to: "/dashboard" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to update password.");
     }
