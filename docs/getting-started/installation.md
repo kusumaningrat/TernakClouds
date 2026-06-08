@@ -29,10 +29,10 @@ cd idp
 ## 2. Configure the Backend
 
 ```bash
-cp server/.env.example server/.env
+cp backend/.env.example backend/.env
 ```
 
-Edit `server/.env` with your values:
+Edit `backend/.env` with your values:
 
 ```env
 # Server
@@ -71,10 +71,10 @@ VAULT_KV_MOUNT=secret
 ## 3. Configure the Admin Dashboard
 
 ```bash
-cp admin/.env.example admin/.env
+cp ui/.env.example ui/.env
 ```
 
-In development, the Vite dev server proxies all `/api/*` requests to the backend automatically. Leave `VITE_API_URL` empty:
+In development, the dev server proxies all `/api/*` requests to the backend automatically. Leave `VITE_API_URL` empty:
 
 ```env
 VITE_API_URL=
@@ -104,7 +104,7 @@ This starts PostgreSQL on `:5432` using Docker Compose. Wait a few seconds for t
 make install
 ```
 
-This runs `npm install` for both the public website and the admin dashboard.
+This runs `npm install` for both the docs site and the admin dashboard.
 
 ---
 
@@ -120,8 +120,8 @@ Or start them individually:
 
 ```bash
 make dev-backend    # Go API on :8022
-make dev-admin      # Admin dashboard on :3000
-make dev-site       # Public website on :4000
+make dev-ui         # Admin dashboard on :3000
+make dev-site       # Docs site on :4000
 ```
 
 ---
@@ -130,11 +130,13 @@ make dev-site       # Public website on :4000
 
 Open [http://localhost:3000](http://localhost:3000).
 
-Log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` you set in `server/.env`. On first start, the server auto-migrates the database and creates:
+Log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` you set in `backend/.env`. On first start, the server auto-migrates the database and creates:
 
 - Default roles and permissions
 - The bootstrap admin user
 - A default **Platform** workspace with `dev`, `staging`, and `production` environments
+
+The setup wizard runs on first login. It requires creating a workspace and at least one environment — no runtime connection is required to reach the dashboard. Runtime providers can be configured later under **Platform → Infrastructure** for each environment.
 
 ---
 
@@ -192,7 +194,7 @@ VAULT_KV_MOUNT=secret
 
 ## Environment Variable Reference
 
-### `server/.env`
+### `backend/.env`
 
 | Variable             | Default                 | Required | Description                            |
 | -------------------- | ----------------------- | -------- | -------------------------------------- |
@@ -215,7 +217,7 @@ VAULT_KV_MOUNT=secret
 | `VAULT_SECRET_ID`    | —                       | If Vault | AppRole secret ID                      |
 | `VAULT_KV_MOUNT`     | `secret`                | If Vault | KV v2 mount path                       |
 
-### `admin/.env`
+### `ui/.env`
 
 | Variable       | Required  | Description                                       |
 | -------------- | --------- | ------------------------------------------------- |
@@ -228,9 +230,7 @@ VAULT_KV_MOUNT=secret
 During development, you can wipe and re-seed the database:
 
 ```bash
-make reset-db-dev
-# or
-cd server && go run ./cmd/reset-db
+cd backend && go run ./cmd/reset-db
 ```
 
 This drops all tables, re-runs migrations, and re-seeds defaults. All data is lost.
@@ -247,21 +247,21 @@ make build
 
 Produces:
 
-- `server/bin/api` — Go binary
-- `admin/dist/` — Admin dashboard static bundle
-- `dist/` — Public website static bundle
+- `backend/bin/api` — Go binary
+- `ui/dist/` — Admin dashboard static bundle
+- `docs-site/build/` — Documentation site static bundle
 
 ### Serve
 
 **Backend:**
 
 ```bash
-GIN_MODE=release ./server/bin/api
+GIN_MODE=release ./backend/bin/api
 ```
 
-**Admin dashboard:** Deploy `admin/dist/` to your CDN or static host (Nginx, Caddy, Cloudflare Pages, Vercel). Set `VITE_API_URL` at build time to your backend's public URL.
+**Admin dashboard:** Deploy `ui/dist/` to your CDN or static host (Nginx, Caddy, Cloudflare Pages, Vercel). Set `VITE_API_URL` at build time to your backend's public URL.
 
-**Public website:** Deploy `dist/` to your CDN.
+**Docs site:** Deploy `docs-site/build/` to your CDN.
 
 ### Full stack with Docker Compose
 
@@ -278,8 +278,8 @@ The Docker image uses a two-stage build (Go builder → Alpine runtime). Final i
 Once the platform is running, connect your first runtime:
 
 1. Open the admin dashboard → select a workspace → open an environment
-2. Go to **Platform → Runtime**
-3. Click **Add provider** → select `Kubernetes` or `Nomad`
+2. Go to **Platform → Infrastructure**
+3. Click **Add provider** → select `Kubernetes`, `Nomad`, or `Docker`
 4. Enter the API endpoint and authentication token
 5. Click **Verify** to confirm connectivity
 

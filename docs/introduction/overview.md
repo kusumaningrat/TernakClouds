@@ -49,7 +49,7 @@ Multiple teams can use the same TernakClouds instance, each with their own works
 
 ### Environment
 
-An environment is a named deployment target within a workspace. Typical environments: `dev`, `staging`, `production`. Three environments are created automatically when a workspace is created.
+An environment is a named deployment target within a workspace. Typical environments: `dev`, `staging`, `production`. Environments are created via the setup wizard or the admin dashboard (**Environments → New environment**).
 
 Each environment independently configures its own capability providers. Your production environment might use a different Nomad cluster or Vault instance than staging.
 
