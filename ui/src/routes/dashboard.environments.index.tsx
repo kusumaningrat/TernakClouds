@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
-import { Globe, ChevronRight, ArrowUpRight, Loader2, AlertCircle } from "lucide-react";
-import { useMe, useWorkspacesMine, useEnvironments } from "@/lib/queries";
+import { Globe, ChevronRight, ArrowUpRight, Loader2, AlertCircle, Plus, X } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { useMe, useWorkspacesMine, useEnvironments, useCreateEnvironment } from "@/lib/queries";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 
 function isAdminOrManager(roles: { role?: { name?: string } }[] | undefined): boolean {
@@ -13,6 +15,115 @@ function isAdminOrManager(roles: { role?: { name?: string } }[] | undefined): bo
   );
 }
 
+// ─── Create environment modal ─────────────────────────────────────────────────
+
+function CreateEnvironmentModal({
+  workspaceSlug,
+  onClose,
+}: {
+  workspaceSlug: string;
+  onClose: () => void;
+}) {
+  const createEnv = useCreateEnvironment();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Name is required.");
+      return;
+    }
+    setError("");
+    try {
+      await createEnv.mutateAsync({
+        slug: workspaceSlug,
+        input: { name: name.trim(), description: description.trim() || undefined },
+      });
+      toast.success(`Environment "${name.trim()}" created.`);
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create environment.");
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-sm">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <Globe className="size-4 text-primary" />
+              <h2 className="font-semibold">New environment</h2>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-secondary transition">
+              <X className="size-4" />
+            </button>
+          </div>
+
+          <form onSubmit={(e) => void handleSubmit(e)} className="p-6 space-y-4">
+            <div>
+              <label className="text-xs font-medium block mb-1.5">Name</label>
+              <input
+                required
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Production"
+                className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm outline-none focus:border-primary/50 transition"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium block mb-1.5 text-muted-foreground">
+                Description <span className="font-normal">(optional)</span>
+              </label>
+              <input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Production environment"
+                className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm outline-none focus:border-primary/50 transition"
+              />
+            </div>
+
+            {error && (
+              <p className="text-xs text-destructive flex items-center gap-1.5">
+                <AlertCircle className="size-3.5 shrink-0" />
+                {error}
+              </p>
+            )}
+
+            <div className="flex gap-3 pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-secondary transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={createEnv.isPending || !name.trim()}
+                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {createEnv.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Plus className="size-4" />
+                )}
+                Create
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export const Route = createFileRoute("/dashboard/environments/")({
   head: () => ({ meta: [{ title: "Environments · TernakClouds" }] }),
   component: EnvironmentsPage,
@@ -23,6 +134,7 @@ function EnvironmentsPage() {
   const { selectedWorkspace, isHydrated } = useWorkspaceContext();
   const { data: me } = useMe();
   const privileged = isAdminOrManager(me?.roles);
+  const [showCreate, setShowCreate] = useState(false);
   const {
     data: myWorkspaces,
     isLoading: isWorkspacesLoading,
@@ -53,6 +165,17 @@ function EnvironmentsPage() {
       <DashboardTopbar
         title="Environments"
         subtitle="Select an environment to manage its services, deployments and configuration."
+        actions={
+          privileged && workspaceSlug ? (
+            <button
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition"
+            >
+              <Plus className="size-3.5" />
+              New environment
+            </button>
+          ) : undefined
+        }
       />
       <main className="p-6 space-y-4">
         {!isHydrated || isWorkspacesLoading ? (
@@ -98,8 +221,16 @@ function EnvironmentsPage() {
             {environmentsError?.message ?? "Failed to load environments"}
           </div>
         ) : sorted.length === 0 ? (
-          <div className="glass rounded-xl border border-dashed border-border p-10 text-center">
+          <div className="glass rounded-xl border border-dashed border-border p-10 text-center space-y-3">
             <p className="text-sm text-muted-foreground">No environments yet.</p>
+            {privileged && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs hover:bg-primary/90 transition"
+              >
+                <Plus className="size-3.5" /> Create first environment
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -140,6 +271,13 @@ function EnvironmentsPage() {
           </div>
         )}
       </main>
+
+      {showCreate && workspaceSlug && (
+        <CreateEnvironmentModal
+          workspaceSlug={workspaceSlug}
+          onClose={() => setShowCreate(false)}
+        />
+      )}
     </>
   );
 }
