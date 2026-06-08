@@ -588,19 +588,6 @@ export function DashboardSidebar() {
               </div>
             )}
 
-            {!privileged && (
-              <div>
-                <SectionHeader label="Access" />
-                <nav className="flex flex-col gap-0.5">
-                  <NavLink
-                    to="/dashboard/no-access"
-                    label="Request Access"
-                    icon={Clock}
-                    active={wsActive("/dashboard/no-access")}
-                  />
-                </nav>
-              </div>
-            )}
           </>
         )}
 

@@ -37,6 +37,7 @@ export interface UserProfile {
   department_id: string;
   department_name: string;
   is_active: boolean;
+  must_change_password: boolean;
 }
 
 export interface MeResponse extends UserProfile {

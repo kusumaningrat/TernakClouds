@@ -22,10 +22,7 @@ func NewUserService(userRepo *UserRepository, tokenRepo *RefreshTokenRepository)
 	return &UserService{userRepo: userRepo, tokenRepo: tokenRepo}
 }
 
-func (s *UserService) Register(email, password, firstName, lastName string, deptID uuid.UUID) (*User, error) {
-
-	// Check department exists
-	// dept, err := s.
+func (s *UserService) Register(email, password, firstName, lastName string, deptID uuid.UUID, mustChangePassword bool) (*User, error) {
 	existing, err := s.userRepo.FindByEmail(email)
 	if err != nil {
 		return nil, err
@@ -40,11 +37,12 @@ func (s *UserService) Register(email, password, firstName, lastName string, dept
 	}
 
 	u := &User{
-		Email:        email,
-		PasswordHash: string(hash),
-		FirstName:    firstName,
-		LastName:     lastName,
-		DepartmentID: deptID,
+		Email:              email,
+		PasswordHash:       string(hash),
+		FirstName:          firstName,
+		LastName:           lastName,
+		DepartmentID:       deptID,
+		MustChangePassword: mustChangePassword,
 	}
 	return u, s.userRepo.Register(u)
 }
@@ -112,5 +110,6 @@ func (s *UserService) ChangePassword(userID uuid.UUID, currentPassword, newPassw
 		return err
 	}
 	u.PasswordHash = string(hash)
+	u.MustChangePassword = false
 	return s.userRepo.Update(u)
 }

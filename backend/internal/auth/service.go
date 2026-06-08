@@ -18,13 +18,14 @@ import (
 var ErrInvalidToken = errors.New("invalid or expired token")
 
 type UserProfile struct {
-	ID             string `json:"id"`
-	Email          string `json:"email"`
-	FirstName      string `json:"first_name"`
-	LastName       string `json:"last_name"`
-	DepartmentID   string `json:"department_id"`
-	DepartmentName string `json:"department_name"`
-	IsActive       bool   `json:"is_active"`
+	ID                 string `json:"id"`
+	Email              string `json:"email"`
+	FirstName          string `json:"first_name"`
+	LastName           string `json:"last_name"`
+	DepartmentID       string `json:"department_id"`
+	DepartmentName     string `json:"department_name"`
+	IsActive           bool   `json:"is_active"`
+	MustChangePassword bool   `json:"must_change_password"`
 }
 
 type AuthService struct {
@@ -54,7 +55,7 @@ func (s *AuthService) Register(input RegisterInput) (*RegisterResponse, error) {
 		return nil, err
 	}
 
-	u, err := s.userService.Register(input.Email, input.Password, input.FirstName, input.LastName, dept.ID)
+	u, err := s.userService.Register(input.Email, input.Password, input.FirstName, input.LastName, dept.ID, false)
 	if err != nil {
 		return nil, err
 	}
@@ -168,12 +169,13 @@ func (s *AuthService) Profile(userID uuid.UUID) (*UserProfile, error) {
 	}
 
 	return &UserProfile{
-		ID:             u.ID.String(),
-		Email:          u.Email,
-		FirstName:      u.FirstName,
-		LastName:       u.LastName,
-		DepartmentID:   u.DepartmentID.String(),
-		DepartmentName: deptName,
-		IsActive:       u.IsActive,
+		ID:                 u.ID.String(),
+		Email:              u.Email,
+		FirstName:          u.FirstName,
+		LastName:           u.LastName,
+		DepartmentID:       u.DepartmentID.String(),
+		DepartmentName:     deptName,
+		IsActive:           u.IsActive,
+		MustChangePassword: u.MustChangePassword,
 	}, nil
 }

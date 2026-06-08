@@ -431,6 +431,7 @@ const ROLES = ["admin", "manager", "developer", "viewer"] as const;
 
 function CreateUserModal({ onClose }: { onClose: () => void }) {
   const { data: deptList } = useDepartments(1, 100);
+  const { data: workspaces } = useWorkspacesMine();
   const createUser = useCreateUser();
 
   const [form, setForm] = useState<CreateUserInput>({
@@ -440,6 +441,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
     last_name: "",
     department_id: "",
     role: "developer",
+    workspace_id: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -449,6 +451,10 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!form.workspace_id) {
+      setError("Please select a workspace.");
+      return;
+    }
     if (!form.department_id) {
       setError("Please select a department.");
       return;
@@ -542,6 +548,29 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
               <p className="text-[11px] text-muted-foreground mt-1">
                 Share this with the user — they can change it after signing in.
               </p>
+            </div>
+
+            {/* Workspace */}
+            <div>
+              <label className="text-xs font-medium block mb-1.5">
+                Workspace <span className="text-destructive">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  required
+                  value={form.workspace_id}
+                  onChange={(e) => set("workspace_id", e.target.value)}
+                  className="appearance-none w-full px-3 py-2 pr-8 rounded-lg bg-input border border-border text-sm outline-none focus:border-primary/50 transition cursor-pointer"
+                >
+                  <option value="">Select workspace…</option>
+                  {(workspaces ?? []).map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+              </div>
             </div>
 
             {/* Department */}

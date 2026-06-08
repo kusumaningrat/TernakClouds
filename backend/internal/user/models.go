@@ -13,8 +13,9 @@ type User struct {
 	PasswordHash string    `gorm:"not null"             json:"-"`
 	FirstName    string    `gorm:"not null"             json:"first_name"`
 	LastName     string    `gorm:"not null"             json:"last_name"`
-	IsActive     bool      `gorm:"default:true"         json:"is_active"`
-	DepartmentID uuid.UUID `gorm:"type:uuid;not null;index" json:"department_id"`
+	IsActive           bool      `gorm:"default:true"         json:"is_active"`
+	MustChangePassword bool      `gorm:"default:false"        json:"must_change_password"`
+	DepartmentID       uuid.UUID `gorm:"type:uuid;not null;index" json:"department_id"`
 	// UserRoles loaded via preload in services — avoids import cycle with role package
 }
 
