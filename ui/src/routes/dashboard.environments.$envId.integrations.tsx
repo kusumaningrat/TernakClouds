@@ -7,6 +7,6 @@ export const Route = createFileRoute("/dashboard/environments/$envId/integration
 function IntegrationsRedirect() {
   const { envId } = useParams({ from: "/dashboard/environments/$envId/integrations" });
   return (
-    <Navigate to="/dashboard/environments/$envId/platform/runtime" params={{ envId }} replace />
+    <Navigate to="/dashboard/environments/$envId/platform/infrastructure" params={{ envId }} replace />
   );
 }

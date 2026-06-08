@@ -444,10 +444,10 @@ export function DashboardSidebar() {
               <SectionHeader label="Platform" />
               <nav className="flex flex-col gap-0.5">
                 <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/platform/runtime`}
+                  to={`/dashboard/environments/${activeEnvId}/platform/infrastructure`}
                   label="Infrastructure"
                   icon={Server}
-                  active={envActive("platform/runtime")}
+                  active={envActive("platform/infrastructure")}
                   badge={providerBadge("runtime")}
                 />
                 <NavLink

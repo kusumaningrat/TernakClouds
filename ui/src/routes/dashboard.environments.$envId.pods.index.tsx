@@ -214,7 +214,7 @@ function PodsIndexPage() {
             </p>
           </div>
           <Link
-            to={`/dashboard/environments/${envId}/platform/runtime` as never}
+            to={`/dashboard/environments/${envId}/platform/infrastructure` as never}
             className="text-sm text-primary hover:underline"
           >
             Configure Runtime →

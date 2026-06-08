@@ -5,8 +5,8 @@ import { useCapability, useNomadNodes, useK8sNodes, useDockerContainers } from "
 import { Loader2, AlertTriangle, RefreshCw, Server, Layers, Box } from "lucide-react";
 import type { NomadNodeStub, K8sNodeStub, DockerContainerStub } from "@/lib/types";
 
-export const Route = createFileRoute("/dashboard/environments/$envId/platform/runtime")({
-  head: () => ({ meta: [{ title: "Runtime · TernakClouds" }] }),
+export const Route = createFileRoute("/dashboard/environments/$envId/platform/infrastructure")({
+  head: () => ({ meta: [{ title: "Infrastructure · TernakClouds" }] }),
   component: RuntimeCapabilityPage,
 });
 
@@ -352,7 +352,7 @@ function DockerRuntimeDashboard({ slug, envId }: { slug: string; envId: string }
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 function RuntimeCapabilityPage() {
-  const { envId } = useParams({ from: "/dashboard/environments/$envId/platform/runtime" });
+  const { envId } = useParams({ from: "/dashboard/environments/$envId/platform/infrastructure" });
   const { selectedWorkspace } = useWorkspaceContext();
   const slug = selectedWorkspace?.slug ?? "";
 
@@ -366,7 +366,7 @@ function RuntimeCapabilityPage() {
     <CapabilityPage
       envId={envId}
       capName="runtime"
-      title="Runtime"
+      title="Infrastructure"
       subtitle="Workload orchestration — Nomad, Kubernetes, Docker."
       endpointPlaceholders={{
         nomad: "https://nomad.internal:4646",

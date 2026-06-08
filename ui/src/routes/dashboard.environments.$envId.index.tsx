@@ -106,7 +106,7 @@ function NoProviderBanner({ capability, envId }: { capability: string; envId: st
       <span>
         No {capability} provider configured.{" "}
         <Link
-          to="/dashboard/environments/$envId/platform/runtime"
+          to="/dashboard/environments/$envId/platform/infrastructure"
           params={{ envId }}
           className="underline underline-offset-2 hover:text-amber-900 dark:hover:text-amber-200 transition"
         >
@@ -315,7 +315,7 @@ function EnvOverviewPage() {
                 <Activity className="size-4 text-primary" /> Platform capabilities
               </h3>
               <Link
-                to="/dashboard/environments/$envId/platform/runtime"
+                to="/dashboard/environments/$envId/platform/infrastructure"
                 params={{ envId }}
                 className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition"
               >
