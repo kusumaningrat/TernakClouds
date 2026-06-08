@@ -181,6 +181,10 @@ func seedPermissionsAndRoles(db *gorm.DB) error {
 		{Name: "integrations:read", Resource: "integrations", Action: "read"},
 		{Name: "integrations:write", Resource: "integrations", Action: "write"},
 		{Name: "integrations:delete", Resource: "integrations", Action: "delete"},
+		// Storage
+		{Name: "storage:read", Resource: "storage", Action: "read", Description: "List buckets and view storage provider"},
+		{Name: "storage:write", Resource: "storage", Action: "write", Description: "Create buckets"},
+		{Name: "storage:delete", Resource: "storage", Action: "delete", Description: "Delete buckets"},
 	}
 
 	for _, p := range permissions {
@@ -214,6 +218,7 @@ func seedPermissionsAndRoles(db *gorm.DB) error {
 				"workspaces:read", "workspaces:write", "workspaces:delete",
 				"environments:read", "environments:write", "environments:delete",
 				"integrations:read", "integrations:write", "integrations:delete",
+				"storage:read", "storage:write", "storage:delete",
 			},
 		},
 		{
@@ -227,6 +232,7 @@ func seedPermissionsAndRoles(db *gorm.DB) error {
 				"workspaces:read", "workspaces:write",
 				"environments:read", "environments:write", "environments:delete",
 				"integrations:read", "integrations:write",
+				"storage:read", "storage:write", "storage:delete",
 			},
 		},
 		{
@@ -240,6 +246,7 @@ func seedPermissionsAndRoles(db *gorm.DB) error {
 				"workspaces:read",
 				"environments:read",
 				"integrations:read", "integrations:write", "integrations:delete",
+				"storage:read", "storage:write",
 			},
 		},
 		{
@@ -253,6 +260,7 @@ func seedPermissionsAndRoles(db *gorm.DB) error {
 				"workspaces:read",
 				"environments:read",
 				"integrations:read",
+				"storage:read",
 			},
 		},
 	}
@@ -350,7 +358,11 @@ func seedCapabilityCatalogue(db *gorm.DB) error {
 		// Observability
 		{ID: uuid.MustParse("00000004-0000-0000-0000-000000000001"), Name: "prometheus", DisplayName: "Prometheus + Grafana", CapabilityName: capability.CapObservability, Description: "Metrics and dashboards"},
 		// Storage
-		{ID: uuid.MustParse("00000005-0000-0000-0000-000000000001"), Name: "minio", DisplayName: "MinIO", CapabilityName: capability.CapStorage, Description: "S3-compatible object storage"},
+		{ID: uuid.MustParse("00000005-0000-0000-0000-000000000001"), Name: "minio", DisplayName: "MinIO", CapabilityName: capability.CapStorage, Description: "S3-compatible object storage for on-premise and edge deployments"},
+		{ID: uuid.MustParse("00000005-0000-0000-0000-000000000002"), Name: "s3", DisplayName: "AWS S3", CapabilityName: capability.CapStorage, Description: "Amazon Simple Storage Service — managed cloud object storage"},
+		{ID: uuid.MustParse("00000005-0000-0000-0000-000000000003"), Name: "gcs", DisplayName: "Google Cloud Storage", CapabilityName: capability.CapStorage, Description: "Scalable object storage on Google Cloud (use HMAC keys for S3-compatible access)"},
+		{ID: uuid.MustParse("00000005-0000-0000-0000-000000000004"), Name: "azure-blob", DisplayName: "Azure Blob Storage", CapabilityName: capability.CapStorage, Description: "Microsoft Azure object storage (credential: accountName:base64AccountKey)"},
+		{ID: uuid.MustParse("00000005-0000-0000-0000-000000000005"), Name: "r2", DisplayName: "Cloudflare R2", CapabilityName: capability.CapStorage, Description: "S3-compatible object storage with zero egress fees"},
 	}
 	for _, p := range providers {
 		if err := db.Where("name = ?", p.Name).FirstOrCreate(&p).Error; err != nil {
