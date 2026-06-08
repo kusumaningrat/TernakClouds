@@ -224,15 +224,15 @@ function SetupPage() {
     setCompleted((p) => (p.includes("workspace") ? p : [...p, "workspace"]));
     if (workspaces?.length) setSelectedWorkspace(workspaces[0]);
 
-    if (!hasRuntime) {
-      if ((envs?.length ?? 0) > 0) {
-        setCompleted((p) => (p.includes("environment") ? p : [...p, "environment"]));
-      }
-      setStep(envs?.length ? "runtime" : "environment");
+    const hasEnv = (envs?.length ?? 0) > 0;
+
+    if (!hasEnv) {
+      setStep("environment");
       return;
     }
 
-    // Runtime already configured — setup is complete. Go straight to dashboard.
+    // Workspace + environment exist — setup is complete. Go straight to dashboard.
+    setCompleted((p) => (p.includes("environment") ? p : [...p, "environment"]));
     markSetupVisited();
     void navigate({ to: "/dashboard" });
   }, [

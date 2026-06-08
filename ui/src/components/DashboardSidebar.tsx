@@ -215,7 +215,6 @@ const ADMIN_NAV = [
   { to: "/dashboard/departments", label: "All Departments", icon: Layers },
   { to: "/dashboard/users", label: "Members", icon: Users },
   { to: "/dashboard/roles", label: "Roles & Permissions", icon: KeyRound },
-  { to: "/dashboard/access-requests", label: "Access Requests", icon: InboxIcon },
 ] as const;
 
 // ─── Provider badge lookup ────────────────────────────────────────────────────
@@ -582,11 +581,7 @@ export function DashboardSidebar() {
                       label={label}
                       icon={icon}
                       active={wsActive(to)}
-                      badge={
-                        to === "/dashboard/access-requests" && pendingCount > 0
-                          ? String(pendingCount)
-                          : undefined
-                      }
+                      badge={undefined}
                     />
                   ))}
                 </nav>

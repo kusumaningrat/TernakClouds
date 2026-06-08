@@ -208,15 +208,8 @@ function LoginPage() {
             </button>
           </div> */}
 
-          {/* Register link */}
-          <p className="mt-8 text-sm text-muted-foreground text-center">
-            Don't have an account?{" "}
-            <Link
-              to="/register"
-              className="text-foreground font-medium hover:text-primary transition"
-            >
-              Request access
-            </Link>
+          <p className="mt-8 text-xs text-muted-foreground text-center">
+            No account? Contact your platform administrator.
           </p>
         </div>
       </div>

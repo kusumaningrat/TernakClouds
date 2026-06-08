@@ -1,6 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, ApiError } from "@/lib/api";
-import type { PermissionCheck, Role, UserListParams, UserListResponse, UserRole } from "./types";
+import type {
+  CreateUserInput,
+  PermissionCheck,
+  Role,
+  UserListParams,
+  UserListResponse,
+  UserRole,
+  UserSummary,
+} from "./types";
 
 export function useUsers(params: UserListParams = {}) {
   const qs = new URLSearchParams();
@@ -72,5 +80,25 @@ export function useCheckPermission(userId: string, permission: string) {
     queryKey: ["users", userId, "permissions", permission],
     queryFn: () => api.get(`/api/v1/users/${userId}/permissions/${permission}`),
     enabled: !!userId && !!permission,
+  });
+}
+
+export function useChangePassword() {
+  return useMutation<
+    { message: string },
+    ApiError,
+    { current_password: string; new_password: string }
+  >({
+    mutationFn: (input) => api.put("/api/v1/users/me/password", input),
+  });
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+  return useMutation<UserSummary, ApiError, CreateUserInput>({
+    mutationFn: (input) => api.post("/api/v1/users", input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["users", "list"] });
+    },
   });
 }
