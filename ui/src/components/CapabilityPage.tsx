@@ -32,6 +32,7 @@ interface Props {
   title: string;
   subtitle: string;
   endpointPlaceholders?: Record<string, string>;
+  tokenPlaceholders?: Record<string, string>;
   extraContent?: React.ReactNode;
 }
 
@@ -44,6 +45,7 @@ function AddProviderForm({
   providers,
   onDone,
   endpointPlaceholders,
+  tokenPlaceholders,
 }: {
   envId: string;
   capName: string;
@@ -51,6 +53,7 @@ function AddProviderForm({
   providers: CapabilityProvider[];
   onDone: () => void;
   endpointPlaceholders?: Record<string, string>;
+  tokenPlaceholders?: Record<string, string>;
 }) {
   const [selectedProvider, setSelectedProvider] = useState<CapabilityProvider | null>(null);
   const [dropOpen, setDropOpen] = useState(false);
@@ -180,7 +183,10 @@ function AddProviderForm({
         <input
           type="password"
           placeholder={
-            isTokenOptional ? "Leave blank for unauthenticated access" : "••••••••••••••••"
+            isTokenOptional
+              ? "Leave blank for unauthenticated access"
+              : ((selectedProvider && tokenPlaceholders?.[selectedProvider.name]) ??
+                "••••••••••••••••")
           }
           value={form.token}
           onChange={(e) => setForm((f) => ({ ...f, token: e.target.value }))}
@@ -491,6 +497,7 @@ export function CapabilityPage({
   title,
   subtitle,
   endpointPlaceholders,
+  tokenPlaceholders,
   extraContent,
 }: Props) {
   const { selectedWorkspace } = useWorkspaceContext();
@@ -573,6 +580,7 @@ export function CapabilityPage({
             providers={availableProviders}
             onDone={() => setShowAddForm(false)}
             endpointPlaceholders={endpointPlaceholders}
+            tokenPlaceholders={tokenPlaceholders}
           />
         )}
       </main>

@@ -470,13 +470,13 @@ export function DashboardSidebar() {
                   active={envActive("platform/networking")}
                   badge={providerBadge("networking")}
                 /> */}
-                {/* <NavLink
+                <NavLink
                   to={`/dashboard/environments/${activeEnvId}/platform/storage`}
                   label="Storage"
                   icon={Database}
                   active={envActive("platform/storage")}
                   badge={providerBadge("storage")}
-                /> */}
+                />
                 <NavLink
                   to={`/dashboard/environments/${activeEnvId}/registries`}
                   label="Registries"
@@ -510,6 +510,20 @@ export function DashboardSidebar() {
                   label="Logs"
                   icon={ScrollText}
                   active={envActive("logs")}
+                />
+              </nav>
+            </div>
+
+            {/* Storage */}
+            <div>
+              <SectionHeader label="Storage" />
+              <nav className="flex flex-col gap-0.5">
+                <NavLink
+                  to={`/dashboard/environments/${activeEnvId}/storage`}
+                  label="Buckets"
+                  icon={HardDrive}
+                  active={envActive("storage")}
+                  badge={providerBadge("storage")}
                 />
               </nav>
             </div>

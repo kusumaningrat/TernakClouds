@@ -21,6 +21,7 @@ import (
 	"github.com/kusumaningrat/ternakclouds/internal/role"
 	"github.com/kusumaningrat/ternakclouds/internal/secret"
 	"github.com/kusumaningrat/ternakclouds/internal/servicecatalog"
+	"github.com/kusumaningrat/ternakclouds/internal/storage"
 	"github.com/kusumaningrat/ternakclouds/internal/user"
 	"github.com/kusumaningrat/ternakclouds/internal/vault"
 	"github.com/kusumaningrat/ternakclouds/internal/workspace"
@@ -82,6 +83,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	k8sService := kubernetes.NewService(capRepo, vc)
 	dockerService := docker.NewService(capRepo, vc)
 	secretService := secret.NewService(secret.NewRepository(db), capRepo, vc)
+	storageService := storage.NewService(capRepo, vc)
 	registryService := registry.NewService(registryRepo, vc)
 	repoService := repository.NewService(repoRepo, vc)
 	catalogService := servicecatalog.NewService(catalogRepo, nomadService, k8sService, dockerService, registryRepo, capRepo, vc)
@@ -100,6 +102,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	k8sHandler := kubernetes.NewHandler(k8sService)
 	dockerHandler := docker.NewHandler(dockerService)
 	secretHandler := secret.NewHandler(secretService)
+	storageHandler := storage.NewHandler(storageService)
 	arHandler := accessrequest.NewHandler(arService)
 	registryHandler := registry.NewHandler(registryService)
 	repoHandler := repository.NewHandler(repoService)
@@ -167,6 +170,11 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 		kubernetes.RegisterRoutes(envGroup, k8sHandler)
 		docker.RegisterRoutes(envGroup, dockerHandler)
 		secret.RegisterRoutes(envGroup, secretHandler)
+		storage.RegisterRoutes(envGroup, storageHandler,
+			middleware.RequirePermission(roleService, "storage:read"),
+			middleware.RequirePermission(roleService, "storage:write"),
+			middleware.RequirePermission(roleService, "storage:delete"),
+		)
 
 		repository.RegisterRoutes(protected, repoHandler,
 				middleware.ResolveWorkspace(wsAdapter),

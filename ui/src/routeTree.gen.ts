@@ -33,6 +33,7 @@ import { Route as DashboardEnvironmentsIndexRouteImport } from './routes/dashboa
 import { Route as EnvironmentsEnvIdIntegrationsRouteImport } from './routes/environments.$envId.integrations'
 import { Route as DashboardEnvironmentsEnvIdRouteImport } from './routes/dashboard.environments.$envId'
 import { Route as DashboardEnvironmentsEnvIdIndexRouteImport } from './routes/dashboard.environments.$envId.index'
+import { Route as DashboardEnvironmentsEnvIdStorageRouteImport } from './routes/dashboard.environments.$envId.storage'
 import { Route as DashboardEnvironmentsEnvIdSettingsRouteImport } from './routes/dashboard.environments.$envId.settings'
 import { Route as DashboardEnvironmentsEnvIdServicesRouteImport } from './routes/dashboard.environments.$envId.services'
 import { Route as DashboardEnvironmentsEnvIdServiceCatalogRouteImport } from './routes/dashboard.environments.$envId.service-catalog'
@@ -184,6 +185,12 @@ const DashboardEnvironmentsEnvIdIndexRoute =
   DashboardEnvironmentsEnvIdIndexRouteImport.update({
     id: '/',
     path: '/',
+    getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
+  } as any)
+const DashboardEnvironmentsEnvIdStorageRoute =
+  DashboardEnvironmentsEnvIdStorageRouteImport.update({
+    id: '/storage',
+    path: '/storage',
     getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
   } as any)
 const DashboardEnvironmentsEnvIdSettingsRoute =
@@ -389,6 +396,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/environments/$envId/service-catalog': typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   '/dashboard/environments/$envId/services': typeof DashboardEnvironmentsEnvIdServicesRouteWithChildren
   '/dashboard/environments/$envId/settings': typeof DashboardEnvironmentsEnvIdSettingsRoute
+  '/dashboard/environments/$envId/storage': typeof DashboardEnvironmentsEnvIdStorageRoute
   '/dashboard/environments/$envId/': typeof DashboardEnvironmentsEnvIdIndexRoute
   '/dashboard/environments/$envId/deployments/$jobId': typeof DashboardEnvironmentsEnvIdDeploymentsJobIdRoute
   '/dashboard/environments/$envId/platform/networking': typeof DashboardEnvironmentsEnvIdPlatformNetworkingRoute
@@ -436,6 +444,7 @@ export interface FileRoutesByTo {
   '/dashboard/environments/$envId/secrets': typeof DashboardEnvironmentsEnvIdSecretsRoute
   '/dashboard/environments/$envId/service-catalog': typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   '/dashboard/environments/$envId/settings': typeof DashboardEnvironmentsEnvIdSettingsRoute
+  '/dashboard/environments/$envId/storage': typeof DashboardEnvironmentsEnvIdStorageRoute
   '/dashboard/environments/$envId': typeof DashboardEnvironmentsEnvIdIndexRoute
   '/dashboard/environments/$envId/deployments/$jobId': typeof DashboardEnvironmentsEnvIdDeploymentsJobIdRoute
   '/dashboard/environments/$envId/platform/networking': typeof DashboardEnvironmentsEnvIdPlatformNetworkingRoute
@@ -490,6 +499,7 @@ export interface FileRoutesById {
   '/dashboard/environments/$envId/service-catalog': typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   '/dashboard/environments/$envId/services': typeof DashboardEnvironmentsEnvIdServicesRouteWithChildren
   '/dashboard/environments/$envId/settings': typeof DashboardEnvironmentsEnvIdSettingsRoute
+  '/dashboard/environments/$envId/storage': typeof DashboardEnvironmentsEnvIdStorageRoute
   '/dashboard/environments/$envId/': typeof DashboardEnvironmentsEnvIdIndexRoute
   '/dashboard/environments/$envId/deployments/$jobId': typeof DashboardEnvironmentsEnvIdDeploymentsJobIdRoute
   '/dashboard/environments/$envId/platform/networking': typeof DashboardEnvironmentsEnvIdPlatformNetworkingRoute
@@ -545,6 +555,7 @@ export interface FileRouteTypes {
     | '/dashboard/environments/$envId/service-catalog'
     | '/dashboard/environments/$envId/services'
     | '/dashboard/environments/$envId/settings'
+    | '/dashboard/environments/$envId/storage'
     | '/dashboard/environments/$envId/'
     | '/dashboard/environments/$envId/deployments/$jobId'
     | '/dashboard/environments/$envId/platform/networking'
@@ -592,6 +603,7 @@ export interface FileRouteTypes {
     | '/dashboard/environments/$envId/secrets'
     | '/dashboard/environments/$envId/service-catalog'
     | '/dashboard/environments/$envId/settings'
+    | '/dashboard/environments/$envId/storage'
     | '/dashboard/environments/$envId'
     | '/dashboard/environments/$envId/deployments/$jobId'
     | '/dashboard/environments/$envId/platform/networking'
@@ -645,6 +657,7 @@ export interface FileRouteTypes {
     | '/dashboard/environments/$envId/service-catalog'
     | '/dashboard/environments/$envId/services'
     | '/dashboard/environments/$envId/settings'
+    | '/dashboard/environments/$envId/storage'
     | '/dashboard/environments/$envId/'
     | '/dashboard/environments/$envId/deployments/$jobId'
     | '/dashboard/environments/$envId/platform/networking'
@@ -835,6 +848,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/dashboard/environments/$envId/'
       preLoaderRoute: typeof DashboardEnvironmentsEnvIdIndexRouteImport
+      parentRoute: typeof DashboardEnvironmentsEnvIdRoute
+    }
+    '/dashboard/environments/$envId/storage': {
+      id: '/dashboard/environments/$envId/storage'
+      path: '/storage'
+      fullPath: '/dashboard/environments/$envId/storage'
+      preLoaderRoute: typeof DashboardEnvironmentsEnvIdStorageRouteImport
       parentRoute: typeof DashboardEnvironmentsEnvIdRoute
     }
     '/dashboard/environments/$envId/settings': {
@@ -1127,6 +1147,7 @@ interface DashboardEnvironmentsEnvIdRouteChildren {
   DashboardEnvironmentsEnvIdServiceCatalogRoute: typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   DashboardEnvironmentsEnvIdServicesRoute: typeof DashboardEnvironmentsEnvIdServicesRouteWithChildren
   DashboardEnvironmentsEnvIdSettingsRoute: typeof DashboardEnvironmentsEnvIdSettingsRoute
+  DashboardEnvironmentsEnvIdStorageRoute: typeof DashboardEnvironmentsEnvIdStorageRoute
   DashboardEnvironmentsEnvIdIndexRoute: typeof DashboardEnvironmentsEnvIdIndexRoute
 }
 
@@ -1163,6 +1184,8 @@ const DashboardEnvironmentsEnvIdRouteChildren: DashboardEnvironmentsEnvIdRouteCh
       DashboardEnvironmentsEnvIdServicesRouteWithChildren,
     DashboardEnvironmentsEnvIdSettingsRoute:
       DashboardEnvironmentsEnvIdSettingsRoute,
+    DashboardEnvironmentsEnvIdStorageRoute:
+      DashboardEnvironmentsEnvIdStorageRoute,
     DashboardEnvironmentsEnvIdIndexRoute: DashboardEnvironmentsEnvIdIndexRoute,
   }
 
