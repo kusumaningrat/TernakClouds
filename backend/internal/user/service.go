@@ -93,3 +93,24 @@ func (s *UserService) Delete(id uuid.UUID) error {
 func (s *UserService) RevokeAllTokens(userID uuid.UUID) error {
 	return s.tokenRepo.RevokeByUserID(userID)
 }
+
+var ErrWrongPassword = errors.New("current password is incorrect")
+
+func (s *UserService) ChangePassword(userID uuid.UUID, currentPassword, newPassword string) error {
+	u, err := s.userRepo.FindByID(userID)
+	if err != nil {
+		return err
+	}
+	if u == nil {
+		return ErrNotFound
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(currentPassword)); err != nil {
+		return ErrWrongPassword
+	}
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	u.PasswordHash = string(hash)
+	return s.userRepo.Update(u)
+}

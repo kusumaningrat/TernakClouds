@@ -9,11 +9,14 @@ import {
   UserCircle,
   Copy,
   Check,
+  KeyRound,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { QueryError } from "@/components/QueryError";
 import { useState } from "react";
 import { toast } from "sonner";
-import { useMe, useRoles } from "@/lib/queries";
+import { useMe, useRoles, useChangePassword } from "@/lib/queries";
 import type { Permission } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard/profile")({
@@ -143,6 +146,135 @@ function PermissionChecker({ userId }: { userId: string }) {
           <span>{permResult.has ? "— permission granted" : "— permission denied"}</span>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Change password form ─────────────────────────────────────────────────────
+
+function ChangePasswordForm() {
+  const changePassword = useChangePassword();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNext, setShowNext] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (next !== confirm) {
+      setError("New passwords don't match.");
+      return;
+    }
+    if (next.length < 8) {
+      setError("New password must be at least 8 characters.");
+      return;
+    }
+    setError("");
+    try {
+      await changePassword.mutateAsync({ current_password: current, new_password: next });
+      toast.success("Password updated successfully.");
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to update password.");
+    }
+  };
+
+  return (
+    <div className="glass rounded-xl p-5">
+      <h3 className="text-sm font-semibold flex items-center gap-2 mb-1">
+        <KeyRound className="size-4 text-primary" /> Change password
+      </h3>
+      <p className="text-xs text-muted-foreground mb-4">
+        Use a strong password you don't use elsewhere.
+      </p>
+
+      <form onSubmit={(e) => void handleSubmit(e)} className="space-y-3">
+        {/* Current password */}
+        <div>
+          <label className="text-xs font-medium block mb-1.5 text-muted-foreground">
+            Current password
+          </label>
+          <div className="relative">
+            <input
+              required
+              type={showCurrent ? "text" : "password"}
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3 py-2 pr-9 rounded-lg bg-secondary border border-border text-sm outline-none focus:border-primary/50 transition"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCurrent((p) => !p)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+            >
+              {showCurrent ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* New password */}
+        <div>
+          <label className="text-xs font-medium block mb-1.5 text-muted-foreground">
+            New password
+          </label>
+          <div className="relative">
+            <input
+              required
+              minLength={8}
+              type={showNext ? "text" : "password"}
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+              placeholder="Min. 8 characters"
+              className="w-full px-3 py-2 pr-9 rounded-lg bg-secondary border border-border text-sm outline-none focus:border-primary/50 transition"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNext((p) => !p)}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+            >
+              {showNext ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Confirm */}
+        <div>
+          <label className="text-xs font-medium block mb-1.5 text-muted-foreground">
+            Confirm new password
+          </label>
+          <input
+            required
+            type="password"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            placeholder="••••••••"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-sm outline-none focus:border-primary/50 transition"
+          />
+        </div>
+
+        {error && (
+          <p className="text-xs text-destructive flex items-center gap-1.5">
+            <XCircle className="size-3.5 shrink-0" />
+            {error}
+          </p>
+        )}
+
+        <div className="pt-1">
+          <button
+            type="submit"
+            disabled={changePassword.isPending || !current || !next || !confirm}
+            className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50 inline-flex items-center gap-2"
+          >
+            {changePassword.isPending && <Loader2 className="size-3.5 animate-spin" />}
+            Update password
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
@@ -279,6 +411,8 @@ function ProfilePage() {
             </div>
           )}
         </div>
+
+        <ChangePasswordForm />
 
         {me && <PermissionChecker userId={me.id} />}
       </main>

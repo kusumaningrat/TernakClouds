@@ -9,6 +9,7 @@ import {
   useWorkspacesMine,
   useAssignRole,
   useRevokeRole,
+  useCreateUser,
 } from "@/lib/queries";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -24,8 +25,11 @@ import {
   Minus,
   Users,
   Globe,
+  UserPlus,
+  Eye,
+  EyeOff,
 } from "lucide-react";
-import type { UserSummary, UserListParams, Role } from "@/lib/types";
+import type { UserSummary, UserListParams, Role, CreateUserInput } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard/users")({
   head: () => ({ meta: [{ title: "Members · TernakClouds" }] }),
@@ -421,11 +425,209 @@ function FilterSelect({
   );
 }
 
+// ─── Create user modal ────────────────────────────────────────────────────────
+
+const ROLES = ["admin", "manager", "developer", "viewer"] as const;
+
+function CreateUserModal({ onClose }: { onClose: () => void }) {
+  const { data: deptList } = useDepartments(1, 100);
+  const createUser = useCreateUser();
+
+  const [form, setForm] = useState<CreateUserInput>({
+    email: "",
+    password: "",
+    first_name: "",
+    last_name: "",
+    department_id: "",
+    role: "developer",
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
+
+  const set = <K extends keyof CreateUserInput>(k: K, v: CreateUserInput[K]) =>
+    setForm((p) => ({ ...p, [k]: v }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.department_id) {
+      setError("Please select a department.");
+      return;
+    }
+    setError("");
+    try {
+      await createUser.mutateAsync(form);
+      toast.success(`User ${form.email} created successfully`);
+      onClose();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to create user");
+    }
+  };
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-card border border-border rounded-2xl shadow-2xl w-full max-w-md">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+            <div className="flex items-center gap-2">
+              <UserPlus className="size-4 text-primary" />
+              <h2 className="font-semibold">Create user</h2>
+            </div>
+            <button onClick={onClose} className="p-1.5 rounded-md hover:bg-secondary transition">
+              <X className="size-4" />
+            </button>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={(e) => void handleSubmit(e)} className="p-6 space-y-4">
+            {/* Name row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium block mb-1.5">First name</label>
+                <input
+                  required
+                  value={form.first_name}
+                  onChange={(e) => set("first_name", e.target.value)}
+                  placeholder="Jane"
+                  className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm outline-none focus:border-primary/50 transition"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium block mb-1.5">Last name</label>
+                <input
+                  required
+                  value={form.last_name}
+                  onChange={(e) => set("last_name", e.target.value)}
+                  placeholder="Doe"
+                  className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm outline-none focus:border-primary/50 transition"
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="text-xs font-medium block mb-1.5">Work email</label>
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                placeholder="jane@company.com"
+                className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm font-mono outline-none focus:border-primary/50 transition"
+              />
+            </div>
+
+            {/* Password */}
+            <div>
+              <label className="text-xs font-medium block mb-1.5">Temporary password</label>
+              <div className="relative">
+                <input
+                  required
+                  minLength={8}
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(e) => set("password", e.target.value)}
+                  placeholder="Min. 8 characters"
+                  className="w-full px-3 py-2 pr-9 rounded-lg bg-input border border-border text-sm outline-none focus:border-primary/50 transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                >
+                  {showPassword ? <EyeOff className="size-3.5" /> : <Eye className="size-3.5" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Share this with the user — they can change it after signing in.
+              </p>
+            </div>
+
+            {/* Department */}
+            <div>
+              <label className="text-xs font-medium block mb-1.5">Department</label>
+              <div className="relative">
+                <select
+                  required
+                  value={form.department_id}
+                  onChange={(e) => set("department_id", e.target.value)}
+                  className="appearance-none w-full px-3 py-2 pr-8 rounded-lg bg-input border border-border text-sm outline-none focus:border-primary/50 transition cursor-pointer"
+                >
+                  <option value="">Select department…</option>
+                  {(deptList?.items ?? []).map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Role */}
+            <div>
+              <label className="text-xs font-medium block mb-1.5">Role</label>
+              <div className="grid grid-cols-4 gap-2">
+                {ROLES.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => set("role", r)}
+                    className={`py-1.5 rounded-lg border text-xs font-medium capitalize transition ${
+                      form.role === r
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-secondary/40 text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    {r}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-destructive">
+                <AlertCircle className="size-3.5 shrink-0" />
+                {error}
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-lg border border-border text-sm font-medium hover:bg-secondary transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={createUser.isPending}
+                className="flex-1 py-2.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {createUser.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <UserPlus className="size-4" />
+                )}
+                Create user
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </>
+  );
+}
+
 // ─── Members admin view ───────────────────────────────────────────────────────
 
 function MembersAdminView({ isPrivileged }: { isPrivileged: boolean }) {
   const [filters, setFilters] = useState<UserListParams>({ status: "" });
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [showCreate, setShowCreate] = useState(false);
 
   const { data: users, isLoading, error } = useUsers(filters);
   const { data: workspaces } = useWorkspacesMine();
@@ -502,14 +704,25 @@ function MembersAdminView({ isPrivileged }: { isPrivileged: boolean }) {
               <X className="size-3.5" /> Clear
             </button>
           )}
-          <div className="ml-auto text-xs text-muted-foreground">
+          <div className="ml-auto flex items-center gap-3">
             {!isLoading && users && (
-              <span>
+              <span className="text-xs text-muted-foreground">
                 {users.total} member{users.total !== 1 ? "s" : ""}
               </span>
             )}
+            {isPrivileged && (
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition"
+              >
+                <UserPlus className="size-3.5" />
+                Create user
+              </button>
+            )}
           </div>
         </div>
+
+        {showCreate && <CreateUserModal onClose={() => setShowCreate(false)} />}
 
         {/* Table */}
         <div className="glass rounded-xl overflow-hidden border border-border">

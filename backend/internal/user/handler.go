@@ -1,19 +1,28 @@
 package user
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/kusumaningrat/ternakclouds/internal/middleware"
 	"github.com/kusumaningrat/ternakclouds/pkg"
 )
 
-type Handler struct {
-	svc *UserService
+// RoleAssigner is satisfied by role.RoleService.
+type RoleAssigner interface {
+	AssignRoleByName(userID uuid.UUID, roleName string) error
 }
 
-func NewHandler(svc *UserService) *Handler {
-	return &Handler{svc: svc}
+type Handler struct {
+	svc     *UserService
+	roleSvc RoleAssigner
+}
+
+func NewHandler(svc *UserService, roleSvc RoleAssigner) *Handler {
+	return &Handler{svc: svc, roleSvc: roleSvc}
 }
 
 // GET /api/v1/users
@@ -54,4 +63,62 @@ func (h *Handler) List(c *gin.Context) {
 		Page:  f.Page,
 		Limit: f.Limit,
 	})
+}
+
+// POST /api/v1/users
+func (h *Handler) Create(c *gin.Context) {
+	var input CreateUserInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
+		return
+	}
+
+	deptID, err := uuid.Parse(input.DepartmentID)
+	if err != nil {
+		pkg.RespondErr(c, http.StatusBadRequest, "invalid department_id")
+		return
+	}
+
+	u, err := h.svc.Register(input.Email, input.Password, input.FirstName, input.LastName, deptID)
+	if errors.Is(err, ErrEmailTaken) {
+		pkg.RespondErr(c, http.StatusConflict, "email already in use")
+		return
+	}
+	if err != nil {
+		pkg.RespondErr(c, http.StatusInternalServerError, "failed to create user")
+		return
+	}
+
+	if h.roleSvc != nil && input.Role != "" {
+		_ = h.roleSvc.AssignRoleByName(u.ID, input.Role)
+	}
+
+	pkg.RespondOK(c, http.StatusCreated, u)
+}
+
+// PUT /api/v1/users/me/password
+func (h *Handler) ChangePassword(c *gin.Context) {
+	var input ChangePasswordInput
+	if err := c.ShouldBindJSON(&input); err != nil {
+		pkg.RespondErr(c, http.StatusBadRequest, "Invalid request. Please check your input.")
+		return
+	}
+
+	userID := middleware.GetUserID(c)
+
+	err := h.svc.ChangePassword(userID, input.CurrentPassword, input.NewPassword)
+	if errors.Is(err, ErrWrongPassword) {
+		pkg.RespondErr(c, http.StatusUnauthorized, "Current password is incorrect.")
+		return
+	}
+	if errors.Is(err, ErrNotFound) {
+		pkg.RespondErr(c, http.StatusNotFound, "User not found.")
+		return
+	}
+	if err != nil {
+		pkg.RespondErr(c, http.StatusInternalServerError, "Failed to change password.")
+		return
+	}
+
+	pkg.RespondOK(c, http.StatusOK, gin.H{"message": "Password updated successfully."})
 }
