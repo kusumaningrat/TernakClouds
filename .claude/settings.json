@@ -13,7 +13,8 @@
       "Bash(sed -n '53,75p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/workspaces/queries.ts)",
       "Bash(sed -n '20,55p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/environments/queries.ts)",
       "Bash(sed -n '53,80p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/capabilities/queries.ts)",
-      "Bash(sed -n '33,60p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/catalog/queries.ts)"
+      "Bash(sed -n '33,60p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/catalog/queries.ts)",
+      "Bash(make lint-ui *)"
     ]
   }
 }

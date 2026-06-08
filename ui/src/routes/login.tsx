@@ -3,7 +3,7 @@ import { Shield, Layers, Users, GitBranch, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { isAuthenticated } from "@/lib/auth";
 import { useLogin } from "@/lib/queries";
-import { hasSetupBeenVisited } from "./setup";
+import { hasSetupBeenVisited } from "@/lib/setup-visited";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => {

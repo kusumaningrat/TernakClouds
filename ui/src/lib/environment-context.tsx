@@ -1,5 +1,6 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type { WorkspaceEnvironment } from "@/lib/types";
+import { EnvironmentContext } from "./use-environment-context";
 
 const STORAGE_KEY = "Clouds_environment_v1";
 
@@ -13,22 +14,10 @@ function readStored(): WorkspaceEnvironment | null {
   }
 }
 
-interface EnvironmentContextValue {
-  /** null means "All environments" */
-  selectedEnvironment: WorkspaceEnvironment | null;
-  setSelectedEnvironment: (env: WorkspaceEnvironment | null) => void;
-  isHydrated: boolean;
-}
-
-const EnvironmentContext = createContext<EnvironmentContextValue>({
-  selectedEnvironment: null,
-  setSelectedEnvironment: () => undefined,
-  isHydrated: false,
-});
-
 export function EnvironmentProvider({ children }: { children: ReactNode }) {
-  const [selectedEnvironment, setSelectedEnvironmentState] =
-    useState<WorkspaceEnvironment | null>(null);
+  const [selectedEnvironment, setSelectedEnvironmentState] = useState<WorkspaceEnvironment | null>(
+    null,
+  );
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
@@ -56,8 +45,4 @@ export function EnvironmentProvider({ children }: { children: ReactNode }) {
       {children}
     </EnvironmentContext.Provider>
   );
-}
-
-export function useEnvironmentContext() {
-  return useContext(EnvironmentContext);
 }
