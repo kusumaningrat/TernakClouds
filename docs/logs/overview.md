@@ -19,52 +19,17 @@ Runtime Workloads (pods / allocations / containers)
    live tail · search · filter · highlight
 ```
 
-The backend proxies directly to runtime log APIs (Kubernetes pod logs, Nomad client allocation logs, Docker container logs) and re-emits them as SSE events. Loki is available as an optional storage layer for historical log querying.
+The backend proxies directly to runtime log APIs (Kubernetes pod logs, Nomad client allocation logs, Docker container logs) and re-emits them as SSE events. As long as a runtime provider is bound to the environment, live log streaming is available — no additional configuration required.
 
 ---
 
-## Two Modes of Log Access
+## Live Streaming
 
-### 1. Live Streaming (Runtime Direct)
-
-The primary mode. The platform opens a streaming connection to the runtime API and forwards log lines in real time.
+The platform opens a streaming connection to the runtime API and forwards log lines in real time.
 
 - **Kubernetes:** proxies `kubectl logs --follow` via the Kubernetes API server
 - **Nomad:** proxies allocation log streaming via the Nomad client HTTP API
 - **Docker:** proxies `docker logs --follow` via the Docker daemon API
-
-This works without any logs backend configuration. As long as a runtime provider is bound to the environment, live log streaming is available.
-
-### 2. Historical / Aggregated (Logs Backend)
-
-When a logs backend provider (Loki) is bound in **Platform → Logs Backend**, historical log queries become available. The backend provider stores logs forwarded by a collector (Promtail, Fluent Bit, Vector).
-
-> The frontend never communicates directly with Loki. All queries go through the TernakClouds API, which translates generic queries into LogQL or the appropriate backend query language.
-
----
-
-## Configuring a Logs Backend
-
-Navigate to **Platform → Logs Backend** in any environment.
-
-### Adding Loki
-
-1. Click **Add provider** → select **Loki**
-2. Enter the Loki endpoint (e.g. `https://loki.internal:3100`)
-3. Token is optional — leave blank for unauthenticated Loki
-4. Click **Add provider**
-5. Click **Verify** to confirm the `/ready` endpoint responds
-
-Loki does not require an authentication token for self-hosted instances. For Grafana Cloud or authenticated Loki, provide a bearer token.
-
-### Provider Configuration
-
-| Field | Description |
-|---|---|
-| Endpoint | Base URL of the logs backend |
-| Token | Bearer token (optional for Loki, required for cloud providers) |
-| Namespace | Optional namespace hint for scoping queries |
-| Region | Optional region for cloud-hosted backends |
 
 ---
 
@@ -181,20 +146,6 @@ The backend:
 4. Emits each line as `event: log`
 
 Docker muxes stdout and stderr into a single stream with a 4-byte header (stream type + length). The backend demuxes this transparently, so log lines arrive as plain text in the SSE stream.
-
----
-
-## Log Provider API
-
-The logs platform exposes a provider-level API for listing available log sources per environment:
-
-```
-GET /logs/providers          → list bound log providers for the environment
-GET /logs/workloads          → list workloads from all runtime providers
-GET /logs/stream             → SSE stream (runtime-resolved)
-```
-
-This API is what the Logs page uses to build the runtime selector, workload list, and streaming connection in a single unified interface.
 
 ---
 

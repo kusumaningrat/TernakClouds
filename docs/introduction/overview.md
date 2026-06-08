@@ -21,7 +21,7 @@ TernakClouds resolves this by sitting between developers and infrastructure. It 
 
 **Runtime agnosticism.** The platform treats Kubernetes, Nomad, and Docker as interchangeable runtime providers behind the same abstraction. Adding a new runtime means implementing a provider interface, not rewriting the UI or the API.
 
-**Capability-based configuration.** Instead of hardcoding infrastructure connections, TernakClouds uses a capability system. Each environment declares what it needs (`runtime`, `logs`, `secrets`) and binds the appropriate provider. This makes environments self-describing and portable.
+**Capability-based configuration.** Instead of hardcoding infrastructure connections, TernakClouds uses a capability system. Each environment declares what it needs (`runtime`, `secrets`) and binds the appropriate provider. This makes environments self-describing and portable.
 
 **Credential isolation.** No provider credential is ever stored in the database. Tokens, API keys, and secrets live exclusively in HashiCorp Vault KV v2. The database stores only the Vault path — not the credential itself.
 
@@ -51,20 +51,19 @@ Multiple teams can use the same TernakClouds instance, each with their own works
 
 An environment is a named deployment target within a workspace. Typical environments: `dev`, `staging`, `production`. Three environments are created automatically when a workspace is created.
 
-Each environment independently configures its own capability providers. Your production environment might use a different Nomad cluster or Loki instance than staging.
+Each environment independently configures its own capability providers. Your production environment might use a different Nomad cluster or Vault instance than staging.
 
 ### Capability
 
 A capability is a platform service type:
 
-| Capability | Purpose |
-|---|---|
-| `runtime` | Workload scheduling and orchestration |
-| `secrets` | Encrypted secret storage and injection |
-| `logs` | Centralized log aggregation and streaming |
-| `networking` | Service mesh and ingress |
-| `storage` | Object storage |
-| `observability` | Metrics and monitoring |
+| Capability      | Purpose                                   |
+| --------------- | ----------------------------------------- |
+| `runtime`       | Workload scheduling and orchestration     |
+| `secrets`       | Encrypted secret storage and injection    |
+| `networking`    | Service mesh and ingress                  |
+| `storage`       | Object storage                            |
+| `observability` | Metrics and monitoring                    |
 
 Each capability can have one or more providers bound to it per environment.
 
@@ -72,16 +71,15 @@ Each capability can have one or more providers bound to it per environment.
 
 A provider is a concrete implementation of a capability. Examples:
 
-| Provider | Capability | Description |
-|---|---|---|
-| `kubernetes` | runtime | Kubernetes cluster |
-| `nomad` | runtime | HashiCorp Nomad cluster |
-| `docker` | runtime | Docker daemon |
-| `loki` | logs | Loki log aggregation |
-| `vault` | secrets | HashiCorp Vault KV v2 |
-| `consul` | networking | Consul service mesh |
-| `prometheus` | observability | Prometheus metrics |
-| `minio` | storage | MinIO object storage |
+| Provider     | Capability    | Description             |
+| ------------ | ------------- | ----------------------- |
+| `kubernetes` | runtime       | Kubernetes cluster      |
+| `nomad`      | runtime       | HashiCorp Nomad cluster |
+| `docker`     | runtime       | Docker daemon           |
+| `vault`      | secrets       | HashiCorp Vault KV v2   |
+| `consul`     | networking    | Consul service mesh     |
+| `prometheus` | observability | Prometheus metrics      |
+| `minio`      | storage       | MinIO object storage    |
 
 Providers are configured with an endpoint, optional credentials, and optional metadata (region, namespace). Credentials are stored in Vault.
 
@@ -106,21 +104,21 @@ The service catalog is a collection of ready-to-deploy service templates. Unlike
 
 A global RBAC role assigned to a user across the entire platform:
 
-| Role | Purpose |
-|---|---|
-| `admin` | Full access to everything |
-| `manager` | User and workspace management |
-| `developer` | Deploy and operate workloads |
-| `viewer` | Read-only access |
+| Role        | Purpose                       |
+| ----------- | ----------------------------- |
+| `admin`     | Full access to everything     |
+| `manager`   | User and workspace management |
+| `developer` | Deploy and operate workloads  |
+| `viewer`    | Read-only access              |
 
 ### Workspace Role
 
 A membership-scoped role within a specific workspace:
 
-| Role | Purpose |
-|---|---|
-| `owner` | Configure the workspace, manage members, bind providers |
-| `member` | Read and operate within the workspace |
+| Role     | Purpose                                                 |
+| -------- | ------------------------------------------------------- |
+| `owner`  | Configure the workspace, manage members, bind providers |
+| `member` | Read and operate within the workspace                   |
 
 ---
 
@@ -135,12 +133,11 @@ A membership-scoped role within a specific workspace:
 
 ## Supported Integrations
 
-| Category | Supported |
-|---|---|
-| Runtime | Kubernetes, Nomad, Docker |
-| Secrets | HashiCorp Vault (KV v2, AppRole) |
-| Logs backend | Loki |
-| Metrics | Prometheus |
-| Storage | MinIO |
+| Category           | Supported                                                       |
+| ------------------ | --------------------------------------------------------------- |
+| Runtime            | Kubernetes, Nomad, Docker                                       |
+| Secrets            | HashiCorp Vault (KV v2, AppRole)                                |
+| Metrics            | Prometheus                                                      |
+| Storage            | MinIO                                                           |
 | Container registry | Any OCI-compatible registry (Docker Hub, ECR, GCR, self-hosted) |
-| Source control | GitHub, GitLab (cloud and self-hosted) |
+| Source control     | GitHub, GitLab (cloud and self-hosted)                          |

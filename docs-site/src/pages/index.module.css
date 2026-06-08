@@ -1,0 +1,394 @@
+/* ── Layout helpers ─────────────────────────────────── */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.section {
+  padding: 5rem 0;
+}
+
+.sectionAlt {
+  padding: 5rem 0;
+  background: color-mix(in oklab, var(--ifm-color-emphasis-100) 60%, transparent);
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
+
+.eyebrow {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  margin-bottom: 0.75rem;
+}
+
+.sectionTitle {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 1rem;
+}
+
+.sectionSubtitle {
+  color: var(--ifm-color-emphasis-700);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.7;
+}
+
+/* ── Hero ───────────────────────────────────────────── */
+.hero {
+  position: relative;
+  overflow: hidden;
+  padding: 6rem 1.5rem 7rem;
+  text-align: center;
+}
+
+.heroGrid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--ifm-color-primary-lightest) 1px, transparent 1px),
+    linear-gradient(90deg, var(--ifm-color-primary-lightest) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.08;
+  pointer-events: none;
+}
+
+.heroGlow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% -5%, color-mix(in oklab, var(--ifm-color-primary) 30%, transparent), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 90% 100%, color-mix(in oklab, var(--ifm-color-secondary) 20%, transparent), transparent 55%);
+  pointer-events: none;
+}
+
+.heroContent {
+  position: relative;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.875rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: color-mix(in oklab, var(--ifm-background-color) 80%, transparent);
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 2rem;
+  backdrop-filter: blur(8px);
+}
+
+.heroBadgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--ifm-color-primary);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-bottom: 1.5rem;
+}
+
+.heroGradient {
+  background: linear-gradient(135deg, var(--ifm-color-primary), var(--ifm-color-primary-dark));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.heroSubtitle {
+  font-size: 1.1rem;
+  color: var(--ifm-color-emphasis-700);
+  max-width: 640px;
+  margin: 0 auto 2.5rem;
+  line-height: 1.7;
+}
+
+.heroCta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+/* ── Buttons ────────────────────────────────────────── */
+.ctaPrimary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  background: var(--ifm-color-primary);
+  color: #fff !important;
+  text-decoration: none !important;
+  box-shadow: 0 0 40px -8px color-mix(in oklab, var(--ifm-color-primary) 60%, transparent);
+  transition: opacity 0.15s;
+}
+
+.ctaPrimary:hover {
+  opacity: 0.88;
+  color: #fff !important;
+}
+
+.ctaSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  background: color-mix(in oklab, var(--ifm-background-color) 80%, transparent);
+  color: var(--ifm-font-color-base) !important;
+  text-decoration: none !important;
+  backdrop-filter: blur(8px);
+  transition: opacity 0.15s;
+}
+
+.ctaSecondary:hover {
+  opacity: 0.75;
+}
+
+/* ── Cards ──────────────────────────────────────────── */
+.grid3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.card {
+  padding: 2rem;
+  border-radius: 12px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: color-mix(in oklab, var(--ifm-background-color) 70%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.cardIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.25rem;
+  background: color-mix(in oklab, var(--ifm-color-primary) 12%, transparent);
+  color: var(--ifm-color-primary);
+}
+
+.cardTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.cardDesc {
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.featureCard {
+  composes: card;
+  transition: border-color 0.2s;
+}
+
+.featureCard:hover {
+  border-color: color-mix(in oklab, var(--ifm-color-primary) 40%, transparent);
+}
+
+.featureIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1rem;
+  background: color-mix(in oklab, var(--ifm-color-primary) 12%, transparent);
+  color: var(--ifm-color-primary);
+}
+
+/* ── Security section ───────────────────────────────── */
+.splitGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .splitGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.checkList {
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.checkItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.checkIcon {
+  color: var(--ifm-color-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.codeCard {
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: color-mix(in oklab, var(--ifm-background-color) 80%, transparent);
+  backdrop-filter: blur(10px);
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.codeComment {
+  font-size: 0.75rem;
+  color: var(--ifm-color-emphasis-600);
+  margin-bottom: 0.75rem;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.codeBlock {
+  font-size: 0.8rem;
+  color: var(--ifm-font-color-base);
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  line-height: 1.7;
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.codeFooter {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.codeBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--ifm-color-primary);
+  font-family: var(--ifm-font-family-monospace);
+}
+
+/* ── Persona cards ──────────────────────────────────── */
+.personaTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  margin-bottom: 0.75rem;
+}
+
+.personaTitle {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.personaList {
+  list-style: none;
+  padding: 0;
+  margin: 1.25rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.personaPoint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--ifm-color-emphasis-700);
+  margin: 0;
+}
+
+.personaDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--ifm-color-primary);
+  flex-shrink: 0;
+  margin-top: 6px;
+}
+
+/* ── CTA banner ─────────────────────────────────────── */
+.ctaBanner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 4rem 2rem;
+  text-align: center;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  background: color-mix(in oklab, var(--ifm-background-color) 70%, transparent);
+  backdrop-filter: blur(10px);
+}
+
+.ctaBannerContent {
+  position: relative;
+}
+
+.ctaBannerTitle {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+}
+
+.ctaBannerSubtitle {
+  color: var(--ifm-color-emphasis-700);
+  margin-bottom: 2rem;
+}

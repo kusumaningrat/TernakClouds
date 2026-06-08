@@ -176,21 +176,21 @@ All API response and request types live in `src/lib/types.ts`. Add types here be
 
 ## Adding a New Capability Provider
 
-1. **Backend — seed the provider catalogue** (`internal/providers/` or `internal/database/seed.go`):
+1. **Backend — seed the provider catalogue** in `internal/database/postgres.go` under the appropriate capability group:
    ```go
-   {Name: "my-provider", DisplayName: "My Provider", CapabilityName: "logs", Description: "..."}
+   {Name: "my-provider", DisplayName: "My Provider", CapabilityName: capability.CapSecrets, Description: "..."}
    ```
 
 2. **Backend — implement verify logic** if needed in `capability/service.go` (the `VerifyProvider` method probes `{endpoint}/ready` — adjust the path for your provider if needed)
 
-3. **Frontend — add endpoint placeholder** in the capability page for the relevant capability (e.g. `platform.logs.tsx`):
+3. **Frontend — add endpoint placeholder** in the relevant capability page (e.g. `platform.secrets.tsx`):
    ```typescript
    endpointPlaceholders={{ "my-provider": "https://my-provider.internal:9200" }}
    ```
 
 4. **Frontend — handle token optionality** in `CapabilityPage.tsx` if your provider doesn't require a token:
    ```typescript
-   const isTokenOptional = selectedProvider?.name === "loki" || selectedProvider?.name === "my-provider";
+   const isTokenOptional = selectedProvider?.name === "my-provider";
    ```
 
 ---

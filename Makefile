@@ -1,7 +1,7 @@
 # Structure:
-#   /           Public website (docs + platform intro) — Vite + React
+#   docs-site/  Public website (docs + platform intro) — Docusaurus
 #   backend/    Go/Gin REST API
-#   ui/   Admin dashboard — TanStack Start + React
+#   ui/         Admin dashboard — TanStack Start + React
 #
 # Usage:
 #   make install       Install all npm dependencies (root + ui/)
@@ -24,7 +24,7 @@
 
 prepare:
 	cd backend && go mod tidy
-	npm install
+	cd docs-site && npm install
 	cd ui && npm install
 
 # ── Development ──────────────────────────────────────────────────────────────
@@ -43,7 +43,7 @@ dev-ui:
 	cd ui && npm run dev
 
 dev-site:
-	npm run dev
+	cd docs-site && npm run start
 
 # ── Build ─────────────────────────────────────────────────────────────────────
 
@@ -56,7 +56,7 @@ build-ui:
 	cd ui && npm run build
 
 build-site:
-	npm run build
+	cd docs-site && npm run build
 
 # ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -82,7 +82,7 @@ fmt:
 clean:
 	rm -rf backend/bin
 	rm -rf ui/dist ui/.tanstack ui/.wrangler
-	rm -rf dist
+	rm -rf docs-site/build docs-site/.docusaurus
 
 # ── ui Linting ────────────────────────────────────────────────────────────────────
 

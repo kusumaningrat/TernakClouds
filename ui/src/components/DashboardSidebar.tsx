@@ -228,9 +228,6 @@ const PROVIDER_DISPLAY: Record<string, string> = {
   consul: "Consul",
   prometheus: "Prometheus",
   minio: "MinIO",
-  loki: "Loki",
-  opensearch: "OpenSearch",
-  elasticsearch: "Elasticsearch",
   harbor: "Harbor",
   dockerhub: "Docker Hub",
   ghcr: "GHCR",
@@ -465,13 +462,6 @@ export function DashboardSidebar() {
                   icon={KeyRound}
                   active={envActive("platform/secrets")}
                   badge={providerBadge("secrets")}
-                />
-                <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/platform/logs`}
-                  label="Logs Backend"
-                  icon={ScrollText}
-                  active={envActive("platform/logs")}
-                  badge={providerBadge("logs")}
                 />
                 {/* <NavLink
                   to={`/dashboard/environments/${activeEnvId}/platform/networking`}

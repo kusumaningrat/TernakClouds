@@ -12,7 +12,6 @@ const (
 	CapNetworking    = "networking"
 	CapObservability = "observability"
 	CapStorage       = "storage"
-	CapLogs          = "logs"
 )
 
 // Capability is a seeded catalogue row describing a platform capability type.

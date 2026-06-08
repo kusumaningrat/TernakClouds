@@ -9,8 +9,8 @@
 │                       Client Layer                          │
 │                                                             │
 │   ┌─────────────────────┐   ┌─────────────────────────┐    │
-│   │   Admin Dashboard   │   │    Public Website        │    │
-│   │   TanStack + React  │   │    Vite + React          │    │
+│   │   Admin Dashboard   │   │    Public Docs Site      │    │
+│   │   TanStack + React  │   │    Docusaurus            │    │
 │   │   :3000             │   │    :4000                 │    │
 │   └──────────┬──────────┘   └─────────────────────────┘    │
 └──────────────┼──────────────────────────────────────────────┘
@@ -35,10 +35,9 @@ Platform state               │  │  API  │ │ :4646 │ │ daemon │ │
 (users, workspaces,          │  └───────┘ └───────┘ └────────┘ │
  environments,               └──────────────────────────────────┘
  capabilities,
- bindings,
- blueprints,     Credentials only               Proxied through
- deployments)    (never in PG)                  backend — never
-                                                exposed to client
+ bindings,                   Credentials only         Proxied through
+ blueprints,                 (never in PG)            backend — never
+ deployments)                                         exposed to client
 ```
 
 ---
@@ -46,22 +45,27 @@ Platform state               │  │  API  │ │ :4646 │ │ daemon │ │
 ## Repository Structure
 
 ```
-idp/
-├── server/                 Go REST API
+TernakClouds/
+├── backend/                Go REST API
 │   ├── cmd/
 │   │   ├── api/            Main entrypoint
 │   │   └── reset-db/       Dev utility (drop + re-migrate + seed)
 │   ├── internal/           Domain packages
 │   └── pkg/                Shared utilities (JWT, responses, pagination)
 │
-├── admin/                  Admin dashboard
+├── ui/                     Admin dashboard (TanStack Start + React)
 │   └── src/
-│       ├── routes/         TanStack file-based routing
+│       ├── routes/         File-based routing (TanStack Router)
+│       ├── modules/        Feature modules (runtime, capabilities, deployments…)
 │       ├── components/     Shared UI components
-│       └── lib/            API queries, types, auth helpers
+│       └── lib/            API client, auth helpers, workspace context
 │
-├── src/                    Public website (Vite + React)
-├── docs/                   Platform documentation
+├── docs-site/              Public documentation site (Docusaurus)
+│   └── src/
+│       ├── pages/          Landing page
+│       └── css/            Custom theme
+│
+├── docs/                   Documentation source (Markdown)
 ├── docker-compose.yml
 └── Makefile
 ```
@@ -84,15 +88,17 @@ internal/
 ├── department/       Organizational department CRUD
 ├── docker/           Docker daemon proxy (containers, images, networks, volumes)
 ├── environment/      Workspace-scoped environment CRUD
-├── generator/        Multi-runtime manifest generators (K8s YAML, Nomad HCL, CI/CD)
+├── generator/        Multi-runtime manifest generators (K8s YAML, Nomad HCL, Docker, CI/CD)
 ├── kubernetes/       Kubernetes cluster proxy (pods, deployments, namespaces)
 ├── middleware/       JWT auth, RBAC checks, workspace/environment resolvers
-├── models/           Shared Base (UUID PK, soft delete, timestamps)
+├── models/           Shared base model (UUID PK, soft delete, timestamps)
 ├── nomad/            Nomad cluster proxy (jobs, allocations, nodes, logs)
 ├── platformapp/      Blueprint-based application provisioning + lifecycle
-├── providers/        Provider catalogue metadata (seeded at startup)
-├── registry/         Container registry management (workspace + environment binding)
-├── repository/       SCM provider management (GitHub, GitLab) + repo browser
+├── providers/        Concrete provider implementations
+│   ├── registry/     DockerHub, GCR, Harbor, GHCR, ECR
+│   └── repository/   GitHub, GitLab (self-hosted supported)
+├── registry/         Registry management (workspace + environment binding)
+├── repository/       SCM provider management + repo browser
 ├── role/             Platform RBAC — role definitions and permission checks
 ├── runtime/          Runtime abstraction and log streaming coordination
 ├── secret/           Vault-backed secret grants and environment access
@@ -165,7 +171,7 @@ platformapp.Handler.Provision
 platformapp.Service.Provision
   │  1. Loads blueprint spec
   │  2. Calls generator.Generate(spec, runtime)
-  │     → renders Nomad HCL or Kubernetes YAML
+  │     → renders Nomad HCL, Kubernetes YAML, or Docker compose
   │  3. Stores manifest + PlatformApp row (status: pending)
   │  4. If repo provider configured:
   │     a. Commits manifest to repository
@@ -198,6 +204,8 @@ SSE stream → Client
   data: <log line>
 ```
 
+The same SSE pattern applies to Nomad allocation logs and Docker container logs.
+
 ---
 
 ## Data Model
@@ -227,7 +235,8 @@ User ──────────────────── RefreshToken (
                                        ├── ServiceDeployment (1:N)
                                        │
                                        └── PlatformApp (1:N)
-                                             └── Blueprint (ref)
+                                             ├── Blueprint (ref)
+                                             └── DeploymentRecord (1:N)
 ```
 
 **Key invariants:**
@@ -297,7 +306,7 @@ The abort signal from the browser propagates as context cancellation in Go, clos
 ## Vault Integration
 
 ```
-BindProvider / StoreRepoToken (write path)
+BindProvider / StoreRepoToken / StoreRegistryCredential (write path)
   │
   vault.StoreToken(ctx, path, token)
   │  PUT {vault}/v1/{mount}/data/{path}
@@ -315,4 +324,42 @@ UnbindProvider / RemoveRepo (delete path)
   │  DELETE {vault}/v1/{mount}/metadata/{path}
 ```
 
+Vault paths follow a consistent scheme:
+
+| Resource | Path |
+|---|---|
+| Runtime provider credential | `idp/capabilities/{envID}/{capability}/{provider}/token` |
+| Registry credential | `idp/registries/{workspaceID}/{registryID}/token` |
+| Repository PAT | `idp/repositories/{workspaceID}/{repoID}/token` |
+| User secret grant | `idp/secrets/{envID}/{grantName}` |
+
 When `VAULT_ENABLED=false`, all Vault calls are no-ops. Token fields in API requests are accepted but silently discarded. This allows running TernakClouds in development without a Vault cluster.
+
+---
+
+## Infrastructure Provider Support
+
+### Container Registries
+
+| Provider | Package |
+|---|---|
+| Docker Hub | `providers/registry/dockerhub` |
+| Google Container Registry (GCR) | `providers/registry/gcr` |
+| GitHub Container Registry (GHCR) | `providers/registry/ghcr` |
+| AWS Elastic Container Registry (ECR) | `providers/registry/ecr` |
+| Harbor | `providers/registry/harbor` |
+
+### Source Control
+
+| Provider | Package | Notes |
+|---|---|---|
+| GitHub | `providers/repository/github` | github.com |
+| GitLab | `providers/repository/gitlab` | Cloud + self-hosted (`base_url`) |
+
+### Runtimes
+
+| Provider | Package | Capabilities |
+|---|---|---|
+| Kubernetes | `kubernetes/` | Pods, deployments, services, namespaces, scaling |
+| HashiCorp Nomad | `nomad/` | Jobs, allocations, nodes, namespaces, evaluations |
+| Docker | `docker/` | Containers, images, networks, volumes |

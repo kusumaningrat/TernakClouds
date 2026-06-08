@@ -1,3 +1,5 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "buildCommand": "cd docs-site && npm run build",
+  "outputDirectory": "docs-site/build",
+  "installCommand": "cd docs-site && npm install"
 }
