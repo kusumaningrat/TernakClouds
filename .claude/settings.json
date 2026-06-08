@@ -2,7 +2,19 @@
   "permissions": {
     "allow": [
       "Bash(go build *)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(git -C /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2 merge-base --is-ancestor 57b5552 HEAD)",
+      "Bash(git -C /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2 show eed5544:ui/src/routes/setup.tsx)",
+      "Bash(git -C /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2 show 57b5552:ui/src/components/GettingStartedChecklist.tsx)",
+      "Bash(git -C /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2 show eed5544:ui/src/routes/dashboard.index.tsx)",
+      "Bash(git -C /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2 show 57b5552:ui/src/lib/environment-context.tsx)",
+      "Bash(git -C /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2 checkout main)",
+      "Bash(git -C /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2 checkout -b feature/setup-onboarding)",
+      "Bash(sed -n '53,75p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/workspaces/queries.ts)",
+      "Bash(sed -n '20,55p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/environments/queries.ts)",
+      "Bash(sed -n '53,80p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/capabilities/queries.ts)",
+      "Bash(sed -n '33,60p' /home/clouders/personal/Oprek/Coding/TernakClouds-0.5.0-beta.2/ui/src/modules/catalog/queries.ts)",
+      "Bash(make lint-ui *)"
     ]
   }
 }

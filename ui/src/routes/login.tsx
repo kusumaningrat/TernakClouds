@@ -3,11 +3,12 @@ import { Shield, Layers, Users, GitBranch, AlertCircle } from "lucide-react";
 import { useState } from "react";
 import { isAuthenticated } from "@/lib/auth";
 import { useLogin } from "@/lib/queries";
+import { hasSetupBeenVisited } from "@/lib/setup-visited";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => {
     if (typeof window !== "undefined" && isAuthenticated()) {
-      throw redirect({ to: "/dashboard" });
+      throw redirect({ to: hasSetupBeenVisited() ? "/dashboard" : "/setup" });
     }
   },
   head: () => ({ meta: [{ title: "Sign in · TernakClouds" }] }),
@@ -44,7 +45,7 @@ function LoginPage() {
     setError(null);
     try {
       await login.mutateAsync({ email, password });
-      void navigate({ to: "/dashboard" });
+      void navigate({ to: "/setup" });
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Incorrect email or password.");
     }

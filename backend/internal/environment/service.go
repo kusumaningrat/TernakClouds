@@ -28,26 +28,6 @@ func (s *Service) Create(workspaceID uuid.UUID, input CreateEnvironmentInput) (*
 	return env, nil
 }
 
-func (s *Service) SeedDefaults(workspaceID uuid.UUID) error {
-	defaults := []struct {
-		name  string
-		order int
-	}{
-		{"dev", 1},
-		{"staging", 2},
-		{"production", 3},
-	}
-	for _, d := range defaults {
-		env := &Environment{
-			WorkspaceID: workspaceID,
-			Name:        d.name,
-			Slug:        d.name,
-			Order:       d.order,
-		}
-		_ = s.repo.Create(env) // best-effort; ignore duplicate slug errors
-	}
-	return nil
-}
 
 func (s *Service) List(workspaceID uuid.UUID) ([]Environment, error) {
 	return s.repo.ListByWorkspace(workspaceID)
