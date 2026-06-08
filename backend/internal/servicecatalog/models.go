@@ -30,9 +30,10 @@ type ServiceDeployment struct {
 	EnvironmentID uuid.UUID  `gorm:"type:uuid;not null;index"    json:"environment_id"`
 	CatalogName   string     `gorm:"not null"                    json:"catalog_name"`
 	JobName       string     `gorm:"not null"                    json:"job_name"`
-	Datacenter    string     `gorm:"not null"                    json:"datacenter"`
-	Namespace     string     `gorm:"not null;default:'default'"  json:"namespace"`
-	WorkerName    string     `gorm:"not null"                    json:"worker_name"`
+	Datacenter  string `gorm:"not null"                   json:"datacenter"`
+	Namespace   string `gorm:"not null;default:'default'" json:"namespace"`
+	WorkerName  string `gorm:"not null"                   json:"worker_name"`
+	HostNetwork string `gorm:"not null;default:'private'" json:"host_network"`
 	ExposedPort   int        `gorm:"not null"                    json:"exposed_port"`
 	ContainerPort int        `gorm:"not null"                    json:"container_port"`
 	CPU           int        `gorm:"not null"                    json:"cpu"`

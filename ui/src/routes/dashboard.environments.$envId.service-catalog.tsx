@@ -303,6 +303,7 @@ function DeployDialog({
   const [datacenter, setDatacenter] = useState("");
   const [namespace, setNamespace] = useState("default");
   const [workerName, setWorkerName] = useState("");
+  const [hostNetwork, setHostNetwork] = useState<"private" | "public">("private");
   // Kubernetes fields
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
@@ -329,6 +330,7 @@ function DeployDialog({
     setDatacenter("");
     setNamespace("default");
     setWorkerName("");
+    setHostNetwork("private");
     setK8sNamespace("default");
     setReplicas("1");
     setK8sNodeName("");
@@ -375,6 +377,7 @@ function DeployDialog({
         datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
         namespace: runtimeProvider === "nomad" ? namespace : undefined,
         worker_name: runtimeProvider === "nomad" ? workerName : undefined,
+        host_network: runtimeProvider === "nomad" ? hostNetwork : undefined,
         // Kubernetes
         k8s_namespace: runtimeProvider === "kubernetes" ? k8sNamespace : undefined,
         replicas: runtimeProvider === "kubernetes" && replicas ? parseInt(replicas, 10) : undefined,
@@ -543,6 +546,29 @@ function DeployDialog({
                     <option value="default">default</option>
                   )}
                 </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Host network</label>
+                <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
+                  Controls which network interface the port is bound to on the Nomad worker.
+                </p>
+                <div className="flex gap-2">
+                  {(["private", "public"] as const).map((net) => (
+                    <button
+                      key={net}
+                      type="button"
+                      onClick={() => setHostNetwork(net)}
+                      className={`flex-1 px-3 py-2 rounded-md border text-xs font-medium transition capitalize ${
+                        hostNetwork === net
+                          ? "border-primary bg-primary/10 text-primary"
+                          : "border-border bg-secondary text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      {net}
+                    </button>
+                  ))}
+                </div>
               </div>
             </>
           )}

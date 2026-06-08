@@ -23,6 +23,7 @@ export interface ServiceDeployment {
   datacenter: string;
   namespace: string;
   worker_name: string;
+  host_network: string;
   exposed_port: number;
   container_port: number;
   cpu: number;
@@ -47,6 +48,7 @@ export interface DeployServiceInput {
   datacenter?: string;
   namespace?: string;
   worker_name?: string;
+  host_network?: string;
   k8s_namespace?: string;
   replicas?: number;
   k8s_node_name?: string;

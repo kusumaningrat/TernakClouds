@@ -36,7 +36,7 @@ const hclTemplate = `job "[[.JobName]]-App" {
       port "http" {
         static       = [[.ExposedPort]]
         to           = [[.ContainerPort]]
-        host_network = "private"
+        host_network = "[[.HostNetwork]]"
       }
     }
 
@@ -107,6 +107,7 @@ type nomadTemplateVars struct {
 	Datacenter       string
 	Namespace        string
 	WorkerName       string
+	HostNetwork      string
 	ExposedPort      int
 	ContainerPort    int
 	CPU              int
@@ -367,6 +368,11 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		return nil, ErrUnsupportedRuntime
 	}
 
+	deployHostNetwork := input.HostNetwork
+	if deployHostNetwork != "public" {
+		deployHostNetwork = "private"
+	}
+
 	d := &ServiceDeployment{
 		WorkspaceID:     workspaceID,
 		EnvironmentID:   envID,
@@ -375,6 +381,7 @@ func (s *Service) Deploy(ctx context.Context, workspaceID, envID, callerID uuid.
 		Datacenter:      input.Datacenter,
 		Namespace:       namespace,
 		WorkerName:      input.WorkerName,
+		HostNetwork:     deployHostNetwork,
 		ExposedPort:     input.ExposedPort,
 		ContainerPort:   item.DefaultContainerPort,
 		CPU:             cpu,
@@ -411,11 +418,17 @@ func (s *Service) deployNomad(
 		}
 	}
 
+	hostNetwork := input.HostNetwork
+	if hostNetwork != "public" {
+		hostNetwork = "private"
+	}
+
 	vars := nomadTemplateVars{
 		JobName:          input.JobName,
 		Datacenter:       input.Datacenter,
 		Namespace:        namespace,
 		WorkerName:       input.WorkerName,
+		HostNetwork:      hostNetwork,
 		ExposedPort:      input.ExposedPort,
 		ContainerPort:    item.DefaultContainerPort,
 		CPU:              cpu,
