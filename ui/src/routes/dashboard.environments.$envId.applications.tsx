@@ -223,9 +223,7 @@ function ApplicationsPage() {
         subtitle="Platform applications provisioned from blueprints"
         actions={
           <button
-            onClick={() =>
-              void navigate({ to: "/dashboard/blueprints" })
-            }
+            onClick={() => void navigate({ to: "/dashboard/blueprints" })}
             className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition"
           >
             <Rocket className="size-3.5" /> New from blueprint
@@ -253,9 +251,7 @@ function ApplicationsPage() {
               manifest and deploys it automatically.
             </p>
             <button
-              onClick={() =>
-                void navigate({ to: "/dashboard/blueprints" })
-              }
+              onClick={() => void navigate({ to: "/dashboard/blueprints" })}
               className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
             >
               <Rocket className="size-3.5" /> Browse blueprints

@@ -1762,7 +1762,8 @@ function ProvisionWizard({
 
   const canNext = () => {
     if (!spec || !blueprint) return false;
-    if (step === 0) return envSlug !== "" && spec.service.name.trim() !== "" && !!spec.runtime.provider;
+    if (step === 0)
+      return envSlug !== "" && spec.service.name.trim() !== "" && !!spec.runtime.provider;
     if (step === 1) {
       if (spec.runtime.provider === "nomad")
         return !!spec.runtime.datacenter && !!spec.runtime.worker_name;
