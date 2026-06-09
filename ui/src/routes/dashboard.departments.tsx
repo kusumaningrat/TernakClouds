@@ -4,6 +4,7 @@ import { Building2, Plus, Loader2, Pencil, Trash2 } from "lucide-react";
 import { QueryError } from "@/components/QueryError";
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import {
   useDepartments,
   useCreateDepartment,
@@ -87,7 +88,7 @@ function CreateDeptDialog({ open, onClose }: { open: boolean; onClose: () => voi
       toast.success(`Department "${name}" created`);
       handleClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create department");
+      toastError(extractError(err, "Failed to create department"));
     }
   };
 
@@ -186,7 +187,7 @@ function EditDeptDialog({ dept, onClose }: { dept: Department; onClose: () => vo
       toast.success(`Department updated`);
       onClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update department");
+      toastError(extractError(err, "Failed to update department"));
     }
   };
 
@@ -274,7 +275,7 @@ function DeptsPage() {
       await deleteDept.mutateAsync(deletingDept.id);
       toast.success(`Department "${deletingDept.name}" deleted`);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete department");
+      toastError(extractError(err, "Failed to delete department"));
     } finally {
       setDeletingDept(null);
     }

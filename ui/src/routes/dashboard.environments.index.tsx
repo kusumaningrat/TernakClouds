@@ -3,6 +3,7 @@ import { DashboardTopbar } from "@/components/DashboardTopbar";
 import { Globe, ChevronRight, ArrowUpRight, Loader2, AlertCircle, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { extractError } from "@/lib/toast-helpers";
 import { useMe, useWorkspacesMine, useEnvironments, useCreateEnvironment } from "@/lib/queries";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 
@@ -44,7 +45,7 @@ function CreateEnvironmentModal({
       toast.success(`Environment "${name.trim()}" created.`);
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create environment.");
+      setError(extractError(err, "Failed to create environment."));
     }
   };
 

@@ -26,6 +26,7 @@ import {
   Check,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import type { RegistryBinding, RegistryProvider, RegistryProviderType } from "@/lib/types";
 import {
   Dialog,
@@ -119,7 +120,7 @@ function BindRegistryDialog({
       toast.success("Registry bound to environment");
       handleClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to bind registry");
+      toastError(extractError(err, "Failed to bind registry"));
     }
   };
 
@@ -627,7 +628,7 @@ function EnvRegistriesPage() {
       toast.success(`Registry unbound from environment`);
       setUnbinding(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to unbind registry");
+      toastError(extractError(err, "Failed to unbind registry"));
     }
   };
 

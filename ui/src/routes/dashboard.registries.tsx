@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import {
   useRegistries,
   useCreateRegistry,
@@ -117,7 +118,7 @@ function CreateRegistryDialog({
       toast.success(`Registry "${name}" created`);
       handleClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create registry");
+      toastError(extractError(err, "Failed to create registry"));
     }
   };
 
@@ -263,7 +264,7 @@ function EditRegistryDialog({
       toast.success("Registry updated");
       onClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update registry");
+      toastError(extractError(err, "Failed to update registry"));
     }
   };
 
@@ -675,7 +676,7 @@ function RegistryCard({
       toast.success("Connection validated");
     } catch (err: unknown) {
       setValidateResult("fail");
-      toast.error(err instanceof Error ? err.message : "Connection failed");
+      toastError(extractError(err, "Connection failed"));
     }
   };
 
@@ -804,7 +805,7 @@ function RegistriesPage() {
       toast.success(`Registry "${deleting.name}" deleted`);
       setDeleting(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete registry");
+      toastError(extractError(err, "Failed to delete registry"));
     }
   };
 

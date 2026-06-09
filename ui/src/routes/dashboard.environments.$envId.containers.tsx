@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import type { DockerContainerStub } from "@/lib/types";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import { getAccessToken } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/containers")({
@@ -268,7 +269,7 @@ function ContainerRow({
       await action.mutateAsync({ slug, envSlug: envId, id: container.id, action: a });
       toast.success(`Container ${a}ed`);
     } catch (e: unknown) {
-      toast.error((e as { message?: string })?.message ?? `Failed to ${a} container`);
+      toastError(extractError(e, `Failed to ${a} container`));
     }
   };
 
@@ -278,7 +279,7 @@ function ContainerRow({
       await remove.mutateAsync({ slug, envSlug: envId, id: container.id });
       toast.success("Container removed");
     } catch (e: unknown) {
-      toast.error((e as { message?: string })?.message ?? "Failed to remove container");
+      toastError(extractError(e, "Failed to remove container"));
     }
   };
 

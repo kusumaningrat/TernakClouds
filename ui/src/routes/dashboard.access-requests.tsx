@@ -19,6 +19,7 @@ import {
   useDenyAccessRequest,
 } from "@/lib/queries";
 import type { AccessRequest } from "@/lib/types";
+import { extractError } from "@/lib/toast-helpers";
 
 export const Route = createFileRoute("/dashboard/access-requests")({
   head: () => ({ meta: [{ title: "Access Requests · TernakClouds" }] }),
@@ -45,7 +46,7 @@ function RequestCard({ req }: { req: AccessRequest }) {
         input: roleOverride ? { role: roleOverride } : undefined,
       });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to approve");
+      setError(extractError(err, "Failed to approve"));
     }
   }
 
@@ -54,7 +55,7 @@ function RequestCard({ req }: { req: AccessRequest }) {
     try {
       await deny.mutateAsync(req.id);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to deny");
+      setError(extractError(err, "Failed to deny"));
     }
   }
 

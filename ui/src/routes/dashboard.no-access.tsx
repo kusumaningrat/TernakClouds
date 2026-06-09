@@ -8,6 +8,7 @@ import {
   useWorkspaceDirectory,
 } from "@/lib/queries";
 import type { AccessRequest } from "@/lib/types";
+import { extractError } from "@/lib/toast-helpers";
 
 export const Route = createFileRoute("/dashboard/no-access")({
   head: () => ({ meta: [{ title: "Request Access · TernakClouds" }] }),
@@ -55,7 +56,7 @@ function RequestForm({ onDone }: { onDone: () => void }) {
       await createRequest.mutateAsync({ workspace_id: workspaceId, requested_role: role, reason });
       onDone();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to submit request");
+      setError(extractError(err, "Failed to submit request"));
     }
   }
 

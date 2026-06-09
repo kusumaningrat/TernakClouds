@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import {
   useRepoProviders,
   useCreateRepoProvider,
@@ -115,7 +116,7 @@ function CreateProviderDialog({
       toast.success(`Repository provider "${name}" created`);
       handleClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create repository provider");
+      toastError(extractError(err, "Failed to create repository provider"));
     }
   };
 
@@ -282,7 +283,7 @@ function EditProviderDialog({
       toast.success("Repository provider updated");
       onClose();
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update repository provider");
+      toastError(extractError(err, "Failed to update repository provider"));
     }
   };
 
@@ -637,7 +638,7 @@ function ProviderCard({
       toast.success("Connection validated");
     } catch (err: unknown) {
       setValidateResult("fail");
-      toast.error(err instanceof Error ? err.message : "Connection failed");
+      toastError(extractError(err, "Connection failed"));
     }
   };
 
@@ -765,7 +766,7 @@ function RepositoriesPage() {
       toast.success(`Repository provider "${deleting.name}" deleted`);
       setDeleting(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete repository provider");
+      toastError(extractError(err, "Failed to delete repository provider"));
     }
   };
 

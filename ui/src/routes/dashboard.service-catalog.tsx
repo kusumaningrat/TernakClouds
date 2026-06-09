@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import type { CatalogItem, ServiceDeployment } from "@/lib/types";
 import type { ApiError } from "@/lib/api";
 import {
@@ -339,8 +340,16 @@ function DeployDialog({
 
   const { data: nodes } = useNomadNodes(workspaceSlug, dialogEnvSlug, hasNomad);
   const { data: nomadNamespaces } = useNomadNamespaces(workspaceSlug, dialogEnvSlug, hasNomad);
-  const { data: k8sNamespaces } = useK8sNamespaces(workspaceSlug, dialogEnvSlug, hasKubernetes);
-  const { data: k8sNodes } = useK8sNodes(workspaceSlug, dialogEnvSlug, hasKubernetes);
+  const { data: k8sNamespaces, isError: k8sNsError } = useK8sNamespaces(
+    workspaceSlug,
+    dialogEnvSlug,
+    hasKubernetes,
+  );
+  const { data: k8sNodes, isError: k8sNodesError } = useK8sNodes(
+    workspaceSlug,
+    dialogEnvSlug,
+    hasKubernetes,
+  );
   const { data: bindings } = useEnvironmentRegistries(workspaceSlug, dialogEnvSlug);
   const deploy = useDeployService(workspaceSlug, dialogEnvSlug);
 
@@ -441,16 +450,16 @@ function DeployDialog({
       handleClose();
     } catch (err: unknown) {
       if ((err as ApiError)?.status === 503) {
-        toast.error("No runtime provider configured", {
+        toastError("No runtime provider configured", {
           description: "Bind a provider in Platform → Runtime before deploying.",
         });
         return;
       }
-      const raw = err instanceof Error ? err.message : "Deploy failed";
+      const raw = extractError(err, "Deploy failed");
       const parts = raw.split(": ");
       const last = parts[parts.length - 1] ?? raw;
       const clean = last.startsWith("{") ? (parts[parts.length - 2] ?? raw) : last;
-      toast.error(clean, { description: raw !== clean ? raw : undefined });
+      toastError(clean, { description: raw !== clean ? raw : undefined });
     }
   };
 
@@ -614,25 +623,44 @@ function DeployDialog({
 
           {runtimeProvider === "kubernetes" && (
             <div className="space-y-3">
+              {(k8sNsError || k8sNodesError) && (
+                <div className="flex items-start gap-2 px-3 py-2.5 rounded-md bg-destructive/10 border border-destructive/20 text-xs text-destructive">
+                  <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Kubernetes cluster unreachable — namespace and node lists unavailable. Enter
+                    them manually.
+                  </span>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Namespace *</label>
-                  <select
-                    required
-                    value={k8sNamespace}
-                    onChange={(e) => setK8sNamespace(e.target.value)}
-                    className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
-                  >
-                    {k8sNamespaces && k8sNamespaces.length > 0 ? (
-                      k8sNamespaces.map((ns) => (
-                        <option key={ns.name} value={ns.name}>
-                          {ns.name}
-                        </option>
-                      ))
-                    ) : (
-                      <option value="default">default</option>
-                    )}
-                  </select>
+                  {k8sNsError ? (
+                    <input
+                      required
+                      value={k8sNamespace}
+                      onChange={(e) => setK8sNamespace(e.target.value)}
+                      placeholder="default"
+                      className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                    />
+                  ) : (
+                    <select
+                      required
+                      value={k8sNamespace}
+                      onChange={(e) => setK8sNamespace(e.target.value)}
+                      className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+                    >
+                      {k8sNamespaces && k8sNamespaces.length > 0 ? (
+                        k8sNamespaces.map((ns) => (
+                          <option key={ns.name} value={ns.name}>
+                            {ns.name}
+                          </option>
+                        ))
+                      ) : (
+                        <option value="default">default</option>
+                      )}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs font-medium text-muted-foreground">Replicas</label>
@@ -1043,7 +1071,7 @@ function ServiceCatalogPage() {
       toast.success(`${stopping.job_name} stopped`);
       setStopping(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to stop deployment");
+      toastError(extractError(err, "Failed to stop deployment"));
     }
   };
 
