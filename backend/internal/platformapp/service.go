@@ -50,11 +50,13 @@ func (s *Service) Preview(input PreviewInput, workspaceSlug, envSlug string) (*G
 		RuntimeProvider: spec.Runtime.Provider,
 	}
 
-	manifest, err := generateManifest(spec, workspaceSlug, envSlug)
-	if err != nil {
-		return nil, err
+	if spec.Runtime.Provider != "" {
+		manifest, err := generateManifest(spec, workspaceSlug, envSlug)
+		if err != nil {
+			return nil, err
+		}
+		resources.RuntimeManifest = manifest
 	}
-	resources.RuntimeManifest = manifest
 
 	if spec.CICD.Enabled && spec.CICD.Provider != "" {
 		cicd, cicdErr := generateCICD(spec, workspaceSlug, envSlug)
@@ -83,10 +85,13 @@ func (s *Service) Provision(
 
 	spec := input.Spec
 
-	// ── Generate runtime manifest ─────────────────────────────────────────────
-	manifest, err := generateManifest(spec, workspaceSlug, envSlug)
-	if err != nil {
-		return nil, fmt.Errorf("generate manifest: %w", err)
+	// ── Generate runtime manifest (skipped for CI/CD-only blueprints) ────────
+	var manifest string
+	if spec.Runtime.Provider != "" {
+		manifest, err = generateManifest(spec, workspaceSlug, envSlug)
+		if err != nil {
+			return nil, fmt.Errorf("generate manifest: %w", err)
+		}
 	}
 	if input.OverrideManifest != "" {
 		manifest = input.OverrideManifest

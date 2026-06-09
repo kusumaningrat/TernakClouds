@@ -71,5 +71,11 @@ func toResponse(b Blueprint) BlueprintResponse {
 		IsSystem:          b.IsSystem,
 		Icon:              b.Icon,
 		CreatedAt:         b.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		DefaultImage:      b.DefaultImage,
+		DefaultTag:        b.DefaultTag,
+		DefaultPort:       b.DefaultPort,
+		DefaultCPU:        b.DefaultCPU,
+		DefaultMemoryMB:   b.DefaultMemoryMB,
+		CICDProvider:      b.CICDProvider,
 	}
 }
