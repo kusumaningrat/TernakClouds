@@ -7,9 +7,32 @@ import {
   useNomadJobs,
   useK8sDeployments,
   useK8sNamespaces,
+  useMe,
+  useStopJob,
+  useScaleK8sDeployment,
 } from "@/lib/queries";
 import { useState } from "react";
-import { Loader2, AlertTriangle, RefreshCw, Server } from "lucide-react";
+import {
+  Loader2,
+  AlertTriangle,
+  RefreshCw,
+  Server,
+  Info,
+  Terminal,
+  Trash2,
+  Square,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import type { NomadJobStub, K8sDeploymentStub } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/deployments/")({
@@ -18,6 +41,15 @@ export const Route = createFileRoute("/dashboard/environments/$envId/deployments
 });
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function isAdminOrManager(roles: { role?: { name?: string } }[] | undefined): boolean {
+  return (
+    roles?.some((ur) => {
+      const n = (ur.role?.name ?? "").toLowerCase();
+      return n === "admin" || n === "manager";
+    }) ?? false
+  );
+}
 
 function formatTime(ns: number | undefined) {
   if (!ns) return "—";
@@ -56,10 +88,14 @@ function JobRow({
   job,
   envId,
   namespace,
+  isAdmin,
+  onDelete,
 }: {
   job: NomadJobStub;
   envId: string;
   namespace: string;
+  isAdmin: boolean;
+  onDelete: (job: NomadJobStub) => void;
 }) {
   const dotCls = JOB_STATUS_DOT[job.Status] ?? "bg-muted-foreground";
   const textCls = JOB_STATUS_TEXT[job.Status] ?? "text-muted-foreground";
@@ -96,6 +132,37 @@ function JobRow({
       <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">
         {formatTime(job.SubmitTime)}
       </td>
+      <td className="px-3 py-3">
+        <div className="flex items-center gap-1">
+          <Link
+            to="/dashboard/environments/$envId/deployments/$jobId"
+            params={{ envId, jobId: job.ID }}
+            search={{ namespace }}
+            title="View details"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
+          >
+            <Info className="size-3.5" />
+          </Link>
+          <Link
+            to="/dashboard/environments/$envId/deployments/$jobId"
+            params={{ envId, jobId: job.ID }}
+            search={{ namespace }}
+            title="View logs"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
+          >
+            <Terminal className="size-3.5" />
+          </Link>
+          {isAdmin && (
+            <button
+              onClick={() => onDelete(job)}
+              title="Delete job (admin)"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          )}
+        </div>
+      </td>
     </tr>
   );
 }
@@ -104,6 +171,9 @@ function JobRow({
 
 function JobsListView({ slug, envId }: { slug: string; envId: string }) {
   const [namespace, setNamespace] = useState("default");
+  const [deletingJob, setDeletingJob] = useState<NomadJobStub | null>(null);
+  const [purge, setPurge] = useState(true);
+
   const { data: namespaces = [] } = useNomadNamespaces(slug, envId);
   const {
     data: jobs = [],
@@ -113,6 +183,27 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
     refetch,
     dataUpdatedAt,
   } = useNomadJobs(slug, envId, namespace);
+  const { data: me } = useMe();
+  const isAdmin = isAdminOrManager(me?.roles);
+  const stopJob = useStopJob();
+
+  const handleDelete = async () => {
+    if (!deletingJob) return;
+    try {
+      await stopJob.mutateAsync({
+        slug,
+        envSlug: envId,
+        jobID: deletingJob.ID,
+        namespace,
+        purge,
+      });
+      toast.success(`Job "${deletingJob.Name}" ${purge ? "deleted" : "stopped"}`);
+      setDeletingJob(null);
+      setPurge(true);
+    } catch {
+      toast.error("Failed to delete job");
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -178,7 +269,7 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                {["Job", "Type", "Status", "Datacenters", "Submitted"].map((h) => (
+                {["Job", "Type", "Status", "Datacenters", "Submitted", "Actions"].map((h) => (
                   <th
                     key={h}
                     className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -190,19 +281,85 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
             </thead>
             <tbody className="bg-background">
               {jobs.map((job) => (
-                <JobRow key={job.ID} job={job} envId={envId} namespace={namespace} />
+                <JobRow
+                  key={job.ID}
+                  job={job}
+                  envId={envId}
+                  namespace={namespace}
+                  isAdmin={isAdmin}
+                  onDelete={setDeletingJob}
+                />
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <AlertDialog
+        open={!!deletingJob}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeletingJob(null);
+            setPurge(true);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete job?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deletingJob?.Name}</strong> will be deregistered and all running allocations
+              stopped.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <label className="flex items-start gap-2.5 cursor-pointer group px-1 pb-1">
+            <input
+              type="checkbox"
+              checked={purge}
+              onChange={(e) => setPurge(e.target.checked)}
+              className="mt-0.5 accent-destructive cursor-pointer"
+            />
+            <div>
+              <span className="text-sm font-medium">Purge job</span>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Permanently remove the job from Nomad state. Cannot be restarted later.
+              </p>
+            </div>
+          </label>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={stopJob.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleDelete()}
+              disabled={stopJob.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {stopJob.isPending ? (
+                <Loader2 className="size-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Trash2 className="size-3.5 mr-1.5" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
 // ─── K8s deployment row ───────────────────────────────────────────────────────
 
-function K8sDeploymentRow({ dep, envId }: { dep: K8sDeploymentStub; envId: string }) {
+function K8sDeploymentRow({
+  dep,
+  envId,
+  isAdmin,
+  onStop,
+}: {
+  dep: K8sDeploymentStub;
+  envId: string;
+  isAdmin: boolean;
+  onStop: (dep: K8sDeploymentStub) => void;
+}) {
   const isHealthy = dep.ready >= dep.desired && dep.desired > 0;
   const isScaledDown = dep.desired === 0;
 
@@ -246,6 +403,35 @@ function K8sDeploymentRow({ dep, envId }: { dep: K8sDeploymentStub; envId: strin
       <td className="px-3 py-3 text-xs text-muted-foreground whitespace-nowrap">
         {formatDate(dep.createdAt)}
       </td>
+      <td className="px-3 py-3">
+        <div className="flex items-center gap-1">
+          <Link
+            to="/dashboard/environments/$envId/deployments/k8s/$namespace/$name"
+            params={{ envId, namespace: dep.namespace, name: dep.name }}
+            title="View details"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
+          >
+            <Info className="size-3.5" />
+          </Link>
+          <Link
+            to="/dashboard/environments/$envId/deployments/k8s/$namespace/$name"
+            params={{ envId, namespace: dep.namespace, name: dep.name }}
+            title="View logs"
+            className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition"
+          >
+            <Terminal className="size-3.5" />
+          </Link>
+          {isAdmin && !isScaledDown && (
+            <button
+              onClick={() => onStop(dep)}
+              title="Scale down to 0 (admin)"
+              className="p-1.5 rounded-md text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition"
+            >
+              <Square className="size-3.5" />
+            </button>
+          )}
+        </div>
+      </td>
     </tr>
   );
 }
@@ -257,6 +443,8 @@ type K8sFilter = "all" | "active" | "scaled-down";
 function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }) {
   const [filter, setFilter] = useState<K8sFilter>("all");
   const [namespace, setNamespace] = useState("default");
+  const [stoppingDep, setStoppingDep] = useState<K8sDeploymentStub | null>(null);
+
   const { data: namespaces = [] } = useK8sNamespaces(slug, envId);
   const {
     data: deployments = [],
@@ -266,6 +454,26 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
     refetch,
     dataUpdatedAt,
   } = useK8sDeployments(slug, envId, namespace);
+  const { data: me } = useMe();
+  const isAdmin = isAdminOrManager(me?.roles);
+  const scaleDeployment = useScaleK8sDeployment();
+
+  const handleStop = async () => {
+    if (!stoppingDep) return;
+    try {
+      await scaleDeployment.mutateAsync({
+        slug,
+        envSlug: envId,
+        namespace: stoppingDep.namespace,
+        name: stoppingDep.name,
+        replicas: 0,
+      });
+      toast.success(`Deployment "${stoppingDep.name}" scaled down to 0`);
+      setStoppingDep(null);
+    } catch {
+      toast.error("Failed to scale down deployment");
+    }
+  };
 
   const filtered = deployments.filter((d) => {
     if (filter === "active") return d.desired > 0;
@@ -363,26 +571,70 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                {["Deployment", "Status", "Ready", "Up-to-date", "Available", "Created"].map(
-                  (h) => (
-                    <th
-                      key={h}
-                      className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
-                    >
-                      {h}
-                    </th>
-                  ),
-                )}
+                {[
+                  "Deployment",
+                  "Status",
+                  "Ready",
+                  "Up-to-date",
+                  "Available",
+                  "Created",
+                  "Actions",
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
+                  >
+                    {h}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody className="bg-background">
               {filtered.map((dep) => (
-                <K8sDeploymentRow key={`${dep.namespace}/${dep.name}`} dep={dep} envId={envId} />
+                <K8sDeploymentRow
+                  key={`${dep.namespace}/${dep.name}`}
+                  dep={dep}
+                  envId={envId}
+                  isAdmin={isAdmin}
+                  onStop={setStoppingDep}
+                />
               ))}
             </tbody>
           </table>
         </div>
       )}
+
+      <AlertDialog
+        open={!!stoppingDep}
+        onOpenChange={(open) => {
+          if (!open) setStoppingDep(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Scale down deployment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{stoppingDep?.name}</strong> will be scaled to 0 replicas. You can scale it
+              back up from the deployment detail page.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={scaleDeployment.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => void handleStop()}
+              disabled={scaleDeployment.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {scaleDeployment.isPending ? (
+                <Loader2 className="size-3.5 animate-spin mr-1.5" />
+              ) : (
+                <Square className="size-3.5 mr-1.5" />
+              )}
+              Scale Down
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
