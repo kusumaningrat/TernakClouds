@@ -16,6 +16,7 @@ import {
 import { QueryError } from "@/components/QueryError";
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import { useMe, useRoles, useChangePassword } from "@/lib/queries";
 import type { Permission } from "@/lib/types";
 
@@ -90,8 +91,8 @@ function PermissionChecker({ userId }: { userId: string }) {
       );
       const json = (await res.json()) as { data: { has_permission: boolean } };
       setPermResult({ checked: permInput.trim(), has: json.data.has_permission });
-    } catch {
-      toast.error("Permission check failed");
+    } catch (err: unknown) {
+      toastError(extractError(err, "Permission check failed"));
     } finally {
       setPermChecking(false);
     }
@@ -179,7 +180,7 @@ function ChangePasswordForm() {
       setNext("");
       setConfirm("");
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update password.");
+      setError(extractError(err, "Failed to update password."));
     }
   };
 

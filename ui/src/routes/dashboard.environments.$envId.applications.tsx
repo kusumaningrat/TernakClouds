@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import type { PlatformApp } from "@/lib/types";
 
 const APPS_LIMIT = 5;
@@ -212,7 +213,7 @@ function ApplicationsPage() {
       toast.success(`${deleting.name} removed`);
       setDeleting(null);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove application");
+      toastError(extractError(err, "Failed to remove application"));
     }
   };
 

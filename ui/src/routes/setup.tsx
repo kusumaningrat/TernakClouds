@@ -26,6 +26,7 @@ import {
   Building2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { extractError } from "@/lib/toast-helpers";
 
 // ─── Route ────────────────────────────────────────────────────────────────────
 
@@ -395,7 +396,7 @@ function WorkspaceStep({
       const ws = await createWs.mutateAsync({ name: name.trim() });
       onDone(ws);
     } catch (e: unknown) {
-      setError((e as { message?: string })?.message ?? "Failed to create workspace. Try again.");
+      setError(extractError(e, "Failed to create workspace. Try again."));
     }
   };
 
@@ -495,7 +496,7 @@ function EnvironmentStep({
       });
       onDone(env.slug);
     } catch (e: unknown) {
-      setError((e as { message?: string })?.message ?? "Failed to create environment. Try again.");
+      setError(extractError(e, "Failed to create environment. Try again."));
     }
   };
 
@@ -638,10 +639,7 @@ function RuntimeStep({
       });
       onDone();
     } catch (e: unknown) {
-      setError(
-        (e as { message?: string })?.message ??
-          "Could not connect. Check your endpoint and credentials.",
-      );
+      setError(extractError(e, "Could not connect. Check your endpoint and credentials."));
     }
   };
 
@@ -791,9 +789,7 @@ function ServiceStep({
       });
       onDone();
     } catch (e: unknown) {
-      setError(
-        (e as { message?: string })?.message ?? "Deployment failed. Check your runtime connection.",
-      );
+      setError(extractError(e, "Deployment failed. Check your runtime connection."));
     }
   };
 

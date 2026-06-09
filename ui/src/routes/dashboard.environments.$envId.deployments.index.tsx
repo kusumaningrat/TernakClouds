@@ -23,6 +23,7 @@ import {
   Square,
 } from "lucide-react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -200,8 +201,8 @@ function JobsListView({ slug, envId }: { slug: string; envId: string }) {
       toast.success(`Job "${deletingJob.Name}" ${purge ? "deleted" : "stopped"}`);
       setDeletingJob(null);
       setPurge(true);
-    } catch {
-      toast.error("Failed to delete job");
+    } catch (err: unknown) {
+      toastError(extractError(err, "Failed to delete job"));
     }
   };
 
@@ -470,8 +471,8 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
       });
       toast.success(`Deployment "${stoppingDep.name}" scaled down to 0`);
       setStoppingDep(null);
-    } catch {
-      toast.error("Failed to scale down deployment");
+    } catch (err: unknown) {
+      toastError(extractError(err, "Failed to scale down deployment"));
     }
   };
 

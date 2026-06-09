@@ -4,6 +4,7 @@ import { useState } from "react";
 import { isAuthenticated } from "@/lib/auth";
 import { useChangePassword } from "@/lib/queries";
 import { toast } from "sonner";
+import { extractError } from "@/lib/toast-helpers";
 
 export const Route = createFileRoute("/change-password")({
   beforeLoad: () => {
@@ -42,7 +43,7 @@ function ChangePasswordPage() {
       toast.success("Password updated. Welcome!");
       void navigate({ to: "/dashboard" });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to update password.");
+      setError(extractError(err, "Failed to update password."));
     }
   };
 

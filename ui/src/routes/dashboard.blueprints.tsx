@@ -35,6 +35,7 @@ import type {
 } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import {
   Globe,
   Cpu,
@@ -1244,7 +1245,7 @@ function Step4SecretsCICD({
       updateSecrets({ vault_path: result.vault_path });
       toast.success("Secret grant created", { description: result.name });
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create secret grant");
+      toastError(extractError(err, "Failed to create secret grant"));
     }
   };
 
@@ -1785,7 +1786,7 @@ function ProvisionWizard({
         setEditedManifest(res.runtime_manifest ?? "");
         setEditedCICD(res.cicd_workflow ?? "");
       } catch (err: unknown) {
-        setPreviewError(err instanceof Error ? err.message : "Preview failed");
+        setPreviewError(extractError(err, "Preview failed"));
       }
       return;
     }
@@ -1827,8 +1828,8 @@ function ProvisionWizard({
       resetWizard();
       onClose();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Provision failed";
-      toast.error(msg);
+      const msg = extractError(err, "Provision failed");
+      toastError(msg);
     }
   };
 
@@ -2410,8 +2411,8 @@ function ProvisionedApplications({ workspaceSlug }: { workspaceSlug: string }) {
       toast.success("Application deleted");
       setConfirmDelete(null);
       if (apps.length === 1 && appsPage > 1) setAppsPage((p) => p - 1);
-    } catch {
-      toast.error("Failed to delete application");
+    } catch (err: unknown) {
+      toastError(extractError(err, "Failed to delete application"));
     }
   };
 

@@ -13,6 +13,7 @@ import {
 } from "@/lib/queries";
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import {
   Loader2,
   AlertCircle,
@@ -204,7 +205,7 @@ function UserDrawer({
       await assignRole.mutateAsync({ userId: user.id, roleId });
       toast.success("Role assigned");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to assign role");
+      toastError(extractError(err, "Failed to assign role"));
     }
   };
 
@@ -213,7 +214,7 @@ function UserDrawer({
       await revokeRole.mutateAsync({ userId: user.id, roleId });
       toast.success("Role revoked");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to revoke role");
+      toastError(extractError(err, "Failed to revoke role"));
     }
   };
 
@@ -465,7 +466,7 @@ function CreateUserModal({ onClose }: { onClose: () => void }) {
       toast.success(`User ${form.email} created successfully`);
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to create user");
+      setError(extractError(err, "Failed to create user"));
     }
   };
 

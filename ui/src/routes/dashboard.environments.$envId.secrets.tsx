@@ -42,6 +42,7 @@ import type {
   SecretEntry,
 } from "@/lib/types";
 import { isAdminGrant } from "@/lib/types";
+import { extractError } from "@/lib/toast-helpers";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/secrets")({
   head: () => ({ meta: [{ title: "Secrets · TernakClouds" }] }),
@@ -296,7 +297,7 @@ function SecretDetailDrawer({
       setSaved(true);
       setTimeout(onClose, 1400);
     } catch (e) {
-      setSaveError((e as { message?: string })?.message ?? "Failed to write to Vault.");
+      setSaveError(extractError(e, "Failed to write to Vault."));
     }
   };
 
@@ -535,7 +536,7 @@ function MemberEditGrantForm({
       });
       onDone();
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to update.");
+      setError(extractError(e, "Failed to update."));
     }
   };
 
@@ -620,7 +621,7 @@ function EditGrantForm({
       });
       onDone();
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to update.");
+      setError(extractError(e, "Failed to update."));
     }
   };
 
@@ -769,7 +770,7 @@ function AddGrantForm({
       });
       onDone();
     } catch (e) {
-      setError((e as { message?: string })?.message ?? "Failed to create grant.");
+      setError(extractError(e, "Failed to create grant."));
     }
   };
 

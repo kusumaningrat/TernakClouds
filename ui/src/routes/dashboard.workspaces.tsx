@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { toastError, extractError } from "@/lib/toast-helpers";
 import {
   useMe,
   useWorkspaces,
@@ -282,7 +283,7 @@ function WorkspaceDetail({
       toast.success("Workspace updated");
       setShowEdit(false);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to update workspace");
+      toastError(extractError(err, "Failed to update workspace"));
     }
   };
 
@@ -292,7 +293,7 @@ function WorkspaceDetail({
       toast.success("Workspace deleted");
       setShowDeleteConfirm(false);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete workspace");
+      toastError(extractError(err, "Failed to delete workspace"));
     }
   };
 
@@ -305,7 +306,7 @@ function WorkspaceDetail({
       setMemberInput("");
       setShowAddMember(false);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to add member");
+      toastError(extractError(err, "Failed to add member"));
     }
   };
 
@@ -315,7 +316,7 @@ function WorkspaceDetail({
       await removeMember.mutateAsync({ slug, userId });
       toast.success("Member removed");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove member");
+      toastError(extractError(err, "Failed to remove member"));
     } finally {
       setDeletingMember(null);
     }
@@ -334,7 +335,7 @@ function WorkspaceDetail({
       setEnvDesc("");
       setShowAddEnv(false);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create environment");
+      toastError(extractError(err, "Failed to create environment"));
     }
   };
 
@@ -344,7 +345,7 @@ function WorkspaceDetail({
       await deleteEnv.mutateAsync({ slug, envSlug });
       toast.success("Environment deleted");
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete environment");
+      toastError(extractError(err, "Failed to delete environment"));
     } finally {
       setDeletingEnv(null);
     }
@@ -645,7 +646,7 @@ function WorkspacesPage() {
       setShowCreate(false);
       setSelectedSlug(ws.slug);
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : "Failed to create workspace");
+      toastError(extractError(err, "Failed to create workspace"));
     }
   };
 

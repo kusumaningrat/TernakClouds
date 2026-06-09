@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { useLogin } from "@/lib/queries";
 import { hasSetupBeenVisited } from "@/lib/setup-visited";
 import type { MeResponse } from "@/lib/types";
+import { extractError } from "@/lib/toast-helpers";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: () => {
@@ -59,7 +60,7 @@ function LoginPage() {
         void navigate({ to: "/setup" });
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Incorrect email or password.");
+      setError(extractError(err, "Incorrect email or password."));
     }
   };
 
