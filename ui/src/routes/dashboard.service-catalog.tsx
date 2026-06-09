@@ -1,4 +1,4 @@
-import { createFileRoute, useParams } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { DashboardTopbar } from "@/components/DashboardTopbar";
 import { useWorkspaceContext } from "@/lib/workspace-context";
 import {
@@ -13,6 +13,7 @@ import {
   useEnvironmentRegistries,
   useNomadJob,
   useCapabilities,
+  useEnvironments,
   catalogKeys,
 } from "@/lib/queries";
 import { useState, useEffect } from "react";
@@ -62,7 +63,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export const Route = createFileRoute("/dashboard/environments/$envId/service-catalog")({
+export const Route = createFileRoute("/dashboard/service-catalog")({
   head: () => ({ meta: [{ title: "Service Catalog · TernakClouds" }] }),
   component: ServiceCatalogPage,
 });
@@ -138,7 +139,8 @@ const CATEGORY_CONFIG: Record<Exclude<Category, "All">, CategoryConfig> = {
   Networking: { icon: Network, color: "text-slate-600", bg: "bg-slate-500/10" },
 };
 
-// Fetches live Nomad status — only rendered for Nomad deployments.
+// ─── Nomad live status ─────────────────────────────────────────────────────────
+
 function NomadLiveStatus({
   workspaceSlug,
   envSlug,
@@ -161,8 +163,6 @@ function NomadLiveStatus({
     enabled,
   );
 
-  // When the Nomad job can't be reached, invalidate the deployments list so
-  // the backend sync can detect and remove jobs that no longer exist on the provider.
   useEffect(() => {
     if (!error) return;
     void queryClient.invalidateQueries({
@@ -305,16 +305,27 @@ function DeployDialog({
   item,
   onClose,
   workspaceSlug,
-  envSlug,
-  capabilities,
+  initialEnvSlug,
 }: {
   open: boolean;
   item: CatalogItem | null;
   onClose: () => void;
   workspaceSlug: string;
-  envSlug: string;
-  capabilities: { capability_name: string; providers: { provider_name: string }[] }[];
+  initialEnvSlug: string;
 }) {
+  const { data: environments = [] } = useEnvironments(workspaceSlug);
+  const [dialogEnvSlug, setDialogEnvSlug] = useState(initialEnvSlug);
+
+  // Keep in sync when page env changes (only if dialog is closed)
+  useEffect(() => {
+    if (!open && initialEnvSlug) setDialogEnvSlug(initialEnvSlug);
+  }, [open, initialEnvSlug]);
+
+  const { data: capabilities = [], isLoading: capLoading } = useCapabilities(
+    workspaceSlug,
+    dialogEnvSlug,
+  );
+
   const hasNomad = capabilities.some(
     (c) => c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
   );
@@ -326,42 +337,36 @@ function DeployDialog({
     (c) => c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "docker"),
   );
 
-  const { data: nodes } = useNomadNodes(workspaceSlug, envSlug, hasNomad);
-  const { data: nomadNamespaces } = useNomadNamespaces(workspaceSlug, envSlug, hasNomad);
-  const { data: k8sNamespaces } = useK8sNamespaces(workspaceSlug, envSlug, hasKubernetes);
-  const { data: k8sNodes } = useK8sNodes(workspaceSlug, envSlug, hasKubernetes);
-  const { data: bindings } = useEnvironmentRegistries(workspaceSlug, envSlug);
-  const deploy = useDeployService(workspaceSlug, envSlug);
+  const { data: nodes } = useNomadNodes(workspaceSlug, dialogEnvSlug, hasNomad);
+  const { data: nomadNamespaces } = useNomadNamespaces(workspaceSlug, dialogEnvSlug, hasNomad);
+  const { data: k8sNamespaces } = useK8sNamespaces(workspaceSlug, dialogEnvSlug, hasKubernetes);
+  const { data: k8sNodes } = useK8sNodes(workspaceSlug, dialogEnvSlug, hasKubernetes);
+  const { data: bindings } = useEnvironmentRegistries(workspaceSlug, dialogEnvSlug);
+  const deploy = useDeployService(workspaceSlug, dialogEnvSlug);
 
-  // Determine available runtimes from capabilities
-  const availableRuntimes = [
-    ...(hasNomad ? [{ value: "nomad", label: "Nomad" }] : []),
-    ...(hasKubernetes ? [{ value: "kubernetes", label: "Kubernetes" }] : []),
-    ...(hasDocker ? [{ value: "docker", label: "Docker" }] : []),
-  ];
+  // Derived directly — no useState/useEffect lag that would gate the conditional fields
+  const runtimeProvider = hasNomad
+    ? "nomad"
+    : hasKubernetes
+      ? "kubernetes"
+      : hasDocker
+        ? "docker"
+        : "";
 
-  const defaultRuntime = availableRuntimes[0]?.value ?? "nomad";
-
-  const [runtimeProvider, setRuntimeProvider] = useState(defaultRuntime);
   const [jobName, setJobName] = useState("");
-  // Nomad fields
   const [datacenter, setDatacenter] = useState("");
   const [namespace, setNamespace] = useState("default");
   const [workerName, setWorkerName] = useState("");
   const [hostNetwork, setHostNetwork] = useState<"private" | "public">("private");
-  // Kubernetes fields
   const [k8sNamespace, setK8sNamespace] = useState("default");
   const [replicas, setReplicas] = useState("1");
   const [k8sNodeName, setK8sNodeName] = useState("");
-  // Shared
   const [exposedPort, setExposedPort] = useState("");
   const [cpu, setCpu] = useState("");
   const [memory, setMemory] = useState("");
-  // Registry
   const [registryId, setRegistryId] = useState("");
   const [imagePath, setImagePath] = useState("");
   const [imageTag, setImageTag] = useState("");
-  // Vault (Nomad only)
   const [vaultRole, setVaultRole] = useState("");
   const [vaultPath, setVaultPath] = useState("");
   const [envMappings, setEnvMappings] = useState<[string, string][]>([]);
@@ -370,7 +375,6 @@ function DeployDialog({
   const workers = (nodes ?? []).filter((n) => !datacenter || n.Datacenter === datacenter);
 
   const handleClose = () => {
-    setRuntimeProvider(defaultRuntime);
     setJobName("");
     setDatacenter("");
     setNamespace("default");
@@ -418,20 +422,16 @@ function DeployDialog({
         exposed_port: parseInt(exposedPort, 10),
         cpu: cpu ? parseInt(cpu, 10) : undefined,
         memory: memory ? parseInt(memory, 10) : undefined,
-        // Nomad
         datacenter: runtimeProvider === "nomad" ? datacenter : undefined,
         namespace: runtimeProvider === "nomad" ? namespace : undefined,
         worker_name: runtimeProvider === "nomad" ? workerName : undefined,
         host_network: runtimeProvider === "nomad" ? hostNetwork : undefined,
-        // Kubernetes
         k8s_namespace: runtimeProvider === "kubernetes" ? k8sNamespace : undefined,
         replicas: runtimeProvider === "kubernetes" && replicas ? parseInt(replicas, 10) : undefined,
         k8s_node_name: runtimeProvider === "kubernetes" && k8sNodeName ? k8sNodeName : undefined,
-        // Registry
         registry_id: registryId || undefined,
         image_path: imagePath || undefined,
         image_tag: imageTag || undefined,
-        // Vault
         vault_role: runtimeProvider === "nomad" ? vaultRole || undefined : undefined,
         vault_path: runtimeProvider === "nomad" ? vaultPath || undefined : undefined,
         env_mappings:
@@ -473,35 +473,30 @@ function DeployDialog({
           }}
           className="space-y-4 mt-2"
         >
-          {/* Runtime selector */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground">Runtime *</label>
-            {availableRuntimes.length > 0 ? (
-              <div className="mt-1.5 flex gap-2">
-                {availableRuntimes.map((rt) => (
-                  <button
-                    key={rt.value}
-                    type="button"
-                    onClick={() => setRuntimeProvider(rt.value)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-md border text-xs font-medium transition ${
-                      runtimeProvider === rt.value
-                        ? "border-primary bg-primary/10 text-primary"
-                        : "border-border bg-secondary text-muted-foreground hover:border-primary/40"
-                    }`}
-                  >
-                    <Server className="size-3.5" />
-                    {rt.label}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <p className="mt-1.5 text-xs text-destructive">
-                No runtime providers configured. Bind a runtime in Platform → Capabilities.
-              </p>
-            )}
+            <label className="text-xs font-medium text-muted-foreground">Environment *</label>
+            <select
+              required
+              value={dialogEnvSlug}
+              onChange={(e) => setDialogEnvSlug(e.target.value)}
+              className="mt-1.5 w-full px-3 py-2.5 rounded-md bg-secondary border border-border focus:border-primary outline-none transition text-sm"
+            >
+              <option value="">Select environment…</option>
+              {environments.map((env) => (
+                <option key={env.slug} value={env.slug}>
+                  {env.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Job name */}
+          {dialogEnvSlug && !capLoading && !runtimeProvider && (
+            <p className="text-xs text-destructive">
+              No runtime providers configured for this environment. Bind a runtime in Platform →
+              Capabilities.
+            </p>
+          )}
+
           <div>
             <label className="text-xs font-medium text-muted-foreground">Job name *</label>
             <input
@@ -513,7 +508,6 @@ function DeployDialog({
             />
           </div>
 
-          {/* ── Nomad-specific fields ── */}
           {runtimeProvider === "nomad" && (
             <>
               <div>
@@ -618,7 +612,6 @@ function DeployDialog({
             </>
           )}
 
-          {/* ── Kubernetes-specific fields ── */}
           {runtimeProvider === "kubernetes" && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -687,7 +680,6 @@ function DeployDialog({
             </div>
           )}
 
-          {/* Exposed port */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">
               {runtimeProvider === "kubernetes" ? "Exposed port (NodePort) *" : "Exposed port *"}
@@ -714,7 +706,6 @@ function DeployDialog({
             />
           </div>
 
-          {/* CPU + Memory */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-muted-foreground">
@@ -746,7 +737,6 @@ function DeployDialog({
             </div>
           </div>
 
-          {/* Private image fields */}
           {!item.is_public_image && (
             <div className="border-t border-border pt-4 space-y-3">
               <p className="text-xs font-medium text-muted-foreground">Private image settings</p>
@@ -779,7 +769,6 @@ function DeployDialog({
             </div>
           )}
 
-          {/* Tag override */}
           <div>
             <label className="text-xs font-medium text-muted-foreground">
               Image tag <span className="text-muted-foreground/60">optional override</span>
@@ -794,7 +783,6 @@ function DeployDialog({
             />
           </div>
 
-          {/* Vault section — Nomad only */}
           {runtimeProvider === "nomad" && (
             <div className="border-t border-border pt-4 space-y-3">
               <p className="text-xs font-medium text-muted-foreground">
@@ -869,7 +857,7 @@ function DeployDialog({
             </button>
             <button
               type="submit"
-              disabled={deploy.isPending || availableRuntimes.length === 0}
+              disabled={deploy.isPending || !runtimeProvider || !dialogEnvSlug}
               className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition disabled:opacity-60 inline-flex items-center gap-2"
             >
               {deploy.isPending && <Loader2 className="size-3.5 animate-spin" />}
@@ -995,11 +983,22 @@ function DeploymentRow({
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 function ServiceCatalogPage() {
-  const { envId } = useParams({ from: "/dashboard/environments/$envId/service-catalog" });
   const { selectedWorkspace } = useWorkspaceContext();
   const workspaceSlug = selectedWorkspace?.slug ?? "";
 
-  const { data: capabilities, isLoading: capLoading } = useCapabilities(workspaceSlug, envId);
+  const { data: environments = [] } = useEnvironments(workspaceSlug);
+  const [selectedEnvSlug, setSelectedEnvSlug] = useState("");
+
+  useEffect(() => {
+    if (!selectedEnvSlug && environments.length > 0) {
+      setSelectedEnvSlug(environments[0].slug);
+    }
+  }, [environments, selectedEnvSlug]);
+
+  const { data: capabilities, isLoading: capLoading } = useCapabilities(
+    workspaceSlug,
+    selectedEnvSlug,
+  );
   const capList = capabilities ?? [];
 
   const hasNomadProvider =
@@ -1009,12 +1008,16 @@ function ServiceCatalogPage() {
         c.capability_name === "runtime" && c.providers.some((p) => p.provider_name === "nomad"),
     );
 
-  const { data: catalog, isLoading: catalogLoading, error: catalogError } = useCatalog();
+  const {
+    data: catalog,
+    isLoading: catalogLoading,
+    error: catalogError,
+  } = useCatalog(workspaceSlug);
   const { data: deployments, isLoading: deploymentsLoading } = useServiceDeployments(
     workspaceSlug,
-    envId,
+    selectedEnvSlug,
   );
-  const stopDeployment = useStopDeployment(workspaceSlug, envId);
+  const stopDeployment = useStopDeployment(workspaceSlug, selectedEnvSlug);
 
   const [deployingItem, setDeployingItem] = useState<CatalogItem | null>(null);
   const [stopping, setStopping] = useState<ServiceDeployment | null>(null);
@@ -1048,18 +1051,40 @@ function ServiceCatalogPage() {
     <div className="flex flex-col h-full">
       <DashboardTopbar
         title="Service Catalog"
-        subtitle="Deploy managed services to this environment"
+        subtitle="Deploy managed services to your environments"
       />
 
       <div className="flex-1 overflow-auto p-6 space-y-8">
+        {/* Environment selector */}
+        {/* {environments.length > 0 && (
+          <div className="flex items-center gap-3">
+            <label className="text-xs font-medium text-muted-foreground shrink-0">
+              Active environment
+            </label>
+            <select
+              value={selectedEnvSlug}
+              onChange={(e) => setSelectedEnvSlug(e.target.value)}
+              className="px-3 py-1.5 rounded-md bg-secondary border border-border text-sm outline-none focus:border-primary transition"
+            >
+              {environments.map((env) => (
+                <option key={env.slug} value={env.slug}>
+                  {env.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              Deployments and runtime providers are scoped to the selected environment.
+            </p>
+          </div>
+        )} */}
+
         {/* Catalog section */}
         <section>
           <h2 className="text-base font-semibold mb-1">Available services</h2>
           <p className="text-sm text-muted-foreground mb-4">
-            Select a service template to deploy it to this environment.
+            Select a service template to deploy it to the selected environment.
           </p>
 
-          {/* Search + category filter */}
           {!catalogLoading && !catalogError && (
             <div className="mb-4 space-y-3">
               <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border bg-secondary">
@@ -1105,7 +1130,7 @@ function ServiceCatalogPage() {
             </div>
           ) : catalogError ? (
             <div className="flex items-center gap-2 text-sm text-destructive">
-              <AlertCircle className="size-4" /> {catalogError.message}
+              <AlertCircle className="size-4" /> {(catalogError as ApiError).message}
             </div>
           ) : filteredCatalog.length === 0 ? (
             <div className="rounded-xl border border-border bg-card p-8 flex flex-col items-center text-center">
@@ -1128,12 +1153,31 @@ function ServiceCatalogPage() {
 
         {/* Active deployments section */}
         <section>
-          <h2 className="text-base font-semibold mb-1">Active deployments</h2>
+          <div className="flex items-center gap-3 mb-1">
+            <h2 className="text-base font-semibold flex-1">Active deployments</h2>
+            {environments.length > 1 && (
+              <select
+                value={selectedEnvSlug}
+                onChange={(e) => setSelectedEnvSlug(e.target.value)}
+                className="px-2.5 py-1 rounded-md bg-secondary border border-border text-xs outline-none focus:border-primary transition"
+              >
+                {environments.map((env) => (
+                  <option key={env.slug} value={env.slug}>
+                    {env.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
           <p className="text-sm text-muted-foreground mb-4">
             Services deployed to this environment via the catalog.
           </p>
 
-          {deploymentsLoading ? (
+          {!selectedEnvSlug ? (
+            <p className="text-sm text-muted-foreground">
+              Select an environment to view deployments.
+            </p>
+          ) : deploymentsLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" /> Loading deployments…
             </div>
@@ -1182,7 +1226,7 @@ function ServiceCatalogPage() {
                       key={d.id}
                       d={d}
                       workspaceSlug={workspaceSlug}
-                      envSlug={envId}
+                      envSlug={selectedEnvSlug}
                       hasNomadProvider={hasNomadProvider}
                       onStop={setStopping}
                       stopping={stopDeployment.isPending && stopping?.id === d.id}
@@ -1196,17 +1240,14 @@ function ServiceCatalogPage() {
         </section>
       </div>
 
-      {/* Deploy dialog */}
       <DeployDialog
         open={!!deployingItem}
         item={deployingItem}
         onClose={() => setDeployingItem(null)}
         workspaceSlug={workspaceSlug}
-        envSlug={envId}
-        capabilities={capList}
+        initialEnvSlug={selectedEnvSlug}
       />
 
-      {/* Definition viewer */}
       {viewingDefinition?.job_definition && (
         <DefinitionDialog
           definition={viewingDefinition.job_definition}
@@ -1214,7 +1255,6 @@ function ServiceCatalogPage() {
         />
       )}
 
-      {/* Stop confirmation */}
       <AlertDialog
         open={!!stopping}
         onOpenChange={(v) => {

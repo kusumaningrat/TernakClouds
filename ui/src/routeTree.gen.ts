@@ -21,6 +21,7 @@ import { Route as DashboardWorkspacesRouteImport } from './routes/dashboard.work
 import { Route as DashboardUsersRouteImport } from './routes/dashboard.users'
 import { Route as DashboardTeamsRouteImport } from './routes/dashboard.teams'
 import { Route as DashboardServicesRouteImport } from './routes/dashboard.services'
+import { Route as DashboardServiceCatalogRouteImport } from './routes/dashboard.service-catalog'
 import { Route as DashboardRolesRouteImport } from './routes/dashboard.roles'
 import { Route as DashboardRepositoriesRouteImport } from './routes/dashboard.repositories'
 import { Route as DashboardRegistriesRouteImport } from './routes/dashboard.registries'
@@ -30,6 +31,7 @@ import { Route as DashboardEnvironmentsRouteImport } from './routes/dashboard.en
 import { Route as DashboardDeploymentsRouteImport } from './routes/dashboard.deployments'
 import { Route as DashboardDeploymentControlsRouteImport } from './routes/dashboard.deployment-controls'
 import { Route as DashboardDepartmentsRouteImport } from './routes/dashboard.departments'
+import { Route as DashboardBlueprintsRouteImport } from './routes/dashboard.blueprints'
 import { Route as DashboardAccessRequestsRouteImport } from './routes/dashboard.access-requests'
 import { Route as DashboardEnvironmentsIndexRouteImport } from './routes/dashboard.environments.index'
 import { Route as EnvironmentsEnvIdIntegrationsRouteImport } from './routes/environments.$envId.integrations'
@@ -38,7 +40,6 @@ import { Route as DashboardEnvironmentsEnvIdIndexRouteImport } from './routes/da
 import { Route as DashboardEnvironmentsEnvIdStorageRouteImport } from './routes/dashboard.environments.$envId.storage'
 import { Route as DashboardEnvironmentsEnvIdSettingsRouteImport } from './routes/dashboard.environments.$envId.settings'
 import { Route as DashboardEnvironmentsEnvIdServicesRouteImport } from './routes/dashboard.environments.$envId.services'
-import { Route as DashboardEnvironmentsEnvIdServiceCatalogRouteImport } from './routes/dashboard.environments.$envId.service-catalog'
 import { Route as DashboardEnvironmentsEnvIdSecretsRouteImport } from './routes/dashboard.environments.$envId.secrets'
 import { Route as DashboardEnvironmentsEnvIdRuntimeEventsRouteImport } from './routes/dashboard.environments.$envId.runtime-events'
 import { Route as DashboardEnvironmentsEnvIdRegistriesRouteImport } from './routes/dashboard.environments.$envId.registries'
@@ -124,6 +125,11 @@ const DashboardServicesRoute = DashboardServicesRouteImport.update({
   path: '/services',
   getParentRoute: () => DashboardRoute,
 } as any)
+const DashboardServiceCatalogRoute = DashboardServiceCatalogRouteImport.update({
+  id: '/service-catalog',
+  path: '/service-catalog',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardRolesRoute = DashboardRolesRouteImport.update({
   id: '/roles',
   path: '/roles',
@@ -168,6 +174,11 @@ const DashboardDeploymentControlsRoute =
 const DashboardDepartmentsRoute = DashboardDepartmentsRouteImport.update({
   id: '/departments',
   path: '/departments',
+  getParentRoute: () => DashboardRoute,
+} as any)
+const DashboardBlueprintsRoute = DashboardBlueprintsRouteImport.update({
+  id: '/blueprints',
+  path: '/blueprints',
   getParentRoute: () => DashboardRoute,
 } as any)
 const DashboardAccessRequestsRoute = DashboardAccessRequestsRouteImport.update({
@@ -215,12 +226,6 @@ const DashboardEnvironmentsEnvIdServicesRoute =
   DashboardEnvironmentsEnvIdServicesRouteImport.update({
     id: '/services',
     path: '/services',
-    getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
-  } as any)
-const DashboardEnvironmentsEnvIdServiceCatalogRoute =
-  DashboardEnvironmentsEnvIdServiceCatalogRouteImport.update({
-    id: '/service-catalog',
-    path: '/service-catalog',
     getParentRoute: () => DashboardEnvironmentsEnvIdRoute,
   } as any)
 const DashboardEnvironmentsEnvIdSecretsRoute =
@@ -376,6 +381,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/setup': typeof SetupRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
+  '/dashboard/blueprints': typeof DashboardBlueprintsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
@@ -385,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/registries': typeof DashboardRegistriesRoute
   '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
+  '/dashboard/service-catalog': typeof DashboardServiceCatalogRoute
   '/dashboard/services': typeof DashboardServicesRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
   '/dashboard/users': typeof DashboardUsersRoute
@@ -407,7 +414,6 @@ export interface FileRoutesByFullPath {
   '/dashboard/environments/$envId/registries': typeof DashboardEnvironmentsEnvIdRegistriesRoute
   '/dashboard/environments/$envId/runtime-events': typeof DashboardEnvironmentsEnvIdRuntimeEventsRoute
   '/dashboard/environments/$envId/secrets': typeof DashboardEnvironmentsEnvIdSecretsRoute
-  '/dashboard/environments/$envId/service-catalog': typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   '/dashboard/environments/$envId/services': typeof DashboardEnvironmentsEnvIdServicesRouteWithChildren
   '/dashboard/environments/$envId/settings': typeof DashboardEnvironmentsEnvIdSettingsRoute
   '/dashboard/environments/$envId/storage': typeof DashboardEnvironmentsEnvIdStorageRoute
@@ -431,6 +437,7 @@ export interface FileRoutesByTo {
   '/register': typeof RegisterRoute
   '/setup': typeof SetupRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
+  '/dashboard/blueprints': typeof DashboardBlueprintsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
@@ -439,6 +446,7 @@ export interface FileRoutesByTo {
   '/dashboard/registries': typeof DashboardRegistriesRoute
   '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
+  '/dashboard/service-catalog': typeof DashboardServiceCatalogRoute
   '/dashboard/services': typeof DashboardServicesRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
   '/dashboard/users': typeof DashboardUsersRoute
@@ -458,7 +466,6 @@ export interface FileRoutesByTo {
   '/dashboard/environments/$envId/registries': typeof DashboardEnvironmentsEnvIdRegistriesRoute
   '/dashboard/environments/$envId/runtime-events': typeof DashboardEnvironmentsEnvIdRuntimeEventsRoute
   '/dashboard/environments/$envId/secrets': typeof DashboardEnvironmentsEnvIdSecretsRoute
-  '/dashboard/environments/$envId/service-catalog': typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   '/dashboard/environments/$envId/settings': typeof DashboardEnvironmentsEnvIdSettingsRoute
   '/dashboard/environments/$envId/storage': typeof DashboardEnvironmentsEnvIdStorageRoute
   '/dashboard/environments/$envId': typeof DashboardEnvironmentsEnvIdIndexRoute
@@ -483,6 +490,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/setup': typeof SetupRoute
   '/dashboard/access-requests': typeof DashboardAccessRequestsRoute
+  '/dashboard/blueprints': typeof DashboardBlueprintsRoute
   '/dashboard/departments': typeof DashboardDepartmentsRoute
   '/dashboard/deployment-controls': typeof DashboardDeploymentControlsRoute
   '/dashboard/deployments': typeof DashboardDeploymentsRoute
@@ -492,6 +500,7 @@ export interface FileRoutesById {
   '/dashboard/registries': typeof DashboardRegistriesRoute
   '/dashboard/repositories': typeof DashboardRepositoriesRoute
   '/dashboard/roles': typeof DashboardRolesRoute
+  '/dashboard/service-catalog': typeof DashboardServiceCatalogRoute
   '/dashboard/services': typeof DashboardServicesRoute
   '/dashboard/teams': typeof DashboardTeamsRoute
   '/dashboard/users': typeof DashboardUsersRoute
@@ -514,7 +523,6 @@ export interface FileRoutesById {
   '/dashboard/environments/$envId/registries': typeof DashboardEnvironmentsEnvIdRegistriesRoute
   '/dashboard/environments/$envId/runtime-events': typeof DashboardEnvironmentsEnvIdRuntimeEventsRoute
   '/dashboard/environments/$envId/secrets': typeof DashboardEnvironmentsEnvIdSecretsRoute
-  '/dashboard/environments/$envId/service-catalog': typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   '/dashboard/environments/$envId/services': typeof DashboardEnvironmentsEnvIdServicesRouteWithChildren
   '/dashboard/environments/$envId/settings': typeof DashboardEnvironmentsEnvIdSettingsRoute
   '/dashboard/environments/$envId/storage': typeof DashboardEnvironmentsEnvIdStorageRoute
@@ -541,6 +549,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/setup'
     | '/dashboard/access-requests'
+    | '/dashboard/blueprints'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
@@ -550,6 +559,7 @@ export interface FileRouteTypes {
     | '/dashboard/registries'
     | '/dashboard/repositories'
     | '/dashboard/roles'
+    | '/dashboard/service-catalog'
     | '/dashboard/services'
     | '/dashboard/teams'
     | '/dashboard/users'
@@ -572,7 +582,6 @@ export interface FileRouteTypes {
     | '/dashboard/environments/$envId/registries'
     | '/dashboard/environments/$envId/runtime-events'
     | '/dashboard/environments/$envId/secrets'
-    | '/dashboard/environments/$envId/service-catalog'
     | '/dashboard/environments/$envId/services'
     | '/dashboard/environments/$envId/settings'
     | '/dashboard/environments/$envId/storage'
@@ -596,6 +605,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/setup'
     | '/dashboard/access-requests'
+    | '/dashboard/blueprints'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
@@ -604,6 +614,7 @@ export interface FileRouteTypes {
     | '/dashboard/registries'
     | '/dashboard/repositories'
     | '/dashboard/roles'
+    | '/dashboard/service-catalog'
     | '/dashboard/services'
     | '/dashboard/teams'
     | '/dashboard/users'
@@ -623,7 +634,6 @@ export interface FileRouteTypes {
     | '/dashboard/environments/$envId/registries'
     | '/dashboard/environments/$envId/runtime-events'
     | '/dashboard/environments/$envId/secrets'
-    | '/dashboard/environments/$envId/service-catalog'
     | '/dashboard/environments/$envId/settings'
     | '/dashboard/environments/$envId/storage'
     | '/dashboard/environments/$envId'
@@ -647,6 +657,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/setup'
     | '/dashboard/access-requests'
+    | '/dashboard/blueprints'
     | '/dashboard/departments'
     | '/dashboard/deployment-controls'
     | '/dashboard/deployments'
@@ -656,6 +667,7 @@ export interface FileRouteTypes {
     | '/dashboard/registries'
     | '/dashboard/repositories'
     | '/dashboard/roles'
+    | '/dashboard/service-catalog'
     | '/dashboard/services'
     | '/dashboard/teams'
     | '/dashboard/users'
@@ -678,7 +690,6 @@ export interface FileRouteTypes {
     | '/dashboard/environments/$envId/registries'
     | '/dashboard/environments/$envId/runtime-events'
     | '/dashboard/environments/$envId/secrets'
-    | '/dashboard/environments/$envId/service-catalog'
     | '/dashboard/environments/$envId/services'
     | '/dashboard/environments/$envId/settings'
     | '/dashboard/environments/$envId/storage'
@@ -792,6 +803,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardServicesRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/service-catalog': {
+      id: '/dashboard/service-catalog'
+      path: '/service-catalog'
+      fullPath: '/dashboard/service-catalog'
+      preLoaderRoute: typeof DashboardServiceCatalogRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/roles': {
       id: '/dashboard/roles'
       path: '/roles'
@@ -855,6 +873,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardDepartmentsRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/dashboard/blueprints': {
+      id: '/dashboard/blueprints'
+      path: '/blueprints'
+      fullPath: '/dashboard/blueprints'
+      preLoaderRoute: typeof DashboardBlueprintsRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/access-requests': {
       id: '/dashboard/access-requests'
       path: '/access-requests'
@@ -909,13 +934,6 @@ declare module '@tanstack/react-router' {
       path: '/services'
       fullPath: '/dashboard/environments/$envId/services'
       preLoaderRoute: typeof DashboardEnvironmentsEnvIdServicesRouteImport
-      parentRoute: typeof DashboardEnvironmentsEnvIdRoute
-    }
-    '/dashboard/environments/$envId/service-catalog': {
-      id: '/dashboard/environments/$envId/service-catalog'
-      path: '/service-catalog'
-      fullPath: '/dashboard/environments/$envId/service-catalog'
-      preLoaderRoute: typeof DashboardEnvironmentsEnvIdServiceCatalogRouteImport
       parentRoute: typeof DashboardEnvironmentsEnvIdRoute
     }
     '/dashboard/environments/$envId/secrets': {
@@ -1184,7 +1202,6 @@ interface DashboardEnvironmentsEnvIdRouteChildren {
   DashboardEnvironmentsEnvIdRegistriesRoute: typeof DashboardEnvironmentsEnvIdRegistriesRoute
   DashboardEnvironmentsEnvIdRuntimeEventsRoute: typeof DashboardEnvironmentsEnvIdRuntimeEventsRoute
   DashboardEnvironmentsEnvIdSecretsRoute: typeof DashboardEnvironmentsEnvIdSecretsRoute
-  DashboardEnvironmentsEnvIdServiceCatalogRoute: typeof DashboardEnvironmentsEnvIdServiceCatalogRoute
   DashboardEnvironmentsEnvIdServicesRoute: typeof DashboardEnvironmentsEnvIdServicesRouteWithChildren
   DashboardEnvironmentsEnvIdSettingsRoute: typeof DashboardEnvironmentsEnvIdSettingsRoute
   DashboardEnvironmentsEnvIdStorageRoute: typeof DashboardEnvironmentsEnvIdStorageRoute
@@ -1218,8 +1235,6 @@ const DashboardEnvironmentsEnvIdRouteChildren: DashboardEnvironmentsEnvIdRouteCh
       DashboardEnvironmentsEnvIdRuntimeEventsRoute,
     DashboardEnvironmentsEnvIdSecretsRoute:
       DashboardEnvironmentsEnvIdSecretsRoute,
-    DashboardEnvironmentsEnvIdServiceCatalogRoute:
-      DashboardEnvironmentsEnvIdServiceCatalogRoute,
     DashboardEnvironmentsEnvIdServicesRoute:
       DashboardEnvironmentsEnvIdServicesRouteWithChildren,
     DashboardEnvironmentsEnvIdSettingsRoute:
@@ -1251,6 +1266,7 @@ const DashboardEnvironmentsRouteWithChildren =
 
 interface DashboardRouteChildren {
   DashboardAccessRequestsRoute: typeof DashboardAccessRequestsRoute
+  DashboardBlueprintsRoute: typeof DashboardBlueprintsRoute
   DashboardDepartmentsRoute: typeof DashboardDepartmentsRoute
   DashboardDeploymentControlsRoute: typeof DashboardDeploymentControlsRoute
   DashboardDeploymentsRoute: typeof DashboardDeploymentsRoute
@@ -1260,6 +1276,7 @@ interface DashboardRouteChildren {
   DashboardRegistriesRoute: typeof DashboardRegistriesRoute
   DashboardRepositoriesRoute: typeof DashboardRepositoriesRoute
   DashboardRolesRoute: typeof DashboardRolesRoute
+  DashboardServiceCatalogRoute: typeof DashboardServiceCatalogRoute
   DashboardServicesRoute: typeof DashboardServicesRoute
   DashboardTeamsRoute: typeof DashboardTeamsRoute
   DashboardUsersRoute: typeof DashboardUsersRoute
@@ -1269,6 +1286,7 @@ interface DashboardRouteChildren {
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAccessRequestsRoute: DashboardAccessRequestsRoute,
+  DashboardBlueprintsRoute: DashboardBlueprintsRoute,
   DashboardDepartmentsRoute: DashboardDepartmentsRoute,
   DashboardDeploymentControlsRoute: DashboardDeploymentControlsRoute,
   DashboardDeploymentsRoute: DashboardDeploymentsRoute,
@@ -1278,6 +1296,7 @@ const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardRegistriesRoute: DashboardRegistriesRoute,
   DashboardRepositoriesRoute: DashboardRepositoriesRoute,
   DashboardRolesRoute: DashboardRolesRoute,
+  DashboardServiceCatalogRoute: DashboardServiceCatalogRoute,
   DashboardServicesRoute: DashboardServicesRoute,
   DashboardTeamsRoute: DashboardTeamsRoute,
   DashboardUsersRoute: DashboardUsersRoute,

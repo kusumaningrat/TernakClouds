@@ -197,15 +197,19 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 			middleware.RequirePermission(roleService, "workspaces:write"),
 		)
 
-		// Service catalog: global listing for any authenticated user.
-		// Deployments live under the env group; deploy + delete require deployments:exec.
-		servicecatalog.RegisterCatalogRoutes(protected, catalogHandler)
+		// Workspace-scoped read routes: blueprints and service catalog are
+		// environment-agnostic templates; member access is sufficient.
+		wsGroup := protected.Group("/workspaces/:slug",
+			middleware.ResolveWorkspace(wsAdapter),
+			middleware.RequireWorkspaceMember(wsAdapter),
+		)
+		blueprint.RegisterRoutes(wsGroup, blueprintHandler)
+		servicecatalog.RegisterCatalogRoutes(wsGroup, catalogHandler)
+
+		// Service catalog deployments live under the env group; deploy + delete require deployments:exec.
 		servicecatalog.RegisterDeploymentRoutes(envGroup, catalogHandler,
 			middleware.RequirePermission(roleService, "deployments:exec"),
 		)
-
-		// Blueprints: global read-only listing for any authenticated user.
-		blueprint.RegisterRoutes(protected, blueprintHandler)
 
 		// Platform applications: provision + delete require deployments:exec.
 		platformapp.RegisterRoutes(envGroup, platformAppHandler,

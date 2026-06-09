@@ -764,7 +764,7 @@ function ServiceStep({
   onDone: () => void;
   onSkip: () => void;
 }) {
-  const { data: catalog, isLoading } = useCatalog();
+  const { data: catalog, isLoading } = useCatalog(slug);
   const [selectedService, setSelectedService] = useState("");
   const [error, setError] = useState("");
   const deployService = useDeployService(slug, envSlug);

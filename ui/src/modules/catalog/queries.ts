@@ -3,17 +3,18 @@ import { api, ApiError } from "@/lib/api";
 import type { CatalogItem, DeployServiceInput, ServiceDeployment } from "./types";
 
 export const catalogKeys = {
-  catalog: () => ["service-catalog"] as const,
+  catalog: (slug: string) => ["workspaces", slug, "service-catalog"] as const,
   deployments: (slug: string, envSlug: string) =>
     ["workspaces", slug, "environments", envSlug, "service-deployments"] as const,
   deployment: (slug: string, envSlug: string, id: string) =>
     ["workspaces", slug, "environments", envSlug, "service-deployments", id] as const,
 };
 
-export function useCatalog() {
+export function useCatalog(slug: string) {
   return useQuery<CatalogItem[], ApiError>({
-    queryKey: catalogKeys.catalog(),
-    queryFn: () => api.get("/api/v1/service-catalog"),
+    queryKey: catalogKeys.catalog(slug),
+    queryFn: () => api.get(`/api/v1/workspaces/${slug}/service-catalog`),
+    enabled: !!slug,
     staleTime: 60_000,
   });
 }

@@ -528,11 +528,6 @@ function EnvOverviewPage() {
                 to: "/dashboard/environments/$envId/deployments",
               },
               {
-                label: "Service Catalog",
-                icon: Package,
-                to: "/dashboard/environments/$envId/service-catalog",
-              },
-              {
                 label: `Registries (${(registries ?? []).length})`,
                 icon: Container,
                 to: "/dashboard/environments/$envId/registries",
