@@ -201,6 +201,8 @@ function SectionHeader({ label }: { label: string }) {
 const WORKSPACE_NAV = [
   { to: "/dashboard", label: "Overview", icon: LayoutDashboard },
   { to: "/dashboard/environments", label: "Environments", icon: Globe },
+  { to: "/dashboard/blueprints", label: "Blueprints", icon: Blocks },
+  { to: "/dashboard/service-catalog", label: "Service Catalog", icon: Package },
   { to: "/dashboard/registries", label: "Registries", icon: Container },
   { to: "/dashboard/repositories", label: "Repositories", icon: GitFork },
   { to: "/dashboard/teams", label: "Teams", icon: UsersRound },
@@ -390,12 +392,6 @@ export function DashboardSidebar() {
                   icon={Layers}
                   active={envActive("applications")}
                 />
-                <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/blueprints`}
-                  label="Blueprints"
-                  icon={Blocks}
-                  active={envActive("blueprints")}
-                />
                 {hasNomadOrK8s && (
                   <>
                     <NavLink
@@ -430,12 +426,6 @@ export function DashboardSidebar() {
                     badge="Docker"
                   />
                 )}
-                <NavLink
-                  to={`/dashboard/environments/${activeEnvId}/service-catalog`}
-                  label="Service Catalog"
-                  icon={Package}
-                  active={envActive("service-catalog")}
-                />
               </nav>
             </div>
 

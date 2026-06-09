@@ -224,7 +224,7 @@ function ApplicationsPage() {
         actions={
           <button
             onClick={() =>
-              void navigate({ to: `/dashboard/environments/${envId}/blueprints` as never })
+              void navigate({ to: "/dashboard/blueprints" })
             }
             className="flex items-center gap-2 px-3 py-2 rounded-md bg-primary text-primary-foreground text-xs font-medium hover:opacity-90 transition"
           >
@@ -254,7 +254,7 @@ function ApplicationsPage() {
             </p>
             <button
               onClick={() =>
-                void navigate({ to: `/dashboard/environments/${envId}/blueprints` as never })
+                void navigate({ to: "/dashboard/blueprints" })
               }
               className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition"
             >
