@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kusumaningrat/ternakclouds/internal/accessrequest"
 	"github.com/kusumaningrat/ternakclouds/internal/blueprint"
+	"github.com/kusumaningrat/ternakclouds/internal/blueprintrun"
 	"github.com/kusumaningrat/ternakclouds/internal/capability"
 	"github.com/kusumaningrat/ternakclouds/internal/config"
 	"github.com/kusumaningrat/ternakclouds/internal/department"
@@ -52,6 +53,16 @@ func Migrate(db *gorm.DB) error {
 	// Add display_name with a default so existing rows don't violate NOT NULL.
 	db.Exec("ALTER TABLE provider_configs ADD COLUMN IF NOT EXISTS display_name VARCHAR NOT NULL DEFAULT ''")
 
+	// Blueprint refactor: legacy deployment-centric columns were removed from the
+	// struct. AutoMigrate never drops columns, so they still exist in the DB.
+	// Make them nullable so new inserts (which omit these fields) don't fail.
+	for _, col := range []string{
+		"supported_runtimes", "default_image", "default_tag",
+		"default_port", "default_cpu", "default_memory_mb", "cicd_provider",
+	} {
+		db.Exec("ALTER TABLE blueprints ALTER COLUMN " + col + " DROP NOT NULL")
+	}
+
 	return db.AutoMigrate(
 		&department.Department{},
 		&user.User{},
@@ -74,6 +85,8 @@ func Migrate(db *gorm.DB) error {
 		&servicecatalog.CatalogItem{},
 		&servicecatalog.ServiceDeployment{},
 		&blueprint.Blueprint{},
+		&blueprintrun.BlueprintRun{},
+		&blueprintrun.BlueprintRunStep{},
 		&platformapp.PlatformApp{},
 		&platformapp.DeploymentRecord{},
 		&repository.RepoProvider{},
@@ -346,130 +359,262 @@ func seedCatalog(db *gorm.DB) error {
 
 func seedBlueprints(db *gorm.DB) error {
 	items := []blueprint.Blueprint{
-		// ── Legacy blueprints (kept for backwards compatibility) ────────────
+		// ── Provision blueprints ────────────────────────────────────────────
 		{
-			Name: "web-api", DisplayName: "Web API",
-			Description:       "HTTP REST or GraphQL API service. Includes health checks, rolling deployments, and optional Vault secret injection.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "globe",
-			DefaultPort: 8080, DefaultCPU: 256, DefaultMemoryMB: 256,
+			Name:        "postgresql-provision",
+			DisplayName: "PostgreSQL Database",
+			Description: "Deploy a PostgreSQL database and store the connection string in Vault. Ready for immediate use.",
+			Category:    "provision",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "database",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+				{Key: "db_name", Label: "Database Name", Type: "string", Required: true, Placeholder: "my-database", HelpText: "Used as the service job name and secret path prefix."},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "deploy_postgres", Type: "deploy_catalog_item", Label: "Deploy PostgreSQL",
+					Description: "Provisions a PostgreSQL instance from the service catalog.",
+					Config:      map[string]any{"catalog_name": "postgresql", "job_name": "{{.db_name}}-db", "exposed_port": 5432},
+				},
+				{
+					ID: "store_secret", Type: "write_secret", Label: "Store Connection String",
+					Description: "Writes database credentials to Vault for application use.",
+					Config: map[string]any{
+						"vault_path": "secret/data/workspaces/{{.workspace_id}}/{{.environment}}/{{.db_name}}",
+						"values": map[string]any{
+							"DB_HOST": "{{.db_name}}-db",
+							"DB_PORT": "5432",
+							"DB_NAME": "{{.db_name}}",
+							"DB_USER": "postgres",
+						},
+					},
+				},
+			},
 		},
 		{
-			Name: "worker", DisplayName: "Background Worker",
-			Description:       "Long-running background processor. No HTTP port exposed; suitable for queue consumers and async jobs.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "cpu",
-			DefaultPort: 0, DefaultCPU: 256, DefaultMemoryMB: 256,
+			Name:        "redis-provision",
+			DisplayName: "Redis Cache",
+			Description: "Deploy a Redis instance and register the connection endpoint in Vault.",
+			Category:    "provision",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "zap",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+				{Key: "cache_name", Label: "Cache Name", Type: "string", Required: true, Placeholder: "my-cache"},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "deploy_redis", Type: "deploy_catalog_item", Label: "Deploy Redis",
+					Description: "Provisions a Redis instance from the service catalog.",
+					Config:      map[string]any{"catalog_name": "redis", "job_name": "{{.cache_name}}", "exposed_port": 6379},
+				},
+				{
+					ID: "store_secret", Type: "write_secret", Label: "Store Connection Info",
+					Description: "Writes Redis connection details to Vault.",
+					Config: map[string]any{
+						"vault_path": "secret/data/workspaces/{{.workspace_id}}/{{.environment}}/{{.cache_name}}",
+						"values":     map[string]any{"REDIS_HOST": "{{.cache_name}}", "REDIS_PORT": "6379"},
+					},
+				},
+			},
 		},
 		{
-			Name: "cron-job", DisplayName: "Cron Job",
-			Description:       "Scheduled batch task that runs on a cron schedule. Mapped to Nomad batch jobs or Kubernetes CronJobs.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "clock",
-			DefaultPort: 0, DefaultCPU: 256, DefaultMemoryMB: 128,
+			Name:        "rabbitmq-provision",
+			DisplayName: "RabbitMQ Message Broker",
+			Description: "Deploy RabbitMQ with management UI and store connection credentials in Vault.",
+			Category:    "provision",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "zap",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+				{Key: "broker_name", Label: "Broker Name", Type: "string", Required: true, Placeholder: "my-broker"},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "deploy_rabbitmq", Type: "deploy_catalog_item", Label: "Deploy RabbitMQ",
+					Description: "Provisions a RabbitMQ broker from the service catalog.",
+					Config:      map[string]any{"catalog_name": "rabbitmq", "job_name": "{{.broker_name}}", "exposed_port": 5672},
+				},
+				{
+					ID: "store_secret", Type: "write_secret", Label: "Store Connection Info",
+					Description: "Writes AMQP connection details to Vault.",
+					Config: map[string]any{
+						"vault_path": "secret/data/workspaces/{{.workspace_id}}/{{.environment}}/{{.broker_name}}",
+						"values":     map[string]any{"AMQP_HOST": "{{.broker_name}}", "AMQP_PORT": "5672"},
+					},
+				},
+			},
+		},
+		// ── Bootstrap blueprints ────────────────────────────────────────────
+		{
+			Name:        "go-api-bootstrap",
+			DisplayName: "Go API Bootstrap",
+			Description: "Scaffold a production-ready Go API: generate repository structure, Dockerfile, and GitHub Actions pipeline.",
+			Category:    "bootstrap",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "code-2",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "app_name", Label: "Application Name", Type: "string", Required: true, Placeholder: "my-go-api"},
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+				{Key: "repository", Label: "Repository Name", Type: "string", Required: true, Placeholder: "org/my-go-api"},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "generate_repo", Type: "generate_repository", Label: "Generate Repository",
+					Description: "Creates repository structure with Go module, Dockerfile, and health check endpoint.",
+					Config:      map[string]any{"name": "{{.repository}}", "template": "go-api"},
+				},
+				{
+					ID: "generate_cicd", Type: "generate_cicd", Label: "Generate CI/CD Pipeline",
+					Description: "Commits a GitHub Actions workflow for build and deploy automation.",
+					Config:      map[string]any{"provider": "github-actions", "repository": "{{.repository}}", "app_name": "{{.app_name}}"},
+				},
+			},
 		},
 		{
-			Name: "internal-service", DisplayName: "Internal Service",
-			Description:       "Service exposed only within the cluster network. Suitable for gRPC microservices and internal APIs.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "network",
-			DefaultPort: 8080, DefaultCPU: 256, DefaultMemoryMB: 256,
+			Name:        "nodejs-api-bootstrap",
+			DisplayName: "Node.js API Bootstrap",
+			Description: "Scaffold a Node.js Express API with Dockerfile, health check, and GitHub Actions pipeline.",
+			Category:    "bootstrap",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "code-2",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "app_name", Label: "Application Name", Type: "string", Required: true, Placeholder: "my-node-api"},
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+				{Key: "repository", Label: "Repository Name", Type: "string", Required: true, Placeholder: "org/my-node-api"},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "generate_repo", Type: "generate_repository", Label: "Generate Repository",
+					Description: "Creates repository structure with package.json, Dockerfile, and Express boilerplate.",
+					Config:      map[string]any{"name": "{{.repository}}", "template": "nodejs-api"},
+				},
+				{
+					ID: "generate_cicd", Type: "generate_cicd", Label: "Generate CI/CD Pipeline",
+					Description: "Commits a GitHub Actions workflow for build and deploy automation.",
+					Config:      map[string]any{"provider": "github-actions", "repository": "{{.repository}}", "app_name": "{{.app_name}}"},
+				},
+			},
+		},
+		// ── DevOps blueprints ───────────────────────────────────────────────
+		{
+			Name:        "monitoring-stack",
+			DisplayName: "Monitoring Stack",
+			Description: "Deploy Prometheus and Grafana for environment-wide metrics and dashboards.",
+			Category:    "devops",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "activity",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "deploy_prometheus", Type: "deploy_catalog_item", Label: "Deploy Prometheus",
+					Description: "Provisions a Prometheus metrics server.",
+					Config:      map[string]any{"catalog_name": "prometheus", "job_name": "prometheus", "exposed_port": 9090},
+				},
+				{
+					ID: "deploy_grafana", Type: "deploy_catalog_item", Label: "Deploy Grafana",
+					Description: "Provisions a Grafana dashboard server.",
+					Config:      map[string]any{"catalog_name": "grafana", "job_name": "grafana", "exposed_port": 3000},
+				},
+			},
 		},
 		{
-			Name: "static-website", DisplayName: "Static Website",
-			Description:       "Static file server or SPA served via Nginx. Includes zero-downtime rolling updates.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "layout-dashboard",
-			DefaultImage: "nginx", DefaultTag: "alpine", DefaultPort: 80, DefaultCPU: 128, DefaultMemoryMB: 128,
+			Name:        "github-actions-cicd",
+			DisplayName: "GitHub Actions CI/CD",
+			Description: "Generate a GitHub Actions workflow for building, testing, and deploying your service.",
+			Category:    "devops",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "git-branch",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "app_name", Label: "Application Name", Type: "string", Required: true, Placeholder: "my-service"},
+				{Key: "repository", Label: "Repository", Type: "string", Required: true, Placeholder: "org/repo"},
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "generate_cicd", Type: "generate_cicd", Label: "Generate GitHub Actions Workflow",
+					Description: "Commits a deploy.yml workflow to the repository.",
+					Config:      map[string]any{"provider": "github-actions", "repository": "{{.repository}}", "app_name": "{{.app_name}}"},
+				},
+			},
 		},
 		{
-			Name: "background-processor", DisplayName: "Background Processor",
-			Description:       "Event-driven processor for streaming pipelines. Suitable for Kafka consumers and stream processors.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "zap",
-			DefaultPort: 0, DefaultCPU: 512, DefaultMemoryMB: 512,
+			Name:        "gitlab-ci-cicd",
+			DisplayName: "GitLab CI/CD",
+			Description: "Generate a .gitlab-ci.yml pipeline for automated build and deployment.",
+			Category:    "devops",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "git-branch",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "app_name", Label: "Application Name", Type: "string", Required: true, Placeholder: "my-service"},
+				{Key: "repository", Label: "Repository", Type: "string", Required: true, Placeholder: "org/repo"},
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "generate_cicd", Type: "generate_cicd", Label: "Generate GitLab CI Pipeline",
+					Description: "Commits a .gitlab-ci.yml pipeline to the repository.",
+					Config:      map[string]any{"provider": "gitlab-ci", "repository": "{{.repository}}", "app_name": "{{.app_name}}"},
+				},
+			},
 		},
-		// ── New starter blueprints ──────────────────────────────────────────
-		// Applications
+		// ── Environment blueprints ──────────────────────────────────────────
 		{
-			Name: "go-api", DisplayName: "Go API",
-			Description:       "Go HTTP service. Provisioned with sensible CPU/memory defaults and health-check support.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "globe",
-			DefaultTag: "latest", DefaultPort: 8080, DefaultCPU: 256, DefaultMemoryMB: 256,
-		},
-		{
-			Name: "nodejs-api", DisplayName: "Node.js API",
-			Description:       "Node.js HTTP/Express service. Includes health checks and rolling deployments.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "globe",
-			DefaultTag: "latest", DefaultPort: 3000, DefaultCPU: 256, DefaultMemoryMB: 256,
-		},
-		{
-			Name: "python-fastapi", DisplayName: "Python FastAPI",
-			Description:       "Python FastAPI service. Auto-configured with uvicorn, health endpoint, and rolling deploys.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "globe",
-			DefaultTag: "latest", DefaultPort: 8000, DefaultCPU: 256, DefaultMemoryMB: 256,
-		},
-		{
-			Name: "nextjs", DisplayName: "Next.js",
-			Description:       "Next.js full-stack application. Server-side rendering with Node.js runtime.",
-			Category:          "application", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "layout-dashboard",
-			DefaultTag: "latest", DefaultPort: 3000, DefaultCPU: 512, DefaultMemoryMB: 512,
-		},
-		// Infrastructure
-		{
-			Name: "postgresql", DisplayName: "PostgreSQL",
-			Description:       "PostgreSQL relational database. Provisioned with persistent storage and default credentials via Vault.",
-			Category:          "infrastructure", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "database",
-			DefaultImage: "postgres", DefaultTag: "16-alpine", DefaultPort: 5432, DefaultCPU: 512, DefaultMemoryMB: 512,
-		},
-		{
-			Name: "redis", DisplayName: "Redis",
-			Description:       "Redis in-memory data store. Suitable for caching, pub/sub, and session storage.",
-			Category:          "infrastructure", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "database",
-			DefaultImage: "redis", DefaultTag: "7-alpine", DefaultPort: 6379, DefaultCPU: 256, DefaultMemoryMB: 256,
-		},
-		{
-			Name: "rabbitmq", DisplayName: "RabbitMQ",
-			Description:       "RabbitMQ message broker with management UI. Suitable for async task queues and event streaming.",
-			Category:          "infrastructure", Version: "v1", SupportedRuntimes: "nomad,kubernetes",
-			IsPublic: true, IsSystem: true, Icon: "zap",
-			DefaultImage: "rabbitmq", DefaultTag: "3-management-alpine", DefaultPort: 5672, DefaultCPU: 512, DefaultMemoryMB: 512,
-		},
-		// CI/CD
-		{
-			Name: "github-actions", DisplayName: "GitHub Actions",
-			Description:       "Generate a GitHub Actions workflow for building, testing, and deploying your service automatically.",
-			Category:          "cicd", Version: "v1", SupportedRuntimes: "",
-			IsPublic: true, IsSystem: true, Icon: "git-branch",
-			CICDProvider: "github-actions",
-		},
-		{
-			Name: "gitlab-ci", DisplayName: "GitLab CI",
-			Description:       "Generate a GitLab CI/CD pipeline (.gitlab-ci.yml) for automated build and deploy.",
-			Category:          "cicd", Version: "v1", SupportedRuntimes: "",
-			IsPublic: true, IsSystem: true, Icon: "git-branch",
-			CICDProvider: "gitlab-ci",
-		},
-		{
-			Name: "jenkins", DisplayName: "Jenkins Pipeline",
-			Description:       "Generate a Jenkinsfile pipeline for build, test, and deploy stages.",
-			Category:          "cicd", Version: "v1", SupportedRuntimes: "",
-			IsPublic: true, IsSystem: true, Icon: "git-branch",
-			CICDProvider: "jenkins",
+			Name:        "environment-bootstrap",
+			DisplayName: "Environment Bootstrap",
+			Description: "Set up a new environment with standard secret paths and baseline configuration.",
+			Category:    "environment",
+			Version:     "v1",
+			IsPublic:    true,
+			IsSystem:    true,
+			Icon:        "layers",
+			InputsSchema: []blueprint.BlueprintInput{
+				{Key: "environment_id", Label: "Target Environment", Type: "env_select", Required: true},
+				{Key: "team_name", Label: "Team Name", Type: "string", Required: true, Placeholder: "platform"},
+			},
+			StepsConfig: []blueprint.BlueprintStep{
+				{
+					ID: "configure_env", Type: "configure_environment", Label: "Configure Environment",
+					Description: "Applies baseline policies and secret path structure.",
+					Config:      map[string]any{"team": "{{.team_name}}"},
+				},
+				{
+					ID: "init_secrets", Type: "write_secret", Label: "Initialize Secret Namespace",
+					Description: "Creates the base secret namespace in Vault.",
+					Config: map[string]any{
+						"vault_path": "secret/data/workspaces/{{.workspace_id}}/{{.environment}}/config",
+						"values":     map[string]any{"ENVIRONMENT": "{{.environment}}", "TEAM": "{{.team_name}}"},
+					},
+				},
+			},
 		},
 	}
+
 	for _, item := range items {
 		if err := db.Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "name"}},
 			DoUpdates: clause.AssignmentColumns([]string{
-				"display_name", "description", "default_image", "default_tag",
-				"default_port", "default_cpu", "default_memory_mb", "cicd_provider",
+				"display_name", "description", "category", "icon",
+				"inputs_schema", "steps_config",
 			}),
 		}).Create(&item).Error; err != nil {
 			return err

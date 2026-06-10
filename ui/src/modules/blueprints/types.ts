@@ -1,19 +1,35 @@
+export interface BlueprintInput {
+  key: string;
+  label: string;
+  /** "string" | "env_select" | "repo_provider_select" | "existing_deployment_select" */
+  type: string;
+  required: boolean;
+  placeholder?: string;
+  help_text?: string;
+  default?: string;
+}
+
+export interface BlueprintStep {
+  id: string;
+  /** "deploy_catalog_item" | "write_secret" | "generate_cicd" | "generate_repository" | "configure_environment" */
+  type: string;
+  label: string;
+  description?: string;
+  config?: Record<string, unknown>;
+}
+
 export interface Blueprint {
   id: string;
   name: string;
   display_name: string;
   description: string;
-  category: "application" | "infrastructure" | "cicd";
+  /** "provision" | "bootstrap" | "devops" | "environment" | "operate" */
+  category: string;
   version: string;
-  supported_runtimes: string[];
   is_public: boolean;
   is_system: boolean;
   icon?: string;
   created_at: string;
-  default_image?: string;
-  default_tag?: string;
-  default_port?: number;
-  default_cpu?: number;
-  default_memory_mb?: number;
-  cicd_provider?: string;
+  inputs_schema: BlueprintInput[];
+  steps_config: BlueprintStep[];
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/kusumaningrat/ternakclouds/internal/accessrequest"
 	"github.com/kusumaningrat/ternakclouds/internal/auth"
 	"github.com/kusumaningrat/ternakclouds/internal/blueprint"
+	"github.com/kusumaningrat/ternakclouds/internal/blueprintrun"
 	"github.com/kusumaningrat/ternakclouds/internal/capability"
 	"github.com/kusumaningrat/ternakclouds/internal/config"
 	"github.com/kusumaningrat/ternakclouds/internal/department"
@@ -68,6 +69,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	repoRepo := repository.NewRepository(db)
 	catalogRepo := servicecatalog.NewRepository(db)
 	blueprintRepo := blueprint.NewRepository(db)
+	blueprintRunRepo := blueprintrun.NewRepository(db)
 	platformAppRepo := platformapp.NewRepository(db)
 
 	// ── Services ─────────────────────────────────────────────────────────────
@@ -88,6 +90,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	repoService := repository.NewService(repoRepo, vc)
 	catalogService := servicecatalog.NewService(catalogRepo, nomadService, k8sService, dockerService, registryRepo, capRepo, vc)
 	blueprintService := blueprint.NewService(blueprintRepo)
+	blueprintRunService := blueprintrun.NewService(blueprintRunRepo, blueprintService, catalogService, capRepo, nomadService, vc)
 	platformAppService := platformapp.NewService(platformAppRepo, blueprintService, nomadService, repoService, secretService)
 
 	// ── Handlers ─────────────────────────────────────────────────────────────
@@ -108,6 +111,7 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 	repoHandler := repository.NewHandler(repoService)
 	catalogHandler := servicecatalog.NewHandler(catalogService)
 	blueprintHandler := blueprint.NewHandler(blueprintService)
+	blueprintRunHandler := blueprintrun.NewHandler(blueprintRunService)
 	platformAppHandler := platformapp.NewHandler(platformAppService)
 
 	v1 := r.Group("/api/v1")
@@ -204,6 +208,9 @@ func registerRoutes(r *gin.Engine, cfg *config.Config, db *gorm.DB, vc vault.Cli
 			middleware.RequireWorkspaceMember(wsAdapter),
 		)
 		blueprint.RegisterRoutes(wsGroup, blueprintHandler)
+		blueprintrun.RegisterRoutes(wsGroup, blueprintRunHandler,
+			middleware.RequirePermission(roleService, "deployments:exec"),
+		)
 		servicecatalog.RegisterCatalogRoutes(wsGroup, catalogHandler)
 
 		// Service catalog deployments live under the env group; deploy + delete require deployments:exec.

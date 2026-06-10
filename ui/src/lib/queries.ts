@@ -15,4 +15,5 @@ export * from "../modules/runtime/docker/queries";
 export * from "../modules/logs/queries";
 export * from "../modules/catalog/queries";
 export * from "../modules/blueprints/queries";
+export * from "../modules/blueprintrun/queries";
 export * from "../modules/platform-apps/queries";
