@@ -1,7 +1,5 @@
 package blueprint
 
-import "strings"
-
 type Service struct {
 	repo *Repository
 }
@@ -40,6 +38,10 @@ func (s *Service) GetByID(id string) (*BlueprintResponse, error) {
 	return &r, nil
 }
 
+func (s *Service) GetRaw(name string) (*Blueprint, error) {
+	return s.repo.FindByName(name)
+}
+
 func (s *Service) Delete(id string) error {
 	b, err := s.repo.FindByID(id)
 	if err != nil {
@@ -52,24 +54,26 @@ func (s *Service) Delete(id string) error {
 }
 
 func toResponse(b Blueprint) BlueprintResponse {
-	runtimes := strings.Split(b.SupportedRuntimes, ",")
-	clean := make([]string, 0, len(runtimes))
-	for _, r := range runtimes {
-		if t := strings.TrimSpace(r); t != "" {
-			clean = append(clean, t)
-		}
+	inputs := b.InputsSchema
+	if inputs == nil {
+		inputs = []BlueprintInput{}
+	}
+	steps := b.StepsConfig
+	if steps == nil {
+		steps = []BlueprintStep{}
 	}
 	return BlueprintResponse{
-		ID:                b.ID.String(),
-		Name:              b.Name,
-		DisplayName:       b.DisplayName,
-		Description:       b.Description,
-		Category:          b.Category,
-		Version:           b.Version,
-		SupportedRuntimes: clean,
-		IsPublic:          b.IsPublic,
-		IsSystem:          b.IsSystem,
-		Icon:              b.Icon,
-		CreatedAt:         b.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		ID:           b.ID.String(),
+		Name:         b.Name,
+		DisplayName:  b.DisplayName,
+		Description:  b.Description,
+		Category:     b.Category,
+		Version:      b.Version,
+		IsPublic:     b.IsPublic,
+		IsSystem:     b.IsSystem,
+		Icon:         b.Icon,
+		CreatedAt:    b.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		InputsSchema: inputs,
+		StepsConfig:  steps,
 	}
 }

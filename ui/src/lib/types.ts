@@ -15,4 +15,5 @@ export * from "../modules/runtime/docker/types";
 export * from "../modules/logs/types";
 export * from "../modules/catalog/types";
 export * from "../modules/blueprints/types";
+export * from "../modules/blueprintrun/types";
 export * from "../modules/platform-apps/types";
