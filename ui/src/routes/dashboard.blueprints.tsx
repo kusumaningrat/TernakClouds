@@ -67,32 +67,57 @@ function BlueprintIcon({ icon, className }: { icon?: string; className?: string 
 // ─── Category config ───────────────────────────────────────────────────────────
 
 const CATEGORIES: Record<string, { label: string; color: string; description: string }> = {
-  provision:   { label: "Provision",   color: "bg-blue-500/15 text-blue-600",   description: "Deploy and configure platform resources" },
-  bootstrap:   { label: "Bootstrap",   color: "bg-emerald-500/15 text-emerald-600", description: "Scaffold new projects from scratch" },
-  devops:      { label: "DevOps",      color: "bg-purple-500/15 text-purple-600", description: "CI/CD pipelines and observability" },
-  environment: { label: "Environment", color: "bg-amber-500/15 text-amber-600",  description: "Environment setup and configuration" },
-  operate:     { label: "Operate",     color: "bg-rose-500/15 text-rose-600",    description: "Day-2 operations on existing resources" },
+  provision: {
+    label: "Provision",
+    color: "bg-blue-500/15 text-blue-600",
+    description: "Deploy and configure platform resources",
+  },
+  bootstrap: {
+    label: "Bootstrap",
+    color: "bg-emerald-500/15 text-emerald-600",
+    description: "Scaffold new projects from scratch",
+  },
+  devops: {
+    label: "DevOps",
+    color: "bg-purple-500/15 text-purple-600",
+    description: "CI/CD pipelines and observability",
+  },
+  environment: {
+    label: "Environment",
+    color: "bg-amber-500/15 text-amber-600",
+    description: "Environment setup and configuration",
+  },
+  operate: {
+    label: "Operate",
+    color: "bg-rose-500/15 text-rose-600",
+    description: "Day-2 operations on existing resources",
+  },
 };
 
 // ─── Step status icon ──────────────────────────────────────────────────────────
 
 function StepStatusIcon({ status }: { status: string }) {
   switch (status) {
-    case "completed": return <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />;
-    case "running":   return <Loader2 className="size-4 text-primary shrink-0 animate-spin" />;
-    case "failed":    return <XCircle className="size-4 text-destructive shrink-0" />;
-    case "skipped":   return <Circle className="size-4 text-muted-foreground/40 shrink-0" />;
-    default:          return <Circle className="size-4 text-muted-foreground/30 shrink-0" />;
+    case "completed":
+      return <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />;
+    case "running":
+      return <Loader2 className="size-4 text-primary shrink-0 animate-spin" />;
+    case "failed":
+      return <XCircle className="size-4 text-destructive shrink-0" />;
+    case "skipped":
+      return <Circle className="size-4 text-muted-foreground/40 shrink-0" />;
+    default:
+      return <Circle className="size-4 text-muted-foreground/30 shrink-0" />;
   }
 }
 
 // ─── Run status badge ──────────────────────────────────────────────────────────
 
 const RUN_STATUS: Record<string, { dot: string; text: string }> = {
-  pending:   { dot: "bg-muted-foreground",  text: "text-muted-foreground" },
-  running:   { dot: "bg-primary animate-pulse", text: "text-primary" },
-  completed: { dot: "bg-emerald-500",       text: "text-emerald-600" },
-  failed:    { dot: "bg-destructive",       text: "text-destructive" },
+  pending: { dot: "bg-muted-foreground", text: "text-muted-foreground" },
+  running: { dot: "bg-primary animate-pulse", text: "text-primary" },
+  completed: { dot: "bg-emerald-500", text: "text-emerald-600" },
+  failed: { dot: "bg-destructive", text: "text-destructive" },
 };
 
 function RunStatusBadge({ status }: { status: string }) {
@@ -127,13 +152,18 @@ function BlueprintCard({ bp, onRun }: { bp: Blueprint; onRun: (bp: Blueprint) =>
       <div className="p-5 flex flex-col flex-1">
         <div className="flex items-start gap-3 mb-3">
           <div className="size-10 rounded-lg bg-secondary grid place-items-center shrink-0 group-hover:bg-primary/10 transition">
-            <BlueprintIcon icon={bp.icon} className="size-5 text-muted-foreground group-hover:text-primary transition" />
+            <BlueprintIcon
+              icon={bp.icon}
+              className="size-5 text-muted-foreground group-hover:text-primary transition"
+            />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
               <span className="font-semibold text-sm">{bp.display_name}</span>
               {bp.is_system && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">platform</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                  platform
+                </span>
               )}
             </div>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -158,7 +188,10 @@ function BlueprintCard({ bp, onRun }: { bp: Blueprint; onRun: (bp: Blueprint) =>
         {stepCount > 0 && (
           <div className="flex flex-col gap-1 mb-4">
             {bp.steps_config.slice(0, 3).map((s) => (
-              <div key={s.id} className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <div
+                key={s.id}
+                className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+              >
                 <Circle className="size-2 shrink-0" />
                 {s.label}
               </div>
@@ -282,7 +315,11 @@ function ExecutionView({
             <XCircle className="size-4 text-destructive" />
           )}
           <span className="text-sm font-medium">
-            {isRunning ? "Running automation…" : run?.status === "completed" ? "Completed" : "Failed"}
+            {isRunning
+              ? "Running automation…"
+              : run?.status === "completed"
+                ? "Completed"
+                : "Failed"}
           </span>
         </div>
         {run && <RunStatusBadge status={run.status} />}
@@ -311,8 +348,10 @@ function ExecutionView({
               {step.started_at && step.completed_at && (
                 <span className="text-[11px] text-muted-foreground tabular-nums">
                   {Math.round(
-                    (new Date(step.completed_at).getTime() - new Date(step.started_at).getTime()) / 1000,
-                  )}s
+                    (new Date(step.completed_at).getTime() - new Date(step.started_at).getTime()) /
+                      1000,
+                  )}
+                  s
                 </span>
               )}
             </div>
@@ -389,16 +428,14 @@ function RunBlueprintDialog({
       setStage("inputs");
       setActiveRunId(null);
     }
-  }, [open, blueprint?.name]);
+  }, [open, blueprint]);
 
   if (!blueprint) return null;
 
   const inputs = blueprint.inputs_schema ?? [];
   const steps = blueprint.steps_config ?? [];
 
-  const canProceed = inputs
-    .filter((i) => i.required)
-    .every((i) => fieldValues[i.key]?.trim());
+  const canProceed = inputs.filter((i) => i.required).every((i) => fieldValues[i.key]?.trim());
 
   const handleRun = async () => {
     const parsedInputs: Record<string, unknown> = {};
@@ -432,7 +469,12 @@ function RunBlueprintDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!v) onClose();
+      }}
+    >
       <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -476,9 +518,8 @@ function RunBlueprintDialog({
                   .filter(([, v]) => v)
                   .map(([k, v]) => {
                     const inputDef = inputs.find((i) => i.key === k);
-                    const display = inputDef?.type === "env_select" && v.includes("|")
-                      ? v.split("|")[1]
-                      : v;
+                    const display =
+                      inputDef?.type === "env_select" && v.includes("|") ? v.split("|")[1] : v;
                     return (
                       <div key={k} className="flex items-center gap-2 text-xs">
                         <span className="text-muted-foreground w-32 shrink-0">
@@ -496,7 +537,10 @@ function RunBlueprintDialog({
                 </p>
                 <div className="space-y-2">
                   {steps.map((s, i) => (
-                    <div key={s.id} className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 p-3">
+                    <div
+                      key={s.id}
+                      className="flex items-start gap-2 rounded-lg border border-border bg-muted/20 p-3"
+                    >
                       <span className="text-[11px] text-muted-foreground/60 w-5 shrink-0 text-right tabular-nums mt-0.5">
                         {i + 1}
                       </span>
@@ -513,18 +557,15 @@ function RunBlueprintDialog({
               </div>
 
               <p className="text-[11px] text-muted-foreground">
-                The platform will execute these steps sequentially. On failure, execution stops at the failing step.
+                The platform will execute these steps sequentially. On failure, execution stops at
+                the failing step.
               </p>
             </div>
           )}
 
           {/* Stage: running */}
           {stage === "running" && activeRunId && (
-            <ExecutionView
-              runId={activeRunId}
-              workspaceSlug={workspaceSlug}
-              onClose={onClose}
-            />
+            <ExecutionView runId={activeRunId} workspaceSlug={workspaceSlug} onClose={onClose} />
           )}
         </div>
 
@@ -536,9 +577,13 @@ function RunBlueprintDialog({
               className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-secondary hover:bg-accent text-sm transition"
             >
               {stage === "inputs" ? (
-                <><X className="size-3.5" /> Cancel</>
+                <>
+                  <X className="size-3.5" /> Cancel
+                </>
               ) : (
-                <><ArrowLeft className="size-3.5" /> Back</>
+                <>
+                  <ArrowLeft className="size-3.5" /> Back
+                </>
               )}
             </button>
 
@@ -604,10 +649,18 @@ function RunsHistory({ workspaceSlug }: { workspaceSlug: string }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Blueprint</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Environment</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
-                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Started</th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Blueprint
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Environment
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Status
+                  </th>
+                  <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">
+                    Started
+                  </th>
                   <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground" />
                 </tr>
               </thead>
@@ -663,7 +716,12 @@ function RunsHistory({ workspaceSlug }: { workspaceSlug: string }) {
       )}
 
       {/* Run detail dialog */}
-      <Dialog open={!!selectedRunId} onOpenChange={(v) => { if (!v) setSelectedRunId(null); }}>
+      <Dialog
+        open={!!selectedRunId}
+        onOpenChange={(v) => {
+          if (!v) setSelectedRunId(null);
+        }}
+      >
         <DialogContent className="sm:max-w-lg max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
@@ -672,9 +730,7 @@ function RunsHistory({ workspaceSlug }: { workspaceSlug: string }) {
             </DialogTitle>
           </DialogHeader>
           <div className="flex-1 overflow-y-auto px-1">
-            {selectedRunId && (
-              <RunDetail runId={selectedRunId} workspaceSlug={workspaceSlug} />
-            )}
+            {selectedRunId && <RunDetail runId={selectedRunId} workspaceSlug={workspaceSlug} />}
           </div>
         </DialogContent>
       </Dialog>
@@ -715,10 +771,13 @@ function RunDetail({ runId, workspaceSlug }: { runId: string; workspaceSlug: str
           <div
             key={step.id}
             className={`rounded-lg border p-3 ${
-              step.status === "running" ? "border-primary/40 bg-primary/5" :
-              step.status === "completed" ? "border-emerald-500/30 bg-emerald-500/5" :
-              step.status === "failed" ? "border-destructive/30 bg-destructive/5" :
-              "border-border bg-muted/20"
+              step.status === "running"
+                ? "border-primary/40 bg-primary/5"
+                : step.status === "completed"
+                  ? "border-emerald-500/30 bg-emerald-500/5"
+                  : step.status === "failed"
+                    ? "border-destructive/30 bg-destructive/5"
+                    : "border-border bg-muted/20"
             }`}
           >
             <div className="flex items-center gap-2">
@@ -739,7 +798,10 @@ function RunDetail({ runId, workspaceSlug }: { runId: string; workspaceSlug: str
             {step.status === "completed" && Object.keys(step.output ?? {}).length > 0 && (
               <div className="mt-2 ml-10 flex flex-wrap gap-1.5">
                 {Object.entries(step.output).map(([k, v]) => (
-                  <span key={k} className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono">
+                  <span
+                    key={k}
+                    className="text-[10px] px-1.5 py-0.5 rounded bg-secondary text-muted-foreground font-mono"
+                  >
                     {k}: {String(v)}
                   </span>
                 ))}
@@ -903,9 +965,7 @@ function BlueprintsPage() {
         )}
 
         {/* Runs tab */}
-        {activeTab === "runs" && (
-          <RunsHistory workspaceSlug={workspaceSlug} />
-        )}
+        {activeTab === "runs" && <RunsHistory workspaceSlug={workspaceSlug} />}
       </div>
 
       <RunBlueprintDialog

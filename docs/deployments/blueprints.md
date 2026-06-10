@@ -22,6 +22,41 @@ Blueprints are reusable deployment templates that encode an application's infras
 
 **Custom blueprints** are created within a workspace. They are visible only to that workspace (unless marked public).
 
+### Starter Blueprints
+
+The platform seeds the following system blueprints on first startup. All are public and available to every workspace.
+
+#### Provision
+
+| Blueprint | Description |
+|---|---|
+| **PostgreSQL Database** | Deploys a PostgreSQL instance from the service catalog and stores the connection credentials as a Vault secret grant |
+| **Redis Cache** | Deploys a Redis instance and stores connection info as a Vault secret grant |
+| **RabbitMQ Message Broker** | Deploys RabbitMQ with the management UI and stores credentials as a Vault secret grant |
+
+#### Bootstrap
+
+| Blueprint | Description |
+|---|---|
+| **Go API Bootstrap** | Scaffolds a production-ready Go API repository with a Dockerfile and GitHub Actions CI/CD pipeline |
+| **Node.js API Bootstrap** | Scaffolds an Express API repository with a Dockerfile and GitHub Actions CI/CD pipeline |
+
+#### DevOps
+
+| Blueprint | Description |
+|---|---|
+| **Monitoring Stack** | Deploys Prometheus (`:9090`) and Grafana (`:3000`) to the target environment |
+| **GitHub Actions CI/CD** | Generates a GitHub Actions build/test/deploy workflow and commits it to the repository |
+| **GitLab CI/CD** | Generates a `.gitlab-ci.yml` pipeline and commits it to the repository |
+
+#### Environment
+
+| Blueprint | Description |
+|---|---|
+| **Environment Bootstrap** | Initialises an environment's secret namespace in Vault and applies baseline configuration |
+
+---
+
 ### Versioning
 
 Blueprints support semantic versioning. Multiple versions of the same blueprint can coexist. When deploying, the user selects the version. Previous versions remain available for rollback.
@@ -30,17 +65,25 @@ Blueprints support semantic versioning. Multiple versions of the same blueprint 
 
 ## Blueprint Structure
 
-A blueprint captures the full specification of a deployable application:
+A blueprint captures all the metadata and automation steps needed to provision an application or service:
 
 - **Name and description** — display metadata
-- **Category** — `application` or `infrastructure`
-- **Supported runtimes** — which runtimes this blueprint can target (Kubernetes, Nomad, Docker)
-- **Icon** — display icon
+- **Category** — `provision`, `bootstrap`, `devops`, `environment`, or `operate`
+- **Icon** — display icon for the catalogue UI
 - **Visibility** — public (all workspaces) or private (workspace-only)
 - **Version** — semantic version string
-- **Spec** — the deployment specification used by generators
+- **Inputs schema** — user-facing input fields (text, environment selector, repository selector, existing deployment selector)
+- **Steps config** — ordered list of automation steps executed at deploy time
 
-The spec is a runtime-agnostic representation. The generator package translates it into runtime-specific manifests (Nomad HCL or Kubernetes YAML) at deployment time.
+### Step Types
+
+| Step type | What it does |
+|---|---|
+| `deploy_catalog_item` | Deploy a service from the catalog into the target environment |
+| `write_secret` | Store a value (e.g. generated credentials) as a Vault secret grant |
+| `generate_repository` | Create a Git repository from a code template |
+| `generate_cicd` | Generate and commit a CI/CD pipeline definition |
+| `configure_environment` | Apply configuration to the target environment |
 
 ---
 

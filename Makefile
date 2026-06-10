@@ -65,11 +65,11 @@ test:
 
 # ── Docker infrastructure ────────────────────────────────────────────────────
 
-docker-up:
+infra-up:
 	docker compose up -d
 
-docker-down:
-	docker compose down
+infra-down:
+	docker compose down -v
 
 # ── Formatting ───────────────────────────────────────────────────────────────
 

@@ -11,41 +11,20 @@ version: "3.9"
 # ─────────────────────────────────────────────────────────────────────────────
 
 services:
-  postgres:
-    image: postgres:16-alpine
+  api:
+    build: ./backend
     restart: unless-stopped
+    env_file:
+      - ./backend/.env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: idp_platform
+      DB_HOST: postgres
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: idp_platform
+      SERVER_PORT: "8022"
+      GIN_MODE: release
     ports:
-      - "5432:5432"
-    volumes:
-      - pg_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - "8022:8022"
 
-  vault:
-    image: hashicorp/vault:1.18
-    container_name: vault
-    restart: unless-stopped
-    ports:
-      - "8200:8200"
-    cap_add:
-      - IPC_LOCK
-    environment:
-      VAULT_ADDR: http://0.0.0.0:8200
-    volumes:
-      - ./config:/vault/config
-      - ./data:/vault/file
-    command: vault server -config=/vault/config/vault.hcl
-    healthcheck:
-      test: ["CMD", "vault", "status"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
 volumes:
   pg_data:

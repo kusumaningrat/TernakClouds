@@ -91,17 +91,17 @@ VITE_API_URL=https://api.yourplatform.com
 ## 4. Start Infrastructure
 
 ```bash
-make docker-up
+make infra-up
 ```
 
-This starts PostgreSQL on `:5432` using Docker Compose. Wait a few seconds for the database to be ready before starting the API.
+This starts PostgreSQL on `:5432` and Vault on `:8200` using Docker Compose. Wait a few seconds for the services to be ready before starting the API service.
 
 ---
 
-## 5. Install Frontend Dependencies
+## 5. Install Both Backend & Frontend Dependencies
 
 ```bash
-make install
+make prepare
 ```
 
 This runs `npm install` for both the docs site and the admin dashboard.
@@ -134,7 +134,6 @@ Log in with the `ADMIN_EMAIL` and `ADMIN_PASSWORD` you set in `backend/.env`. On
 
 - Default roles and permissions
 - The bootstrap admin user
-- A default **Platform** workspace with `dev`, `staging`, and `production` environments
 
 The setup wizard runs on first login. It requires creating a workspace and at least one environment — no runtime connection is required to reach the dashboard. Runtime providers can be configured later under **Platform → Infrastructure** for each environment.
 
@@ -180,7 +179,7 @@ vault read auth/approle/role/idp/role-id
 vault write -f auth/approle/role/idp/secret-id
 ```
 
-Update `server/.env`:
+Update `backend/.env`:
 
 ```env
 VAULT_ENABLED=true
@@ -262,16 +261,6 @@ GIN_MODE=release ./backend/bin/api
 **Admin dashboard:** Deploy `ui/dist/` to your CDN or static host (Nginx, Caddy, Cloudflare Pages, Vercel). Set `VITE_API_URL` at build time to your backend's public URL.
 
 **Docs site:** Deploy `docs-site/build/` to your CDN.
-
-### Full stack with Docker Compose
-
-```bash
-docker compose up -d
-```
-
-The Docker image uses a two-stage build (Go builder → Alpine runtime). Final image is approximately 15 MB.
-
----
 
 ## Connecting Runtimes
 

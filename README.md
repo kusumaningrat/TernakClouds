@@ -41,11 +41,11 @@ git clone <repo-url> idp && cd idp
 cp backend/.env.example backend/.env
 # edit backend/.env (DB, JWT_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD)
 
-# 3. Start Postgres
-make docker-up
+# 3. Start infrastructure (Postgres + Vault)
+make infra-up
 
-# 4. Install frontend deps
-make install
+# 4. Install dependencies
+make prepare
 
 # 5. Start dev servers (backend :8022 + dashboard :3000)
 make dev

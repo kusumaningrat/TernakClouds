@@ -13,10 +13,10 @@ Follow the [installation guide](../getting-started/installation.md) to get the p
 
 ```bash
 git clone <repo-url> idp && cd idp
-cp server/.env.example server/.env   # edit DB_* and JWT_SECRET
-cp admin/.env.example admin/.env
-make docker-up
-make install
+cp backend/.env.example backend/.env   # edit DB_* and JWT_SECRET
+cp ui/.env.example ui/.env
+make infra-up
+make prepare
 make dev
 ```
 
@@ -26,19 +26,19 @@ make dev
 
 ```
 idp/
-├── server/                   Go REST API
+├── backend/                  Go REST API
 │   ├── cmd/api/              Main entrypoint (main.go)
 │   ├── cmd/reset-db/         Dev utility to wipe + re-seed
 │   ├── internal/             Domain packages (one per bounded context)
 │   └── pkg/                  Shared utilities (JWT, responses, pagination)
 │
-├── admin/                    Admin dashboard
+├── ui/                       Admin dashboard
 │   ├── src/routes/           File-based routing (TanStack Router)
 │   ├── src/components/       Reusable UI components
 │   └── src/lib/              API query hooks, types, auth
 │
-├── src/                      Public website
-├── docs/                     Platform documentation
+├── docs-site/                Public documentation website (Docusaurus)
+├── docs/                     Documentation source (Markdown)
 ├── docker-compose.yml
 └── Makefile
 ```
@@ -63,7 +63,7 @@ internal/<domain>/
 
 ### Route Registration
 
-Routes are registered in `server/internal/server/server.go`. Each package exposes a `RegisterRoutes(rg *gin.RouterGroup, h *Handler, ...)` function.
+Routes are registered in `backend/internal/server/server.go`. Each package exposes a `RegisterRoutes(rg *gin.RouterGroup, h *Handler, ...)` function.
 
 Never register routes inline in `server.go`. Keep all routing logic in the package's `routes.go`.
 
@@ -205,29 +205,32 @@ See the extensibility section in [Runtimes](../runtimes/overview.md#adding-a-new
 
 ```bash
 # Development
-make dev              # Start API + admin dashboard
+make dev              # Start API + admin dashboard concurrently
 make dev-backend      # Go API only (:8022)
-make dev-admin        # Admin dashboard only (:3000)
-make dev-site         # Public website only (:4000)
+make dev-ui           # Admin dashboard only (:3000)
+make dev-site         # Docs site only (:4000)
 
 # Build
 make build            # Build all artifacts
-make build-backend    # Go binary → server/bin/api
-make build-admin      # Admin bundle → admin/dist/
-make build-site       # Site bundle → dist/
+make build-backend    # Go binary → backend/bin/api
+make build-ui         # Admin bundle → ui/dist/
+make build-site       # Docs site bundle → docs-site/build/
 
 # Quality
 make test             # go test ./...
 make fmt              # go fmt + prettier
-make lint             # eslint (admin)
+make lint-ui          # eslint (ui)
+make lint-autofix     # eslint --fix (ui)
+
+# Infrastructure
+make infra-up         # Start Postgres + Vault via Docker Compose
+make infra-down       # Stop and remove Docker services + volumes
 
 # Database
-make docker-up        # Start Postgres
-make docker-down      # Stop all Docker services
-make reset-db-dev     # Drop + re-migrate + re-seed (dev only)
+cd backend && go run ./cmd/reset-db   # Drop + re-migrate + re-seed (dev only)
 
 # Dependencies
-make install          # npm install (root + admin)
+make prepare          # go mod tidy + npm install (docs-site + ui)
 make clean            # Remove build artifacts
 ```
 
@@ -241,9 +244,9 @@ make clean            # Remove build artifacts
 
 3. **Before opening a PR:**
    ```bash
-   make test    # all Go tests must pass
-   make fmt     # format everything
-   cd admin && npm run lint   # no lint errors
+   make test      # all Go tests must pass
+   make fmt       # format everything
+   make lint-ui   # no lint errors
    ```
 
 4. **PR description should include:**
@@ -257,7 +260,7 @@ make clean            # Remove build artifacts
 
 ## Database Migrations
 
-The server uses GORM `AutoMigrate`. To add a column or table:
+The backend uses GORM `AutoMigrate`. To add a column or table:
 
 1. Update the model in `internal/<domain>/models.go`
 2. `AutoMigrate` will apply the change on next server start
