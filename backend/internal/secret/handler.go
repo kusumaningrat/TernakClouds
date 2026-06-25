@@ -179,7 +179,13 @@ func (h *Handler) GetValue(c *gin.Context) {
 			pkg.RespondErr(c, http.StatusNotFound, "secret grant not found")
 			return
 		}
-		pkg.RespondErr(c, http.StatusBadGateway, "Unable to read secret. Storage returned an error.")
+		// Owners see the vault path already — give them the underlying Vault error
+		// to make misconfigured mounts / paths / token policies diagnosable.
+		msg := "Unable to read secret. Storage returned an error."
+		if isCallerOwner(c) {
+			msg = "Unable to read secret: " + err.Error()
+		}
+		pkg.RespondErr(c, http.StatusBadGateway, msg)
 		return
 	}
 	pkg.RespondOK(c, http.StatusOK, resp)

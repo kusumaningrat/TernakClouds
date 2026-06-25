@@ -100,7 +100,21 @@ func (r *Repository) FindProviderConfig(id uuid.UUID) (*ProviderConfig, error) {
 	return &cfg, err
 }
 
+// FindProviderConfigByBindingAndNameUnscoped returns a ProviderConfig row by binding id and provider name,
+// including soft-deleted rows. This is useful for cleaning up stale soft-deleted duplicates before an insert.
+func (r *Repository) FindProviderConfigByBindingAndNameUnscoped(bindingID uuid.UUID, providerName string) (*ProviderConfig, error) {
+	var cfg ProviderConfig
+	err := r.db.Unscoped().Where("capability_binding_id = ? AND provider_name = ?", bindingID, providerName).First(&cfg).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	return &cfg, err
+}
+
 // DeleteProviderConfigByID removes a ProviderConfig by its primary key.
+// This uses an unscoped delete to remove the row entirely from the database.
+// ProviderConfig uses GORM soft deletes, and the unique index on
+// (capability_binding_id, provider_name) must not retain soft-deleted rows.
 func (r *Repository) DeleteProviderConfigByID(id uuid.UUID) error {
-	return r.db.Where("id = ?", id).Delete(&ProviderConfig{}).Error
+	return r.db.Unscoped().Where("id = ?", id).Delete(&ProviderConfig{}).Error
 }

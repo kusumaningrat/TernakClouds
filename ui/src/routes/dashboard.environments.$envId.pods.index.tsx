@@ -7,7 +7,7 @@ import { Loader2, AlertTriangle, RefreshCw, Server } from "lucide-react";
 import type { K8sPodStub } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/pods/")({
-  head: () => ({ meta: [{ title: "Pods · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Instances · TernakClouds" }] }),
   component: PodsIndexPage,
 });
 
@@ -115,7 +115,7 @@ function K8sPodsListView({ slug, envId }: { slug: string; envId: string }) {
           )}
           {!isLoading && (
             <span className="text-xs text-muted-foreground">
-              {pods.length} pod{pods.length !== 1 ? "s" : ""}
+              {pods.length} instance{pods.length !== 1 ? "s" : ""}
             </span>
           )}
           {dataUpdatedAt > 0 && !isLoading && (
@@ -141,17 +141,17 @@ function K8sPodsListView({ slug, envId }: { slug: string; envId: string }) {
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
-          <Loader2 className="size-4 animate-spin" /> Loading pods…
+          <Loader2 className="size-4 animate-spin" /> Loading instances…
         </div>
       )}
       {error && !isLoading && (
         <div className="flex items-center gap-2 text-sm text-destructive py-4">
-          <AlertTriangle className="size-4" /> Failed to fetch pods from Kubernetes
+          <AlertTriangle className="size-4" /> Failed to fetch instances from Kubernetes
         </div>
       )}
       {!isLoading && !error && pods.length === 0 && (
         <div className="py-16 text-center text-sm text-muted-foreground">
-          No pods found in this environment.
+          No instances found in this environment.
         </div>
       )}
 
@@ -160,7 +160,7 @@ function K8sPodsListView({ slug, envId }: { slug: string; envId: string }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-secondary/50">
-                {["Pod", "Phase", "Node", "Ready", "Restarts", "Created"].map((h) => (
+                {["Instance", "Phase", "Node", "Ready", "Restarts", "Created"].map((h) => (
                   <th
                     key={h}
                     className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -194,7 +194,10 @@ function PodsIndexPage() {
 
   return (
     <>
-      <DashboardTopbar title="Pods" subtitle="Kubernetes pods running in this environment." />
+      <DashboardTopbar
+        title="Instances"
+        subtitle="Running instances (Kubernetes pods) in this environment."
+      />
 
       {capLoading && (
         <main className="p-6 flex items-center justify-center py-32">
@@ -210,7 +213,7 @@ function PodsIndexPage() {
           <div>
             <p className="font-semibold">No Kubernetes provider configured</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Bind a Kubernetes provider to the Runtime capability to view pods here.
+              Bind a Kubernetes provider to the Runtime capability to view instances here.
             </p>
           </div>
           <Link

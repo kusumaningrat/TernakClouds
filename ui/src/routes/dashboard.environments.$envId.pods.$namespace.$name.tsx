@@ -9,7 +9,7 @@ import type { K8sContainerDetail } from "@/lib/types";
 import { getAccessToken } from "@/lib/auth";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/pods/$namespace/$name")({
-  head: () => ({ meta: [{ title: "Pod · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Instance · TernakClouds" }] }),
   component: PodDetailPage,
 });
 
@@ -308,7 +308,7 @@ function PodDetailPage() {
 
   return (
     <>
-      <DashboardTopbar title={name} subtitle={`Pod · namespace: ${namespace}`} />
+      <DashboardTopbar title={name} subtitle={`Instance · Kubernetes Pod · namespace: ${namespace}`} />
 
       <main className="p-6 space-y-8">
         {/* Back */}
@@ -317,17 +317,17 @@ function PodDetailPage() {
           params={{ envId }}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
         >
-          <ArrowLeft className="size-3.5" /> Pods
+          <ArrowLeft className="size-3.5" /> Instances
         </Link>
 
         {isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
-            <Loader2 className="size-4 animate-spin" /> Loading pod…
+            <Loader2 className="size-4 animate-spin" /> Loading instance…
           </div>
         )}
         {error && !isLoading && (
           <div className="flex items-center gap-2 text-sm text-destructive py-4">
-            <AlertTriangle className="size-4" /> Failed to load pod details
+            <AlertTriangle className="size-4" /> Failed to load instance details
           </div>
         )}
 

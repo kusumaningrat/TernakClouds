@@ -396,20 +396,20 @@ export function DashboardSidebar() {
                   <>
                     <NavLink
                       to={`/dashboard/environments/${activeEnvId}/services`}
-                      label="Services"
+                      label="Endpoints"
                       icon={Layers}
                       active={envActive("services")}
                     />
                     <NavLink
                       to={`/dashboard/environments/${activeEnvId}/deployments`}
-                      label="Deployments"
+                      label="Workloads"
                       icon={Rocket}
                       active={envActive("deployments")}
                     />
                     {hasK8s && (
                       <NavLink
                         to={`/dashboard/environments/${activeEnvId}/pods`}
-                        label="Pods"
+                        label="Instances"
                         icon={Server}
                         active={envActive("pods")}
                         badge="K8s"

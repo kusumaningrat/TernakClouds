@@ -243,12 +243,17 @@ func (c *httpClient) WriteKV(ctx context.Context, path string, data map[string]s
 	return nil
 }
 
-// ListKV returns the immediate children of path using Vault's metadata LIST endpoint.
+// ListKV returns the immediate children of path using Vault's metadata list endpoint.
 // Keys ending in "/" are sub-directories. Returns nil, nil when the path has no children.
+//
+// Uses GET with ?list=true rather than the non-standard LIST HTTP verb: Vault treats
+// them as equivalent, but reverse proxies / ingress controllers in front of Vault
+// (e.g. nginx, ALB) frequently reject or drop the LIST method, which silently breaks
+// recursive discovery against hosted Vault endpoints.
 func (c *httpClient) ListKV(ctx context.Context, path string) ([]string, error) {
 	req, err := http.NewRequestWithContext(
-		ctx, "LIST",
-		fmt.Sprintf("%s/v1/%s/metadata/%s", c.address, c.kvMount, strings.TrimRight(path, "/")),
+		ctx, http.MethodGet,
+		fmt.Sprintf("%s/v1/%s/metadata/%s?list=true", c.address, c.kvMount, strings.TrimRight(path, "/")),
 		nil,
 	)
 	if err != nil {

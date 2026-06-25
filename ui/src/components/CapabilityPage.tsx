@@ -26,6 +26,10 @@ import {
 } from "lucide-react";
 import type { CapabilityProvider, ProviderConfigResponse } from "@/lib/types";
 
+// Per-provider overrides for the generic "Namespace" field (e.g. Vault uses it
+// as the KV mount). Keyed by provider name.
+type NamespaceConfig = Record<string, { label?: string; placeholder?: string; hint?: string }>;
+
 interface Props {
   envId: string;
   capName: string;
@@ -33,6 +37,7 @@ interface Props {
   subtitle: string;
   endpointPlaceholders?: Record<string, string>;
   tokenPlaceholders?: Record<string, string>;
+  namespaceConfig?: NamespaceConfig;
   extraContent?: React.ReactNode;
 }
 
@@ -46,6 +51,7 @@ function AddProviderForm({
   onDone,
   endpointPlaceholders,
   tokenPlaceholders,
+  namespaceConfig,
 }: {
   envId: string;
   capName: string;
@@ -54,6 +60,7 @@ function AddProviderForm({
   onDone: () => void;
   endpointPlaceholders?: Record<string, string>;
   tokenPlaceholders?: Record<string, string>;
+  namespaceConfig?: NamespaceConfig;
 }) {
   const [selectedProvider, setSelectedProvider] = useState<CapabilityProvider | null>(null);
   const [dropOpen, setDropOpen] = useState(false);
@@ -62,6 +69,7 @@ function AddProviderForm({
   const bind = useBindProvider();
 
   const isTokenOptional = selectedProvider?.name === "docker";
+  const nsCfg = (selectedProvider && namespaceConfig?.[selectedProvider.name]) ?? undefined;
 
   const handleSubmit = async () => {
     if (!selectedProvider) {
@@ -164,8 +172,9 @@ function AddProviderForm({
           onChange={(v) => setForm((f) => ({ ...f, region: v }))}
         />
         <Field
-          label="Namespace"
-          placeholder="default"
+          label={nsCfg?.label ?? "Namespace"}
+          placeholder={nsCfg?.placeholder ?? "default"}
+          hint={nsCfg?.hint}
           value={form.namespace}
           onChange={(v) => setForm((f) => ({ ...f, namespace: v }))}
         />
@@ -219,12 +228,14 @@ function EditProviderForm({
   slug,
   provider,
   onDone,
+  namespaceConfig,
 }: {
   envId: string;
   capName: string;
   slug: string;
   provider: ProviderConfigResponse;
   onDone: () => void;
+  namespaceConfig?: NamespaceConfig;
 }) {
   const [form, setForm] = useState({
     endpoint: provider.endpoint,
@@ -234,6 +245,7 @@ function EditProviderForm({
   });
   const [error, setError] = useState<string | null>(null);
   const update = useUpdateProvider();
+  const nsCfg = namespaceConfig?.[provider.provider_name];
 
   const handleSubmit = async () => {
     if (!form.endpoint.trim()) {
@@ -277,8 +289,9 @@ function EditProviderForm({
           onChange={(v) => setForm((f) => ({ ...f, region: v }))}
         />
         <Field
-          label="Namespace"
-          placeholder="default"
+          label={nsCfg?.label ?? "Namespace"}
+          placeholder={nsCfg?.placeholder ?? "default"}
+          hint={nsCfg?.hint}
           value={form.namespace}
           onChange={(v) => setForm((f) => ({ ...f, namespace: v }))}
         />
@@ -327,11 +340,13 @@ function ProviderCard({
   capName,
   slug,
   provider,
+  namespaceConfig,
 }: {
   envId: string;
   capName: string;
   slug: string;
   provider: ProviderConfigResponse;
+  namespaceConfig?: NamespaceConfig;
 }) {
   const [editing, setEditing] = useState(false);
   const [verifyResult, setVerifyResult] = useState<{
@@ -442,6 +457,7 @@ function ProviderCard({
           capName={capName}
           slug={slug}
           provider={provider}
+          namespaceConfig={namespaceConfig}
           onDone={() => setEditing(false)}
         />
       )}
@@ -455,12 +471,14 @@ function Field({
   label,
   type = "text",
   placeholder,
+  hint,
   value,
   onChange,
 }: {
   label: string;
   type?: string;
   placeholder?: string;
+  hint?: string;
   value: string;
   onChange: (v: string) => void;
 }) {
@@ -476,6 +494,7 @@ function Field({
         onChange={(e) => onChange(e.target.value)}
         className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm font-mono placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/50"
       />
+      {hint && <p className="text-[11px] text-muted-foreground">{hint}</p>}
     </div>
   );
 }
@@ -498,6 +517,7 @@ export function CapabilityPage({
   subtitle,
   endpointPlaceholders,
   tokenPlaceholders,
+  namespaceConfig,
   extraContent,
 }: Props) {
   const { selectedWorkspace } = useWorkspaceContext();
@@ -566,7 +586,14 @@ export function CapabilityPage({
               )}
             </div>
             {boundProviders.map((p) => (
-              <ProviderCard key={p.id} envId={envId} capName={capName} slug={slug} provider={p} />
+              <ProviderCard
+                key={p.id}
+                envId={envId}
+                capName={capName}
+                slug={slug}
+                provider={p}
+                namespaceConfig={namespaceConfig}
+              />
             ))}
           </div>
         )}
@@ -581,6 +608,7 @@ export function CapabilityPage({
             onDone={() => setShowAddForm(false)}
             endpointPlaceholders={endpointPlaceholders}
             tokenPlaceholders={tokenPlaceholders}
+            namespaceConfig={namespaceConfig}
           />
         )}
       </main>

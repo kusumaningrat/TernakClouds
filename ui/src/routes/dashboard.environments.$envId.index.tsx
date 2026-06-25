@@ -260,7 +260,7 @@ function EnvOverviewPage() {
                 }
               />
               <StatCard
-                label="Ready deployments"
+                label="Ready workloads"
                 value={`${k8sReadyDeployments} / ${(k8sDeployments ?? []).length}`}
                 icon={Box}
                 loading={k8sDeploymentsLoading}
@@ -347,7 +347,7 @@ function EnvOverviewPage() {
                   ) : (
                     <Box className="size-4 text-primary" />
                   )}
-                  {activeTab === "nomad" ? "Recent jobs" : "Recent deployments"}
+                  {activeTab === "nomad" ? "Recent jobs" : "Recent workloads"}
                 </h3>
                 {activeTab === "nomad" && (
                   <span className="text-[11px] font-mono text-muted-foreground font-normal">
@@ -381,7 +381,7 @@ function EnvOverviewPage() {
                   params={{ envId }}
                   className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-0.5 transition"
                 >
-                  {activeTab === "nomad" ? "All jobs" : "All pods"}{" "}
+                  {activeTab === "nomad" ? "All jobs" : "All instances"}{" "}
                   <ChevronRight className="size-3" />
                 </Link>
               </div>
@@ -434,7 +434,7 @@ function EnvOverviewPage() {
                   <NoProviderBanner capability="runtime" envId={envId} />
                 ) : recentK8sDeployments.length === 0 ? (
                   <p className="text-xs text-muted-foreground py-2">
-                    No deployments in default namespace.
+                    No workloads in default namespace.
                   </p>
                 ) : (
                   <div className="space-y-0">
@@ -521,9 +521,9 @@ function EnvOverviewPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {(
             [
-              { label: "Services", icon: Layers, to: "/dashboard/environments/$envId/services" },
+              { label: "Endpoints", icon: Layers, to: "/dashboard/environments/$envId/services" },
               {
-                label: "Deployments",
+                label: "Workloads",
                 icon: Rocket,
                 to: "/dashboard/environments/$envId/deployments",
               },

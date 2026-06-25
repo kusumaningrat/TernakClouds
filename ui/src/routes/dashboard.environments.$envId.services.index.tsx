@@ -14,7 +14,7 @@ import { Loader2, AlertTriangle, Server, Layers, FlaskConical, RefreshCw } from 
 import type { NomadJobStub, K8sDeploymentStub, K8sServiceStub } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/services/")({
-  head: () => ({ meta: [{ title: "Services · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Endpoints · TernakClouds" }] }),
   component: EnvServicesPage,
 });
 
@@ -119,7 +119,7 @@ function ServiceCard({
           search={{ namespace }}
           className="text-[11px] text-muted-foreground hover:text-primary transition"
         >
-          View in Deployments →
+          View in Workloads →
         </Link>
       </div>
     </div>
@@ -235,10 +235,10 @@ function K8sServiceCatalogView({ slug, envId }: { slug: string; envId: string })
           )}
           {!isLoading && (
             <span className="text-xs text-muted-foreground">
-              {deployments.length} deployment
+              {deployments.length} workload
               {deployments.length !== 1 ? "s" : ""}
               {services.length > 0
-                ? ` · ${services.length} service${services.length !== 1 ? "s" : ""}`
+                ? ` · ${services.length} endpoint${services.length !== 1 ? "s" : ""}`
                 : ""}
             </span>
           )}
@@ -281,7 +281,7 @@ function K8sServiceCatalogView({ slug, envId }: { slug: string; envId: string })
       {!isLoading && !error && deployments.length > 0 && (
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Deployments
+            Workloads
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {deployments.map((dep) => (
@@ -294,7 +294,7 @@ function K8sServiceCatalogView({ slug, envId }: { slug: string; envId: string })
       {!isLoading && !error && services.length > 0 && (
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-            Services
+            Endpoints
           </p>
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">
@@ -537,8 +537,8 @@ function EnvServicesPage() {
   return (
     <>
       <DashboardTopbar
-        title="Services"
-        subtitle="Application services running in this environment."
+        title="Endpoints"
+        subtitle="Service endpoints and the workloads behind them."
       />
 
       {capLoading && (
@@ -555,7 +555,7 @@ function EnvServicesPage() {
           <div>
             <p className="font-semibold">No runtime provider configured</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Bind a Nomad or Kubernetes provider to the Runtime capability to view services here.
+              Bind a Nomad or Kubernetes provider to the Runtime capability to view endpoints here.
             </p>
           </div>
           <Link

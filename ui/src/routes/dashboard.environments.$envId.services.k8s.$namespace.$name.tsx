@@ -7,7 +7,7 @@ import { Loader2, AlertTriangle, ArrowLeft } from "lucide-react";
 export const Route = createFileRoute(
   "/dashboard/environments/$envId/services/k8s/$namespace/$name",
 )({
-  head: () => ({ meta: [{ title: "K8s Service · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Endpoint · TernakClouds" }] }),
   component: K8sServiceDetailPage,
 });
 
@@ -46,7 +46,10 @@ function K8sServiceDetailPage() {
 
   return (
     <>
-      <DashboardTopbar title={name} subtitle={`K8s Service · namespace: ${namespace}`} />
+      <DashboardTopbar
+        title={name}
+        subtitle={`Endpoint · Kubernetes Service · namespace: ${namespace}`}
+      />
 
       <main className="p-6 space-y-8">
         {/* Back */}
@@ -55,17 +58,17 @@ function K8sServiceDetailPage() {
           params={{ envId }}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
         >
-          <ArrowLeft className="size-3.5" /> Services
+          <ArrowLeft className="size-3.5" /> Endpoints
         </Link>
 
         {isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
-            <Loader2 className="size-4 animate-spin" /> Loading service…
+            <Loader2 className="size-4 animate-spin" /> Loading endpoint…
           </div>
         )}
         {error && !isLoading && (
           <div className="flex items-center gap-2 text-sm text-destructive py-4">
-            <AlertTriangle className="size-4" /> Failed to load service details
+            <AlertTriangle className="size-4" /> Failed to load endpoint details
           </div>
         )}
 
@@ -207,10 +210,10 @@ function K8sServiceDetailPage() {
               </section>
             )}
 
-            {/* Endpoints */}
+            {/* Targets (backing pod addresses) */}
             <section className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Endpoints
+                Targets
               </p>
               {detail.endpoints && detail.endpoints.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
@@ -224,7 +227,7 @@ function K8sServiceDetailPage() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-muted-foreground">No endpoints.</p>
+                <p className="text-sm text-muted-foreground">No targets.</p>
               )}
             </section>
           </>

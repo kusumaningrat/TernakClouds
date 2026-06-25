@@ -635,8 +635,8 @@ function EditGrantForm({
       />
       <Field
         label="Vault path"
-        placeholder="myapp/dev"
-        hint="Path within your KV v2 mount. Do NOT include the mount name or /data/ prefix."
+        placeholder="ai-local"
+        hint='Path within your KV mount — omit the mount name and /data/ prefix. A folder exposes everything inside it; a leaf like "ai-local/langfuse" exposes just that one.'
         value={form.vault_path}
         onChange={(v) => setForm((f) => ({ ...f, vault_path: v }))}
         monospace
@@ -797,8 +797,8 @@ function AddGrantForm({
       {isOwner ? (
         <Field
           label="Vault path *"
-          placeholder="myapp/dev"
-          hint='Path within your KV v2 mount — omit the mount name and /data/ prefix. E.g. "myapp/dev", not "secret/data/myapp/dev".'
+          placeholder="ai-local"
+          hint='Path within your KV mount — omit the mount name and /data/ prefix. A folder like "ai-local" exposes every secret inside it; a leaf like "ai-local/langfuse" exposes just that one.'
           value={form.vault_path}
           onChange={(v) => setForm((f) => ({ ...f, vault_path: v }))}
           monospace
@@ -989,7 +989,7 @@ function GrantCard({
                   <AlertTriangle className="size-3.5 shrink-0" />
                   {isAdminGrant(grant) && !grant.vault_path
                     ? "Vault path is not configured yet. Edit the grant to set a path."
-                    : "Could not load secrets. Check that the vault path exists."}
+                    : extractError(loadError, "Could not load secrets. Check that the vault path exists.")}
                 </div>
               </div>
             )}

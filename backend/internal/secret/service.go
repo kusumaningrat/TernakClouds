@@ -21,14 +21,18 @@ func NewService(repo *Repository, capRepo *capability.Repository, vc vault.Clien
 	return &Service{repo: repo, capRepo: capRepo, vault: vc}
 }
 
-// vaultClientForEnv resolves the Vault client for an environment.
+// defaultKVMount is used when no provider-specific mount is configured.
+const defaultKVMount = "secret"
+
+// vaultClientForEnv resolves the Vault client and its KV mount for an environment.
 // Resolution order:
 // 1. "secrets" capability binding → "vault" provider → retrieve its token from IDP vault.
-// 2. Fall back to the IDP's own vault client.
-func (s *Service) vaultClientForEnv(ctx context.Context, envID uuid.UUID) (vault.Client, error) {
+//    The provider's Namespace field is the KV v2 mount (defaults to "secret").
+// 2. Fall back to the IDP's own vault client (default mount).
+func (s *Service) vaultClientForEnv(ctx context.Context, envID uuid.UUID) (vault.Client, string, error) {
 	binding, err := s.capRepo.FindBinding(envID, capability.CapSecrets)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	if binding != nil {
 		for _, pc := range binding.ProviderConfigs {
@@ -39,20 +43,31 @@ func (s *Service) vaultClientForEnv(ctx context.Context, envID uuid.UUID) (vault
 			if s.vault != nil && pc.VaultPath != "" {
 				token, err = s.vault.RetrieveToken(ctx, pc.VaultPath)
 				if err != nil {
-					return nil, fmt.Errorf("retrieve vault token: %w", err)
+					return nil, "", fmt.Errorf("retrieve vault token: %w", err)
 				}
 			}
 			kvMount := pc.Namespace
 			if kvMount == "" {
-				kvMount = "secret"
+				kvMount = defaultKVMount
 			}
-			return vault.NewFromToken(pc.Endpoint, token, kvMount), nil
+			return vault.NewFromToken(pc.Endpoint, token, kvMount), kvMount, nil
 		}
 	}
 	if s.vault == nil {
-		return nil, errors.New("no vault client configured")
+		return nil, "", errors.New("no vault client configured")
 	}
-	return s.vault, nil
+	return s.vault, defaultKVMount, nil
+}
+
+// normalizeVaultPath strips a leading slash and an optional "<mount>/" prefix
+// so a grant path works whether the operator wrote it relative to the mount
+// ("ai-local/langfuse") or accidentally included the mount ("secrets/ai-local/langfuse").
+func normalizeVaultPath(path, mount string) string {
+	p := strings.Trim(path, "/")
+	if mount != "" {
+		p = strings.TrimPrefix(p, mount+"/")
+	}
+	return p
 }
 
 func (s *Service) Create(ctx context.Context, envID, workspaceID, createdBy uuid.UUID, input CreateGrantInput) (*SecretGrant, error) {
@@ -110,14 +125,14 @@ func (s *Service) WriteValue(ctx context.Context, envID, grantID uuid.UUID, subP
 		return fmt.Errorf("vault path not configured for this grant")
 	}
 
-	fullPath := g.VaultPath
-	if sub := strings.Trim(subPath, "/"); sub != "" {
-		fullPath = g.VaultPath + "/" + sub
-	}
-
-	vc, err := s.vaultClientForEnv(ctx, envID)
+	vc, mount, err := s.vaultClientForEnv(ctx, envID)
 	if err != nil {
 		return fmt.Errorf("vault client: %w", err)
+	}
+
+	fullPath := normalizeVaultPath(g.VaultPath, mount)
+	if sub := strings.Trim(subPath, "/"); sub != "" {
+		fullPath = fullPath + "/" + sub
 	}
 	return vc.WriteKV(ctx, fullPath, data)
 }
@@ -132,12 +147,12 @@ func (s *Service) ReadValue(ctx context.Context, envID, grantID uuid.UUID) (*Sec
 		return nil, ErrNotFound
 	}
 
-	vc, err := s.vaultClientForEnv(ctx, envID)
+	vc, mount, err := s.vaultClientForEnv(ctx, envID)
 	if err != nil {
 		return nil, fmt.Errorf("vault client: %w", err)
 	}
 
-	treeEntries, err := vc.ReadKVTree(ctx, g.VaultPath)
+	treeEntries, err := vc.ReadKVTree(ctx, normalizeVaultPath(g.VaultPath, mount))
 	if err != nil {
 		return nil, err
 	}

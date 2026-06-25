@@ -899,7 +899,7 @@ function JobDetailPage() {
             params={{ envId }}
             className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
           >
-            <ArrowLeft className="size-3.5" /> Back to Deployments
+            <ArrowLeft className="size-3.5" /> Back to Workloads
           </Link>
 
           {detail && (

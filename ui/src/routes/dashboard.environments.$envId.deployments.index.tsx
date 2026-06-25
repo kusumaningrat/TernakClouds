@@ -37,7 +37,7 @@ import {
 import type { NomadJobStub, K8sDeploymentStub } from "@/lib/types";
 
 export const Route = createFileRoute("/dashboard/environments/$envId/deployments/")({
-  head: () => ({ meta: [{ title: "Deployments · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Workloads · TernakClouds" }] }),
   component: EnvDeploymentsPage,
 });
 
@@ -469,10 +469,10 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
         name: stoppingDep.name,
         replicas: 0,
       });
-      toast.success(`Deployment "${stoppingDep.name}" scaled down to 0`);
+      toast.success(`Workload "${stoppingDep.name}" scaled down to 0`);
       setStoppingDep(null);
     } catch (err: unknown) {
-      toastError(extractError(err, "Failed to scale down deployment"));
+      toastError(extractError(err, "Failed to scale down workload"));
     }
   };
 
@@ -524,7 +524,7 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
           </div>
           {!isLoading && (
             <span className="text-xs text-muted-foreground">
-              {filtered.length} deployment
+              {filtered.length} workload
               {filtered.length !== 1 ? "s" : ""}
             </span>
           )}
@@ -551,19 +551,19 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
 
       {isLoading && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
-          <Loader2 className="size-4 animate-spin" /> Loading deployments…
+          <Loader2 className="size-4 animate-spin" /> Loading workloads…
         </div>
       )}
       {error && !isLoading && (
         <div className="flex items-center gap-2 text-sm text-destructive py-4">
-          <AlertTriangle className="size-4" /> Failed to fetch deployments from Kubernetes
+          <AlertTriangle className="size-4" /> Failed to fetch workloads from Kubernetes
         </div>
       )}
       {!isLoading && !error && filtered.length === 0 && (
         <div className="py-16 text-center text-sm text-muted-foreground">
           {deployments.length === 0
-            ? "No deployments found."
-            : "No deployments match the current filter."}
+            ? "No workloads found."
+            : "No workloads match the current filter."}
         </div>
       )}
 
@@ -573,7 +573,7 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
             <thead>
               <tr className="border-b border-border bg-secondary/50">
                 {[
-                  "Deployment",
+                  "Workload",
                   "Status",
                   "Ready",
                   "Up-to-date",
@@ -613,10 +613,10 @@ function K8sDeploymentsListView({ slug, envId }: { slug: string; envId: string }
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Scale down deployment?</AlertDialogTitle>
+            <AlertDialogTitle>Scale down workload?</AlertDialogTitle>
             <AlertDialogDescription>
               <strong>{stoppingDep?.name}</strong> will be scaled to 0 replicas. You can scale it
-              back up from the deployment detail page.
+              back up from the workload detail page.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -663,7 +663,7 @@ function EnvDeploymentsPage() {
 
   return (
     <>
-      <DashboardTopbar title="Deployments" subtitle="Release history for this environment." />
+      <DashboardTopbar title="Workloads" subtitle="Workloads running in this environment." />
 
       {capLoading && (
         <main className="p-6 flex items-center justify-center py-32">
@@ -679,8 +679,7 @@ function EnvDeploymentsPage() {
           <div>
             <p className="font-semibold">No runtime provider configured</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-xs">
-              Bind a Nomad or Kubernetes provider to the Runtime capability to view deployment
-              history.
+              Bind a Nomad or Kubernetes provider to the Runtime capability to view workloads.
             </p>
           </div>
           <Link

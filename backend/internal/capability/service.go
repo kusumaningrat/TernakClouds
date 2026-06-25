@@ -137,6 +137,17 @@ func (s *Service) BindProvider(ctx context.Context, envID uuid.UUID, capName str
 		}
 	}
 
+	// Remove any stale soft-deleted provider config rows for this binding/name.
+	staleCfg, err := s.repo.FindProviderConfigByBindingAndNameUnscoped(existingBinding.ID, input.ProviderName)
+	if err != nil {
+		return nil, err
+	}
+	if staleCfg != nil && !staleCfg.DeletedAt.Time.IsZero() {
+		if err := s.repo.DeleteProviderConfigByID(staleCfg.ID); err != nil {
+			return nil, fmt.Errorf("capability: cleanup stale provider config: %w", err)
+		}
+	}
+
 	var vaultPath string
 	credentialType := "none"
 	if input.Token != "" {

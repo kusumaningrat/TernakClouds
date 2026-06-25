@@ -9,7 +9,7 @@ import type { K8sPodStub } from "@/lib/types";
 export const Route = createFileRoute(
   "/dashboard/environments/$envId/deployments/k8s/$namespace/$name",
 )({
-  head: () => ({ meta: [{ title: "K8s Deployment · TernakClouds" }] }),
+  head: () => ({ meta: [{ title: "Workload · TernakClouds" }] }),
   component: K8sDeploymentDetailPage,
 });
 
@@ -61,19 +61,21 @@ function PodsSection({
   if (isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-        <Loader2 className="size-4 animate-spin" /> Loading pods…
+        <Loader2 className="size-4 animate-spin" /> Loading instances…
       </div>
     );
   }
   if (filtered.length === 0) {
-    return <p className="text-sm text-muted-foreground py-4">No pods found for this deployment.</p>;
+    return (
+      <p className="text-sm text-muted-foreground py-4">No instances found for this workload.</p>
+    );
   }
   return (
     <div className="rounded-lg border border-border overflow-hidden">
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-secondary/50">
-            {["Pod", "Phase", "Node", "Ready", "Restarts", "Created"].map((h) => (
+            {["Instance", "Phase", "Node", "Ready", "Restarts", "Created"].map((h) => (
               <th
                 key={h}
                 className="px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground"
@@ -165,7 +167,10 @@ function K8sDeploymentDetailPage() {
 
   return (
     <>
-      <DashboardTopbar title={name} subtitle={`K8s Deployment · namespace: ${namespace}`} />
+      <DashboardTopbar
+        title={name}
+        subtitle={`Workload · Kubernetes Deployment · namespace: ${namespace}`}
+      />
 
       <main className="p-6 space-y-8">
         {/* Back */}
@@ -174,17 +179,17 @@ function K8sDeploymentDetailPage() {
           params={{ envId }}
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
         >
-          <ArrowLeft className="size-3.5" /> Deployments
+          <ArrowLeft className="size-3.5" /> Workloads
         </Link>
 
         {isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-8">
-            <Loader2 className="size-4 animate-spin" /> Loading deployment…
+            <Loader2 className="size-4 animate-spin" /> Loading workload…
           </div>
         )}
         {error && !isLoading && (
           <div className="flex items-center gap-2 text-sm text-destructive py-4">
-            <AlertTriangle className="size-4" /> Failed to load deployment details
+            <AlertTriangle className="size-4" /> Failed to load workload details
           </div>
         )}
 
@@ -450,10 +455,10 @@ function K8sDeploymentDetailPage() {
               </section>
             )}
 
-            {/* Pods */}
+            {/* Instances */}
             <section className="space-y-3">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Pods
+                Instances
               </p>
               <PodsSection
                 pods={pods}
